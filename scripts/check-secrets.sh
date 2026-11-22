@@ -14,7 +14,8 @@ PATTERNS=(
   'eyJ[0-9A-Za-z_-]{10,}\.eyJ[0-9A-Za-z_-]{10,}\.[0-9A-Za-z_-]{10,}'   # JWTs (Supabase anon/service_role)
   'vercel_[0-9A-Za-z]{20,}'                         # Vercel token
   'gh[pousr]_[0-9A-Za-z]{30,}'                      # GitHub token
-  '(API_KEY|SERVICE_ROLE_KEY|ANON_KEY|CRON_SECRET|VERCEL_TOKEN)[[:space:]]*[=:][[:space:]]*["'"'"']?[0-9A-Za-z._-]{16,}'  # a secret assigned in code
+  '(API_KEY|SERVICE_ROLE_KEY|ANON_KEY|CRON_SECRET|VERCEL_TOKEN)[[:space:]]*[=:][[:space:]]*["'"'"'][0-9A-Za-z._-]{16,}["'"'"']'   # a secret as a quoted literal in code
+  '^\+[[:space:]]*(export[[:space:]]+)?[A-Z0-9_]*(API_KEY|SERVICE_ROLE_KEY|ANON_KEY|CRON_SECRET|VERCEL_TOKEN)=[^[:space:]]{16,}'   # a secret in .env style
 )
 
 fail=0
