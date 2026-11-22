@@ -12,7 +12,9 @@
     "build": "vite build --config client/vite.config.ts",
     "lint": "tsc -p tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit",
     "test": "vitest run",
-    "preview": "vite preview --config client/vite.config.ts"
+    "preview": "vite preview --config client/vite.config.ts",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
+    "check-secrets": "bash scripts/check-secrets.sh"
   },
   "dependencies": {
     "express": "5.3.0",

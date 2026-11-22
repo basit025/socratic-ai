@@ -10,7 +10,9 @@ Built for the **Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education.**
 - **Disclosure:** every external API, model, library and UI kit goes in `README.md` (section "Third-party APIs and libraries"). Update it in the same commit that adds a dependency.
 - **Freeze:** our feature freeze is **Thursday Nov 26, end of day**. Official freeze is the deadline (Nov 28, 11:59 PM PKT); after that only minor environment/config fixes are allowed. Fri–Sat are for video, deck and submission only.
 - **Never fabricate:** no invented metrics, quotes or "users". Seeded content shows a visible **"Demo data"** badge.
-- **Secrets:** API keys live only in server-side env vars. Never commit `.env*` files (except `.env.example`).
+- **Secrets:** API keys live only in Vercel (type Secret) and in each developer's git-ignored `.env.local`; operator-only values in git-ignored `.env.ops`. Never commit `.env*` files (except `.env.example`), never print a key in logs or tool output, never pass one in a URL query string.
+  - Two automatic guards: the **pre-commit hook** (`scripts/check-secrets.sh`, installed by `npm install` via `core.hooksPath=.githooks`) blocks env files and key-shaped strings; **GitHub push protection** is on for the repo. Never bypass with `--no-verify` except for a proven false positive.
+  - Only `VITE_`-prefixed variables reach the browser bundle; none of them may hold a secret.
 - **No AI-text detection, no webcam, no automatic penalties.** Flags are evidence for the teacher, never verdicts.
 
 ## Judging criteria (25% each): build so each is visible
