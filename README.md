@@ -48,6 +48,8 @@ Every external service, model and library used in this repository is listed here
 | [TypeScript](https://www.typescriptlang.org) | Type checking | Apache-2.0 |
 | [tsx](https://tsx.is) | Runs TypeScript in local development | MIT |
 | [Vitest](https://vitest.dev) | Unit tests | MIT |
+| [Zod](https://zod.dev) | Validates process events and AI responses | MIT |
+| [Supabase CLI](https://supabase.com/docs/guides/cli) | Applies database migrations (development tool, run with `npx`) | MIT |
 
 ### AI coding assistants
 
