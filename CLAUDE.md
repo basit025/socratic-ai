@@ -31,9 +31,13 @@ Before any merge that touches these flows, run through the path manually on the 
 
 ## Scope (in priority order)
 
-**MVP:** accounts and roles; courses and join codes; assignment builder with integrity rules and per-student variants; code workspace (Python via Pyodide, JS and HTML in a sandboxed iframe); paste/copy/drag blocking; process event logging; Ustaad hints; automated viva with rubric scoring; hidden tests; integrity report with replay and rule-based flags; gradebook; student results; seed script with demo data; one-click demo logins.
+**MVP (team decision, Nov 23: keep the full proposal scope), built in this priority order:**
+1. **Demo path first:** accounts and roles; courses and join codes; assignment builder with integrity rules and per-student variants; code workspace (Python via Pyodide, JS and HTML in a sandboxed iframe); paste/copy/drag blocking; process event logging; Ustaad hints; automated viva with rubric scoring; hidden tests; integrity report with replay and rule-based flags; gradebook; student results; seed script with demo data; one-click demo logins.
+2. **Then:** written answers (FR-10); timed quizzes with fullscreen tracking (FR-13, FR-16); handwritten capture with code word + AI reading (FR-11, FR-12).
+
+**Rules for priority 2:** work starts only after the demo path runs end to end on the live link. Each feature stays behind a feature flag (off in production) until it works end to end, so a half-built feature never shows a judge a dead end. **Tripwire (from the proposal):** if the viva isn't working by Wednesday night, priority-2 features stay off for the demo; Friday is never used for feature work.
 **Naming:** in the UI, README, video and deck, call it a **"learning platform"** (or "web platform"). Never call it a "portal", and never call it an "app" unless the installable PWA ships.
-**If time allows:** installable PWA (web manifest + icons, so students can use "Add to Home screen" on Android; no offline mode needed); handwritten capture with code word + AI reading; timed quizzes; voice viva.
+**If time allows:** installable PWA (web manifest + icons, so students can use "Add to Home screen" on Android; no offline mode needed); voice viva.
 **Out of scope:** native Android/iOS app, public API for other LMSs (roadmap only), webcam proctoring, AI-text detectors, LMS export, Safe Exam Browser, admin role, payments.
 
 ## Stack and structure
@@ -123,7 +127,7 @@ Only variables prefixed `VITE_` reach the browser bundle. Never give the service
 - **Flags** (rule-based, each stores the event range as evidence): large instant insertion; typing much faster than the student's own baseline; long focus loss followed by a burst; correct submission with no prior runs; perfect tests with viva score < 50.
 - **Viva:** 3–5 questions generated from the student's own code, output or text: explain a line, predict output for a changed input, describe a modification. About 90 s per question, paste blocked, each question may build on the previous answer. Score 0–100 against a rubric (goal, logic, output prediction, modification) plus a 1–2 sentence teacher summary.
 - **Ustaad never writes solution code.** Replies are short and end with one question; Roman Urdu + English, matching the student. Keep the prototype's prompt and its seven-stage mapping.
-- Hidden tests and answer keys never reach the browser.
+- **Hidden tests run in the browser (team decision, Nov 23), but answer keys never reach it:** test *inputs* are sent only after the student clicks Submit and the code is locked and stored on the server; the browser runs them in the Pyodide worker and sends back the raw outputs; the **server** compares them with the expected outputs, which never leave the server. Judges' Q&A answer: "Tests run on the student's machine, so the server stays cheap; the expected answers never leave our server, the submitted code is locked first, and the teacher can re-run it."
 
 ## UI/UX rules: understandable at first look
 
@@ -180,7 +184,7 @@ npm run build
 
 - **Mon Nov 23:** **live deploy first (hello world + `/api/health` on the production URL) before anything else**; then repo, schema, auth, design system, new layouts.
 - **Tue Nov 24:** assignment builder, workspace + stepper, paste blocking, event logging.
-- **Wed Nov 25:** viva, hidden tests, variants, seed script.
-- **Thu Nov 26:** teacher report + replay + flags; real test with 10 students and 1–2 teachers; **feature freeze at night**.
+- **Wed Nov 25:** viva, hidden tests, variants, seed script; written answers if the demo path is done.
+- **Thu Nov 26:** teacher report + replay + flags; quizzes and handwritten only if the demo path is solid (behind flags); real test with 10 students and 1–2 teachers; **feature freeze at night**.
 - **Fri Nov 27:** video (script, record, edit), demo data check, backup recording.
 - **Sat Nov 28:** deck, README, rehearsal; **submit by 8 PM** (repo, live link, ≤ 2-min video, deck); tag `v1.0-submission`.
