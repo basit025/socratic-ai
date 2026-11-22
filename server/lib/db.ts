@@ -68,6 +68,47 @@ export async function insert(
   }
 }
 
+/** Inserts rows, silently skipping any that collide with `onConflict` (e.g. a resent event batch). */
+export async function insertIgnoringDuplicates(
+  table: string,
+  rows: Record<string, unknown>[],
+  onConflict: string,
+  opts: { env?: Env; fetchFn?: typeof fetch } = {},
+): Promise<void> {
+  const { base, key } = config(opts.env ?? process.env);
+  const res = await (opts.fetchFn ?? fetch)(`${base}/${encodeURIComponent(table)}?on_conflict=${encodeURIComponent(onConflict)}`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal,resolution=ignore-duplicates",
+    },
+    body: JSON.stringify(rows),
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new DbError(`insert into ${table} failed (${res.status}): ${detail.slice(0, 300)}`, res.status);
+  }
+}
+
+/** Updates rows matching `filter` (PostgREST query string, e.g. `id=eq.<uuid>`) and returns them. */
+export async function update<T>(table: string, filter: string, patch: Record<string, unknown>, opts: { env?: Env; fetchFn?: typeof fetch } = {}): Promise<T[]> {
+  const { base, key } = config(opts.env ?? process.env);
+  const res = await (opts.fetchFn ?? fetch)(`${base}/${encodeURIComponent(table)}?${filter}`, {
+    method: "PATCH",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify(patch),
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new DbError(`update ${table} failed (${res.status}): ${detail.slice(0, 300)}`, res.status);
+  }
+  return (await res.json()) as T[];
+}
+
 /** Calls a Postgres function exposed through PostgREST (POST /rest/v1/rpc/<name>). */
 export async function rpc<T>(
   name: string,
