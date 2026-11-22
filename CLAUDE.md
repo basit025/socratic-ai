@@ -82,7 +82,9 @@ vercel.json      build, rewrites, region, cron
 - **Front end:** Vercel builds the Vite app (`npm run build` → `client/dist`) and serves it from its CDN. `express.static()` is never used in production.
 - **API:** the Express app in `server/app.ts` is exported (`export default app`), never started with `app.listen()`. `api/index.ts` re-exports it as **one Vercel Function**; `vercel.json` rewrites `/api/(.*)` to it, and Express routes on the original path (`/api/health`, ...). All other paths fall back to `index.html` (SPA).
 - **Region:** functions run in `bom1` (Mumbai). Create both Supabase projects in **South Asia (Mumbai)** so each API→DB round-trip stays short.
-- **Database and auth:** Supabase Postgres + Auth. Two Supabase projects: **production** (demo data the judges see) and **preview/dev** (PR previews and local work). A preview build must never write to the production database.
+- **Database and auth:** Supabase Postgres + Auth. Two Supabase projects, both Mumbai (`ap-south-1`): **production** `socratic-ai-prod` (ref `szenspgxfjrynhtwhixm`, demo data the judges see) and **preview** `socratic-ai-preview` (ref `eksckojfihwirwdgdrfc`, PR previews and local work). A preview build must never write to the production database.
+- **Server-only database access:** the browser never talks to Postgres. Every table has RLS on with **no policies** and no grants to `anon`/`authenticated`; only `service_role` (the Express API, via `server/lib/db.ts`) can read or write, and the API enforces roles on every endpoint. Never add a policy or grant for `anon`/`authenticated` without team agreement.
+- **Migrations:** SQL files in `supabase/migrations/`, applied in order, **preview first, then production**: `npx supabase db query --remote=<ref> --yes -f supabase/migrations/<file>.sql` (needs `npx supabase login`). Never edit a migration that has been applied; add a new one. After applying, test as `service_role` through the REST API, not only through the CLI (the CLI's admin connection hides missing grants).
 - **Code runner:** Pyodide loads from the jsDelivr CDN in the browser, inside a Web Worker, so running student code costs no server time and an infinite loop can never freeze the page.
 
 ### Git flow
@@ -113,7 +115,7 @@ Only variables prefixed `VITE_` reach the browser bundle. Never give the service
 ### Private demo sandboxes (Try as teacher / Try as student)
 - Each click creates a fresh sandbox with a temporary demo identity. Visitors never collide or see each other's changes; sandboxes expire, and the nightly reset deletes them.
 - Creating a sandbox takes **under 2 s** and **never calls an AI model**.
-- Design: seeded demo data is a shared, read-only base; everything a visitor creates or changes is written with their `sandbox_id`, and reads return `base + own sandbox`. Copying ~400 submissions with event logs on every click would not meet the 2 s target.
+- Design (implemented in the schema): **every row has a `sandbox_id`** (`seed` = demo template, `live` = real accounts such as Thursday's test, `demo` = one per click, with `expires_at`). Creating a demo sandbox copies the small rows (courses, assignments, submissions, flags, vivas) with new ids, and **shares the heavy, immutable event logs** through `submissions.event_source_id` instead of copying them. Every API query filters by the caller's `sandbox_id`. Deleting a sandbox cascades everything inside it.
 
 ### Protecting the AI quota
 - Rate-limit AI calls per sandbox and per IP, with a friendly message when a limit is hit. Counters live in Postgres (serverless instances share no memory).
@@ -133,7 +135,7 @@ Only variables prefixed `VITE_` reach the browser bundle. Never give the service
 
 ## Key domain rules
 
-- **Process events** (`keys`, `delete`, `paste_attempt`, `run`, `error`, `focus_lost`, `focus_back`, `fullscreen_exit`) are batched from the client every 10 s, **timestamped by the server**, and stored append-only.
+- **Process events** (`keys`, `delete`, `paste_attempt`, `run`, `error`, `focus_lost`, `focus_back`, `fullscreen_exit`, `snapshot`, `submit`) follow the **frozen format** in `docs/event-format.md` / `shared/events.ts` (zod; shared by browser and server) and are rebuilt by `shared/replay.ts`. They are batched from the client every 10 s, **timestamped by the server**, idempotent on `(submission_id, seq)`, and stored append-only: a database trigger refuses every update, and refuses deletes except inside `reset_demo()`.
 - **Flags** (rule-based, each stores the event range as evidence): large instant insertion; typing much faster than the student's own baseline; long focus loss followed by a burst; correct submission with no prior runs; perfect tests with viva score < 50.
 - **Viva:** 3–5 questions generated from the student's own code, output or text: explain a line, predict output for a changed input, describe a modification. About 90 s per question, paste blocked, each question may build on the previous answer. Score 0–100 against a rubric (goal, logic, output prediction, modification) plus a 1–2 sentence teacher summary.
 - **Ustaad never writes solution code.** Replies are short and end with one question; Roman Urdu + English, matching the student. Keep the prototype's prompt and its seven-stage mapping.

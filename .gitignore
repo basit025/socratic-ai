@@ -17,3 +17,6 @@ socratic-ai.zip
 
 # Screenshots dropped into the project folder
 /image*.png
+
+# Supabase CLI local state
+supabase/.temp/

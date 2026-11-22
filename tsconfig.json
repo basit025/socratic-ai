@@ -13,5 +13,5 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["server", "api"]
+  "include": ["server", "api", "shared"]
 }

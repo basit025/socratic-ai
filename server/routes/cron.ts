@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { isAuthorizedCron } from "../lib/cronAuth.js";
-import { checkDatabase } from "../lib/health.js";
+import { rpc } from "../lib/db.js";
 
 export const cronRouter = Router();
 
 /**
  * Nightly demo reset, called by Vercel Cron at 22:00 UTC (03:00 PKT); see vercel.json.
- * Hello-world stage: authenticates and touches the database (which also keeps the free
- * Supabase project from pausing). Deleting expired demo sandboxes comes with the schema.
+ * Deletes expired demo sandboxes (everything inside them cascades) and old rate-limit rows.
+ * The daily query also keeps the free Supabase project from pausing.
  */
 cronRouter.get("/reset-demo", async (req, res, next) => {
   try {
@@ -15,12 +15,12 @@ cronRouter.get("/reset-demo", async (req, res, next) => {
       res.status(401).json({ error: "Unauthorized." });
       return;
     }
-    const database = await checkDatabase(process.env);
+    const result = await rpc<{ sandboxes_deleted: number; rate_limit_rows_deleted: number }>("reset_demo");
     res.set("Cache-Control", "no-store");
-    res.status(database === "ok" ? 200 : 503).json({
-      ok: database === "ok",
-      database,
-      sandboxesDeleted: 0, // TODO(schema): delete sandboxes past their expiry
+    res.json({
+      ok: true,
+      sandboxesDeleted: result.sandboxes_deleted,
+      rateLimitRowsDeleted: result.rate_limit_rows_deleted,
       ranAt: new Date().toISOString(),
     });
   } catch (err) {

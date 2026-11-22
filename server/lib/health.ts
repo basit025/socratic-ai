@@ -8,6 +8,8 @@
  * - The response never includes keys, URLs or raw provider errors.
  */
 
+import { rpc } from "./db.js";
+
 export type CheckStatus = "ok" | "not_configured" | "error";
 
 export interface HealthReport {
@@ -42,12 +44,14 @@ async function probe(fetchFn: Fetch, url: string, headers: Record<string, string
 }
 
 export async function checkDatabase(env: Env, fetchFn: Fetch = fetch): Promise<CheckStatus> {
-  const url = env.SUPABASE_URL;
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!isSet(url) || !isSet(key)) return "not_configured";
-  // PostgREST answers /rest/v1/ by introspecting Postgres, so a 200 means the database is reachable.
-  // Replace with a `select 1` RPC once the schema exists.
-  return probe(fetchFn, `${url.replace(/\/$/, "")}/rest/v1/`, { apikey: key, Authorization: `Bearer ${key}` });
+  if (!isSet(env.SUPABASE_URL) || !isSet(env.SUPABASE_SERVICE_ROLE_KEY)) return "not_configured";
+  // A real query (`select 1` via the health_ping function), so "ok" proves the schema is in place.
+  try {
+    const one = await rpc<number>("health_ping", {}, { env, fetchFn, timeoutMs: TIMEOUT_MS });
+    return one === 1 ? "ok" : "error";
+  } catch {
+    return "error";
+  }
 }
 
 export async function checkGemini(env: Env, fetchFn: Fetch = fetch): Promise<CheckStatus> {

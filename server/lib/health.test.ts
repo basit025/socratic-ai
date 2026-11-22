@@ -44,6 +44,16 @@ describe("getHealth", () => {
     expect(report.status).toBe("down");
   });
 
+  it("reports the database ok only when the health_ping query returns 1", async () => {
+    const dbFetch = vi.fn(async (url: string) =>
+      new Response(url.includes("/rpc/health_ping") ? "1" : "{}", { status: 200 }),
+    ) as unknown as typeof fetch;
+    expect((await getHealth(fullEnv, dbFetch, 0)).checks.database).toBe("ok");
+    resetHealthCache();
+    const wrongFetch = vi.fn(async () => new Response("0", { status: 200 })) as unknown as typeof fetch;
+    expect((await getHealth(fullEnv, wrongFetch, 0)).checks.database).toBe("error");
+  });
+
   it("caches results for 60 seconds", async () => {
     await getHealth(fullEnv, okFetch, 0);
     const second = await getHealth(fullEnv, okFetch, 30_000);
