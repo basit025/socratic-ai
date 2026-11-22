@@ -62,7 +62,7 @@ vercel.json      build, rewrites, region, cron
 
 ## Deployment
 
-**Hosting:** one Vercel project on the free Hobby plan, plus Supabase on the free plan. Production URL: `https://socratic-ai.vercel.app` (fill in the claimed name once confirmed) is the only URL used in the README, video and deck.
+**Hosting:** one Vercel project on the free Hobby plan, plus Supabase on the free plan. Production URL: `https://socratic-ai-pk.vercel.app` is the only URL used in the README, video and deck.
 
 - **Front end:** Vercel builds the Vite app (`npm run build` → `client/dist`) and serves it from its CDN. `express.static()` is never used in production.
 - **API:** the Express app in `server/app.ts` is exported (`export default app`), never started with `app.listen()`. `api/index.ts` re-exports it as **one Vercel Function**; `vercel.json` rewrites `/api/(.*)` to it, and Express routes on the original path (`/api/health`, ...). All other paths fall back to `index.html` (SPA).

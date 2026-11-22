@@ -1,6 +1,6 @@
 # Socratic AI: Strong Fundamentals in the Age of AI
 
-**Live demo: https://socratic-ai.vercel.app** · Health check: [`/api/health`](https://socratic-ai.vercel.app/api/health)
+**Live demo: https://socratic-ai-pk.vercel.app** · Health check: [`/api/health`](https://socratic-ai-pk.vercel.app/api/health)
 
 > Status: build in progress (Capital Youth Expo 2026 Hackathon, competition 04-HK, Track 1: Education). Built Nov 16–28, 2026.
 
