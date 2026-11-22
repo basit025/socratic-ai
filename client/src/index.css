@@ -47,6 +47,13 @@
     font-size: 16px;
     line-height: 1.55;
   }
+  /* Show code exactly as typed: no ligatures turning >= into ≥ */
+  code,
+  pre,
+  .cm-content {
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0, "calt" 0;
+  }
   :focus-visible {
     outline: 3px solid var(--color-action);
     outline-offset: 2px;

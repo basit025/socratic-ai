@@ -117,6 +117,7 @@ export class EventRecorder {
   async recordSubmit(): Promise<boolean> {
     this.snapshot();
     this.push({ type: "submit", payload: { docLength: this.getDoc().length } });
+    while (this.inFlight) await new Promise((r) => setTimeout(r, 50)); // let an autosave finish first
     const ok = await this.flush();
     this.stop();
     return ok;
@@ -148,6 +149,7 @@ export class EventRecorder {
 
   /** Sends queued events + the current text. Returns true when everything queued is saved. */
   async flush(): Promise<boolean> {
+    if (this.stopped) return this.queue.length === 0; // after submit nothing more may be sent (the server would refuse it)
     if (this.inFlight) return false;
     const batch = this.queue.slice(0, 500);
     this.inFlight = true;
@@ -175,7 +177,7 @@ export class EventRecorder {
   }
 
   private flushWithKeepalive() {
-    if (!this.queue.length) return;
+    if (this.stopped || !this.queue.length) return;
     // keepalive lets the request finish even if the tab is closing. Duplicates are ignored by the server.
     void fetch(`/api/submissions/${this.submissionId}/events`, {
       method: "POST",

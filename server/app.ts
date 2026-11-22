@@ -4,6 +4,7 @@ import { cronRouter } from "./routes/cron.js";
 import { demoRouter } from "./routes/demo.js";
 import { homeRouter } from "./routes/home.js";
 import { workspaceRouter } from "./routes/workspace.js";
+import { vivaRouter } from "./routes/viva.js";
 
 /**
  * The Express app. It is exported, never started with app.listen():
@@ -20,6 +21,7 @@ app.use("/api/cron", cronRouter);
 app.use("/api", demoRouter);
 app.use("/api", homeRouter);
 app.use("/api", workspaceRouter);
+app.use("/api", vivaRouter);
 
 // Unknown API routes get a JSON 404, never the SPA's index.html.
 app.use("/api", (_req: Request, res: Response) => {

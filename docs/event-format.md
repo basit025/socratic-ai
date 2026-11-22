@@ -53,7 +53,8 @@ Example: the document is `print(x)` and the student renames `x` to `total`:
 
 ## Sending
 
-- **POST** `/api/submissions/:id/events` with body `{ "events": [ ... ] }`: 1 to 500 events, with consecutive `seq` numbers.
+- **POST** `/api/submissions/:id/events` with body `{ "events": [ ... ], "doc": "current text", "lastOutput": "..." }`: 1 to 500 events with consecutive `seq` numbers. `doc` and `lastOutput` are optional and autosave the editor (additive to the frozen event format).
+- After **Submit** the submission is locked and this endpoint answers 409; the recorder sends nothing more.
 - Send every **10 seconds**, immediately on run and submit, and on `visibilitychange` to hidden (use `navigator.sendBeacon`, so events aren't lost when the tab closes).
 - If a send fails, keep the events and resend them with the next batch. Duplicates are ignored.
 - The workspace keeps working offline; the "Saved 3 s ago" indicator shows the time of the last successful send.

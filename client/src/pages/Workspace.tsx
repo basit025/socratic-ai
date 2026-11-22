@@ -3,8 +3,9 @@
  * and Ustaad (side). One primary action at a time, labelled with what it will do.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Link, useParams } from "react-router";
-import { AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, ClipboardX, Copy, Loader2, Lock, MessageCircleQuestion, Play, Shuffle, Timer } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router";
+import { AlertTriangle, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, ClipboardX, Copy, Loader2, Lock, MessageCircleQuestion, Play, Send, Shuffle, Timer } from "lucide-react";
+import { Dialog } from "../components/Dialog";
 import { AppShell } from "../components/AppShell";
 import { Button, Card, Chip, ErrorState, Skeleton, cx } from "../components/ui";
 import { api, ApiError } from "../lib/api";
@@ -115,6 +116,10 @@ export function Workspace() {
   const [runUnlocked, setRunUnlocked] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [recorder, setRecorder] = useState<EventRecorder | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const editor = useRef<CodeEditorHandle | null>(null);
   const chatInput = useRef<HTMLTextAreaElement | null>(null);
@@ -218,6 +223,20 @@ export function Workspace() {
     }
   };
 
+  const submitWork = async () => {
+    if (!sub || !a) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await recorder?.recordSubmit(); // last snapshot + submit marker, while edits are still accepted
+      await api(`/submissions/${sub.id}/submit`, { body: { doc: docRef.current } });
+      navigate(`/student/assignments/${a.id}/viva`);
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : "Couldn't submit. Check your connection and try again.");
+      setSubmitting(false);
+    }
+  };
+
   // ------------------------------------------------ the journey
   const explained = messages.some((m) => m.role === "student") && (workflow === "explain_first" || hasRun);
   const written = startedWriting && a != null && doc.trim() !== a.starterCode.trim();
@@ -268,7 +287,7 @@ export function Workspace() {
             ? workflow === "explain_first"
               ? { text: "Tell Ustaad what your code should do and how, in plain words. Running unlocks when your plan is clear.", button: { label: "Explain my plan to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
               : { text: "Tell Ustaad, in your own words, why your code gives that output.", button: { label: "Explain to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
-            : { text: `Ready to hand in? ${vivaLine}`, button: { label: "Submit and start the viva (arriving next)", icon: Lock, onClick: () => {}, disabled: true } };
+            : { text: `Ready to hand in? ${vivaLine}`, button: { label: "Submit (you can't edit after this)", icon: Send, onClick: () => setConfirmOpen(true) } };
 
   const starters =
     workflow === "explain_first"
@@ -327,10 +346,23 @@ export function Workspace() {
             </ul>
           </div>
 
-          {sub && sub.status !== "in_progress" && (
-            <Card className="mb-5 flex items-center gap-3 border-done-line bg-done-soft p-4">
-              <CheckCircle2 className="size-6 text-done" aria-hidden />
-              <p className="font-medium text-done">Submitted{sub.submittedAt ? ` on ${formatDateTime(sub.submittedAt)}` : ""}. Your work can't be changed now.</p>
+          {sub && sub.status === "viva_in_progress" && (
+            <Card className="mb-5 flex flex-wrap items-center justify-between gap-3 border-attention-line bg-attention-soft p-4">
+              <p className="font-medium text-ink">Your work is submitted, but your viva isn't finished yet.</p>
+              <Link to={`/student/assignments/${a.id}/viva`} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-action px-4 font-semibold text-white hover:bg-action-hover">
+                Continue your viva <ArrowRight className="size-5" aria-hidden />
+              </Link>
+            </Card>
+          )}
+          {sub && (sub.status === "submitted" || sub.status === "graded") && (
+            <Card className="mb-5 flex flex-wrap items-center justify-between gap-3 border-done-line bg-done-soft p-4">
+              <p className="flex items-center gap-2 font-medium text-done">
+                <CheckCircle2 className="size-5" aria-hidden />
+                Submitted{sub.submittedAt ? ` on ${formatDateTime(sub.submittedAt)}` : ""}. Your work can't be changed now.
+              </p>
+              <Link to={`/student/assignments/${a.id}/viva`} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-done-line bg-surface px-4 font-semibold text-done hover:bg-done-soft">
+                See your results <ArrowRight className="size-5" aria-hidden />
+              </Link>
             </Card>
           )}
           {!a.open && !sub && (
@@ -460,6 +492,22 @@ export function Workspace() {
           </div>
         </>
       )}
+      <Dialog open={confirmOpen} title="Submit and start your viva?" onClose={() => !submitting && setConfirmOpen(false)}>
+        <ul className="space-y-2 text-[15px] text-ink-2">
+          <li className="flex gap-2"><Lock className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden /> Your code is locked: you can't edit it after this.</li>
+          <li className="flex gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden /> It's checked against the hidden tests straight away.</li>
+          <li className="flex gap-2"><Timer className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden /> {vivaLine} It can't be paused.</li>
+        </ul>
+        {submitError && <p role="alert" className="mt-3 text-danger">{submitError}</p>}
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={() => setConfirmOpen(false)} disabled={submitting} data-autofocus>
+            Keep working
+          </Button>
+          <Button icon={Send} loading={submitting} onClick={submitWork}>
+            Submit and start the viva
+          </Button>
+        </div>
+      </Dialog>
     </AppShell>
   );
 }
