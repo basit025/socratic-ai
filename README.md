@@ -29,7 +29,7 @@ npm run dev                  # http://localhost:3000 and http://localhost:3000/a
 npm run lint && npm test && npm run build
 ```
 
-`GET /api/health` reports whether the database, Gemini and Groq are reachable, without making a model call.
+`GET /api/health` reports whether the database, Gemini, Groq and OpenRouter are reachable, without making a model call.
 
 ## Third-party APIs and libraries
 
@@ -40,7 +40,8 @@ Every external service, model and library used in this repository is listed here
 | [Vercel](https://vercel.com) | Hosting: CDN for the front end, a serverless function for the API, cron | Hobby plan |
 | [Supabase](https://supabase.com) | Postgres database and authentication | Free plan |
 | [Google Gemini API](https://ai.google.dev) (`gemini-3.1-flash-lite`) | Primary AI model for Ustaad and the viva | Google AI Studio free tier |
-| [Groq API](https://groq.com) (`openai/gpt-oss-120b`) | Automatic fallback AI model | Groq free tier |
+| [Groq API](https://groq.com) (`openai/gpt-oss-120b`) | First automatic fallback AI model | Groq free tier |
+| [OpenRouter](https://openrouter.ai) | Second automatic fallback AI model (model set in `OPENROUTER_MODEL`) | OpenRouter terms; free or credit-based models |
 | [React](https://react.dev) 19 | User interface | MIT |
 | [Vite](https://vite.dev) + `@vitejs/plugin-react` | Front-end build and dev server | MIT |
 | [Express](https://expressjs.com) 5 | API server | MIT |

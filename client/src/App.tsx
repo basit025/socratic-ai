@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 type Health = {
   status: "ok" | "degraded" | "down";
-  checks: Record<"database" | "gemini" | "groq", "ok" | "not_configured" | "error">;
+  checks: Record<"database" | "gemini" | "groq" | "openrouter", "ok" | "not_configured" | "error">;
 };
 
 // Hello-world landing (deploy check). Monday's design work replaces this with the real
@@ -30,7 +30,7 @@ export function App() {
         {failed && "Server: not reachable"}
         {!failed && !health && "Checking the server…"}
         {health &&
-          `Server: ${health.status} · database ${health.checks.database} · Gemini ${health.checks.gemini} · Groq ${health.checks.groq}`}
+          `Server: ${health.status} · database ${health.checks.database} · Gemini ${health.checks.gemini} · Groq ${health.checks.groq} · OpenRouter ${health.checks.openrouter}`}
       </p>
       <p className="note">Build in progress (Capital Youth Expo 2026, Track 1: Education).</p>
     </main>

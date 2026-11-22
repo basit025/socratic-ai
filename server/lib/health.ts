@@ -1,7 +1,8 @@
 /**
  * Cheap dependency checks for GET /api/health.
  * - No model generation: Gemini and Groq are checked with a "get model" metadata call,
- *   which validates the key and the model name without using generation quota.
+ *   which validates the key and the model name without using generation quota;
+ *   OpenRouter is checked with its "current key" endpoint (no tokens used).
  * - Results are cached per function instance for CACHE_MS so a public health URL
  *   can't be used to hammer the providers.
  * - The response never includes keys, URLs or raw provider errors.
@@ -11,7 +12,7 @@ export type CheckStatus = "ok" | "not_configured" | "error";
 
 export interface HealthReport {
   status: "ok" | "degraded" | "down";
-  checks: { database: CheckStatus; gemini: CheckStatus; groq: CheckStatus };
+  checks: { database: CheckStatus; gemini: CheckStatus; groq: CheckStatus; openrouter: CheckStatus };
   llmProvider: string;
   environment: string;
   commit: string | null;
@@ -57,6 +58,12 @@ export async function checkGemini(env: Env, fetchFn: Fetch = fetch): Promise<Che
   });
 }
 
+export async function checkOpenRouter(env: Env, fetchFn: Fetch = fetch): Promise<CheckStatus> {
+  const key = env.OPENROUTER_API_KEY;
+  if (!isSet(key)) return "not_configured";
+  return probe(fetchFn, "https://openrouter.ai/api/v1/key", { Authorization: `Bearer ${key}` });
+}
+
 export async function checkGroq(env: Env, fetchFn: Fetch = fetch): Promise<CheckStatus> {
   const key = env.GROQ_API_KEY;
   if (!isSet(key)) return "not_configured";
@@ -67,12 +74,12 @@ export async function checkGroq(env: Env, fetchFn: Fetch = fetch): Promise<Check
 
 /**
  * down     = the database is unreachable (nothing works without it)
- * degraded = the database is fine but at least one AI provider isn't (fallback may still cover it)
+ * degraded = the database is fine but at least one AI provider isn't (the fallback chain may still cover it)
  * ok       = everything answers
  */
 export function overallStatus(checks: HealthReport["checks"]): HealthReport["status"] {
   if (checks.database !== "ok") return "down";
-  if (checks.gemini !== "ok" || checks.groq !== "ok") return "degraded";
+  if (checks.gemini !== "ok" || checks.groq !== "ok" || checks.openrouter !== "ok") return "degraded";
   return "ok";
 }
 
@@ -86,12 +93,13 @@ export async function getHealth(env: Env = process.env, fetchFn: Fetch = fetch, 
   if (cache && now - cache.at < CACHE_MS) {
     return { ...cache.report, cached: true };
   }
-  const [database, gemini, groq] = await Promise.all([
+  const [database, gemini, groq, openrouter] = await Promise.all([
     checkDatabase(env, fetchFn),
     checkGemini(env, fetchFn),
     checkGroq(env, fetchFn),
+    checkOpenRouter(env, fetchFn),
   ]);
-  const checks = { database, gemini, groq };
+  const checks = { database, gemini, groq, openrouter };
   const report: HealthReport = {
     status: overallStatus(checks),
     checks,

@@ -8,18 +8,20 @@ const fullEnv = {
   SUPABASE_SERVICE_ROLE_KEY: "service",
   GEMINI_API_KEY: "g",
   GROQ_API_KEY: "q",
+  OPENROUTER_API_KEY: "o",
 };
 
 describe("overallStatus", () => {
   it("is down when the database is not ok", () => {
-    expect(overallStatus({ database: "error", gemini: "ok", groq: "ok" })).toBe("down");
-    expect(overallStatus({ database: "not_configured", gemini: "ok", groq: "ok" })).toBe("down");
+    expect(overallStatus({ database: "error", gemini: "ok", groq: "ok", openrouter: "ok" })).toBe("down");
+    expect(overallStatus({ database: "not_configured", gemini: "ok", groq: "ok", openrouter: "ok" })).toBe("down");
   });
   it("is degraded when an AI provider is not ok", () => {
-    expect(overallStatus({ database: "ok", gemini: "error", groq: "ok" })).toBe("degraded");
+    expect(overallStatus({ database: "ok", gemini: "error", groq: "ok", openrouter: "ok" })).toBe("degraded");
+    expect(overallStatus({ database: "ok", gemini: "ok", groq: "ok", openrouter: "not_configured" })).toBe("degraded");
   });
   it("is ok when everything answers", () => {
-    expect(overallStatus({ database: "ok", gemini: "ok", groq: "ok" })).toBe("ok");
+    expect(overallStatus({ database: "ok", gemini: "ok", groq: "ok", openrouter: "ok" })).toBe("ok");
   });
 });
 
@@ -29,7 +31,7 @@ describe("getHealth", () => {
   it("reports not_configured without calling anything when keys are missing", async () => {
     const fetchSpy = vi.fn() as unknown as typeof fetch;
     const report = await getHealth({}, fetchSpy, 0);
-    expect(report.checks).toEqual({ database: "not_configured", gemini: "not_configured", groq: "not_configured" });
+    expect(report.checks).toEqual({ database: "not_configured", gemini: "not_configured", groq: "not_configured", openrouter: "not_configured" });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -38,7 +40,7 @@ describe("getHealth", () => {
       throw new Error("offline");
     }) as unknown as typeof fetch;
     const report = await getHealth(fullEnv, failing, 0);
-    expect(report.checks).toEqual({ database: "error", gemini: "error", groq: "error" });
+    expect(report.checks).toEqual({ database: "error", gemini: "error", groq: "error", openrouter: "error" });
     expect(report.status).toBe("down");
   });
 

@@ -41,8 +41,9 @@ Before any merge that touches these flows, run through the path manually on the 
 - Front end: React 19 + Vite + TypeScript (strict) + Tailwind 4 + shadcn/ui (Radix). Editor: CodeMirror or Monaco with paste interception.
 - Back end: Express (Node, TypeScript). Database, auth and storage: Supabase (Postgres).
 - AI: `server/llm.ts` is the **only** module that calls a model.
-  - Primary: Google Gemini `gemini-3.1-flash-lite` (free tier). Backup: Groq `openai/gpt-oss-120b` (free tier); Whisper on Groq for the voice viva.
-  - Provider is chosen by `LLM_PROVIDER`; on a 429 or 5xx from Gemini, retry once, then fall back to Groq automatically.
+  - **Fallback chain: Gemini → Groq → OpenRouter.** Primary: Google Gemini `gemini-3.1-flash-lite`. Backup 1: Groq `openai/gpt-oss-120b` (also Whisper for the voice viva). Backup 2: OpenRouter, model set by `OPENROUTER_MODEL` (must support structured outputs).
+  - `LLM_PROVIDER` picks the first provider. On a 429, 5xx or timeout: retry once, then move to the next configured provider in the chain; a provider that returned 429 is skipped for 60 s. Providers with no key are skipped.
+  - **Key policy:** one account per provider per environment (Production = R1's accounts, Preview = one teammate's accounts, local = each developer's own accounts). Never rotate keys from several accounts of the same provider to multiply free quota: it breaks the providers' terms (Google's API terms forbid circumventing limits) and risks a ban during judging. If quota runs short, add paid credit instead.
   - All model output uses structured JSON validated against a schema (zod); on invalid JSON, retry once, then show a friendly error. Never crash the workspace.
   - Separate keys for development and demo (`GEMINI_API_KEY`, `GROQ_API_KEY`, set per environment). Gemini's free daily quota resets at midnight Pacific = **1 PM PKT**.
 - Deploy: **one Vercel project (Hobby) + Supabase (free)**. See "Deployment" below. **Never use Render's free tier** (it sleeps after 15 min and takes about a minute to wake).
@@ -82,6 +83,8 @@ Listed in `.env.example`. Set separately for **Production** and **Preview**; loc
 | --- | --- | --- |
 | `GEMINI_API_KEY` | server only | **different keys** (separate Google Cloud projects) |
 | `GROQ_API_KEY` | server only | **different keys** |
+| `OPENROUTER_API_KEY` | server only | **different keys** (different accounts) |
+| `OPENROUTER_MODEL` | server only | same model id in both |
 | `LLM_PROVIDER` | server only | `gemini` in both |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | browser + server | production vs preview Supabase project |
 | `SUPABASE_SERVICE_ROLE_KEY` | **server only**; never sent to the browser, never `VITE_`-prefixed | production vs preview Supabase project |
@@ -90,7 +93,7 @@ Listed in `.env.example`. Set separately for **Production** and **Preview**; loc
 Only variables prefixed `VITE_` reach the browser bundle. Never give the service-role key or any AI key that prefix.
 
 ### Endpoints that protect the live link
-- **`GET /api/health`** reports `database`, `gemini`, `groq` as `ok | not_configured | error`, plus `status` (`ok`, `degraded` = an AI provider is down, `down` = the database is down, HTTP 503). It is cheap: no model generation (the AI checks are model-metadata GETs), results cached 60 s per instance, no secrets in the output.
+- **`GET /api/health`** reports `database`, `gemini`, `groq`, `openrouter` as `ok | not_configured | error`, plus `status` (`ok`, `degraded` = an AI provider is down, `down` = the database is down, HTTP 503). It is cheap: no model generation (the AI checks are model-metadata GETs), results cached 60 s per instance, no secrets in the output.
 - **`GET /api/cron/reset-demo`**, called by Vercel Cron at `0 22 * * *` UTC (**03:00 PKT**; Hobby runs cron at most once a day and may fire up to 59 min late). It returns 401 unless `Authorization` is exactly `Bearer ${CRON_SECRET}` (constant-time compare). It deletes expired demo sandboxes, and the daily database activity keeps the free Supabase project from pausing (Supabase pauses after 7 days of low activity).
 
 ### Private demo sandboxes (Try as teacher / Try as student)
@@ -100,7 +103,7 @@ Only variables prefixed `VITE_` reach the browser bundle. Never give the service
 
 ### Protecting the AI quota
 - Rate-limit AI calls per sandbox and per IP, with a friendly message when a limit is hit. Counters live in Postgres (serverless instances share no memory).
-- Gemini 429/5xx → retry once → Groq takes over automatically (in `server/llm.ts`).
+- Gemini 429/5xx → retry once → Groq → OpenRouter, automatically (in `server/llm.ts`).
 - Seeded submissions use pre-generated viva transcripts and summaries; seeding never calls a model.
 
 ### Performance and stability
