@@ -151,6 +151,35 @@ async function main() {
     ok(`viva finished; results screen shows viva score ${score}`);
     await shot(s, "11-viva-results");
 
+    // ------------------------------------------------ "See what your teacher sees": the judge's own work as a report
+    await s.locator("button ::-p-text(See what your teacher sees)").click();
+    await s.waitForFunction(() => location.pathname.startsWith("/teacher/submissions/") && document.body.innerText.includes("How the work was made"), { timeout: 30000 });
+    ok("switched to the teacher's integrity report of the same submission");
+    const report = await s.$eval("body", (b) => b.innerText);
+    report.includes("Viva on their own code") && report.includes("Hidden tests") ? ok("report shows viva transcript and hidden tests") : fail("report sections missing");
+    (await s.$$("[aria-label='Session timeline'] button")).length > 0 ? ok("replay timeline has markers") : fail("no timeline markers");
+    await s.setViewport({ width: 1920, height: 1080 });
+    await shot(s, "12-teacher-report-1920");
+    await s.locator("button ::-p-text(Looks fine)").click();
+    await s
+      .waitForFunction(() => document.body.innerText.includes("Saved") || document.querySelector("[role=alert]"), { timeout: 20000 })
+      .catch(() => {});
+    const decisionText = await s.$eval("body", (b) => b.innerText);
+    if (decisionText.includes("Saved")) ok("teacher decision saved");
+    else {
+      const alert = await s.$eval("[role=alert]", (e) => (e as HTMLElement).innerText).catch(() => "no alert shown");
+      await shot(s, "fail-decision");
+      fail(`teacher decision not saved: ${alert}`);
+    }
+    await s.locator("a ::-p-text(all submissions)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("Tick 2 students to compare"), { timeout: 15000 });
+    (await s.$eval("body", (b) => b.innerText.includes("Looks fine"))) ? ok("submissions list shows the decision") : fail("decision not shown in list");
+    await shot(s, "13-teacher-submissions-1920");
+    await s.setViewport({ width: 1440, height: 900 });
+    await s.locator("button ::-p-text(Student view)").click();
+    await s.waitForFunction(() => location.pathname === "/student", { timeout: 15000 });
+    ok("switched back to the student view");
+
     await s.setViewport({ width: 390, height: 844, isMobile: true });
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "3-student-home-mobile");

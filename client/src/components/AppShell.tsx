@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
-import { LogOut } from "lucide-react";
+import { ArrowLeftRight, LogOut } from "lucide-react";
 import { api } from "../lib/api";
 import { useMe } from "../lib/session";
 import { Logo } from "./Logo";
@@ -22,6 +22,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const me = useMe();
   const navigate = useNavigate();
   const [leaving, setLeaving] = useState(false);
+  const [switching, setSwitching] = useState(false);
+
+  // Demo only: see the same sandbox through the other role's eyes.
+  const switchRole = async () => {
+    setSwitching(true);
+    try {
+      const r = await api<{ home: string }>("/demo/switch", { body: {} });
+      window.location.assign(r.home); // full reload so every screen re-reads the new role
+    } catch {
+      setSwitching(false);
+    }
+  };
 
   const leave = async () => {
     setLeaving(true);
@@ -50,6 +62,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="block text-ink-3">{me.role === "teacher" ? "Teacher" : "Student"}</span>
               </span>
             </div>
+            <Button variant="ghost" icon={ArrowLeftRight} loading={switching} onClick={switchRole} title={`See this demo as the ${me.role === "teacher" ? "student" : "teacher"}`}>
+              <span className="hidden lg:inline">{me.role === "teacher" ? "Student view" : "Teacher view"}</span>
+            </Button>
             <Button variant="ghost" icon={LogOut} loading={leaving} onClick={leave} title="Leave this demo and go back to the start page">
               <span className="hidden sm:inline">Leave demo</span>
             </Button>

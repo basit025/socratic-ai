@@ -108,7 +108,7 @@ export async function generateQuestion(c: QuestionContext): Promise<{ prompt: st
       maxOutputTokens: 300,
       temperature: 0.5,
       sandboxId: c.sandboxId,
-      timeoutMs: 8_000,
+      timeoutMs: 6_000,
     });
     const call = c.kind === "predict_output" && validInputCall(r.data.input_call, c.code) ? r.data.input_call : null;
     if (c.kind === "predict_output" && !call) return { ...fallbackQuestion("explain_line", c.code), fallback: true };

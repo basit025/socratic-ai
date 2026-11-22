@@ -1,0 +1,251 @@
+/**
+ * Teacher views: an assignment's submissions, one submission's integrity report, and decisions.
+ * Every query checks the assignment belongs to a course this teacher teaches, in their sandbox.
+ * Teachers may see expected test answers (students never do).
+ */
+import { Router } from "express";
+import { z } from "zod";
+import { requireSession } from "../lib/auth.js";
+import { eq, select, update } from "../lib/db.js";
+import { notFound, PublicError } from "../lib/errors.js";
+import { expectedFor, type HiddenTest, type MarkedTest } from "../integrity/grading.js";
+import type { VariantSpec } from "../lib/variants.js";
+import type { VivaQuestion } from "../viva.js";
+import type { ProcessEvent } from "../../shared/events.js";
+
+export const teacherRouter = Router();
+
+const uuid = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
+type SubStatus = "in_progress" | "submitted" | "viva_in_progress" | "graded";
+
+interface FlagRow {
+  id: string;
+  rule: string;
+  severity: "low" | "medium" | "high";
+  message: string;
+  evidence: { from_seq: number; to_seq: number };
+  teacher_status: "open" | "dismissed" | "followed_up";
+}
+
+const severityRank = { high: 3, medium: 2, low: 1 } as const;
+
+// ---------------------------------------------------------------- an assignment's submissions
+teacherRouter.get("/teacher/assignments/:id", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const id = String(req.params.id);
+    if (!uuid(id)) throw notFound("That assignment");
+    const [a] = await select<{
+      id: string;
+      title: string;
+      type: string;
+      status: "draft" | "published" | "closed";
+      due_at: string | null;
+      marks: number;
+      instructions_md: string;
+      course: { id: string; code: string; name: string; section: string | null };
+      rules: { paste_blocked: boolean; workflow: string; viva_questions: number; viva_seconds_per_q: number; viva_weight: number; variants_on: boolean } | null;
+    }>(
+      `assignments?select=id,title,type,status,due_at,marks,instructions_md,course:courses!inner(id,code,name,section,teacher_id),rules:integrity_rules(paste_blocked,workflow,viva_questions,viva_seconds_per_q,viva_weight,variants_on)&id=${eq(id)}&sandbox_id=${eq(sid)}&course.teacher_id=${eq(pid)}`,
+    );
+    if (!a) throw notFound("That assignment");
+    const [roster, subs] = await Promise.all([
+      select<{ student: { id: string; full_name: string; initials: string } }>(`enrollments?select=student:profiles(id,full_name,initials)&course_id=${eq(a.course.id)}`),
+      select<{
+        id: string;
+        student_id: string;
+        status: SubStatus;
+        tests_passed: number | null;
+        tests_total: number | null;
+        viva_score: number | null;
+        suggested_grade: number | null;
+        final_grade: number | null;
+        teacher_decision: string | null;
+        submitted_at: string | null;
+        flags: Pick<FlagRow, "rule" | "severity" | "teacher_status" | "message">[];
+      }>(
+        `submissions?select=id,student_id,status,tests_passed,tests_total,viva_score,suggested_grade,final_grade,teacher_decision,submitted_at,flags(rule,severity,teacher_status,message)&assignment_id=${eq(a.id)}&sandbox_id=${eq(sid)}`,
+      ),
+    ]);
+    const byStudent = new Map(subs.map((s) => [s.student_id, s]));
+    const rows = roster
+      .map(({ student }) => {
+        const s = byStudent.get(student.id);
+        const open = s?.flags.filter((f) => f.teacher_status === "open") ?? [];
+        return {
+          student: { id: student.id, name: student.full_name, initials: student.initials },
+          submission: s
+            ? {
+                id: s.id,
+                status: s.status,
+                testsPassed: s.tests_passed,
+                testsTotal: s.tests_total,
+                vivaScore: s.viva_score,
+                grade: s.final_grade ?? s.suggested_grade,
+                decision: s.teacher_decision,
+                submittedAt: s.submitted_at,
+                openFlags: open.map((f) => ({ rule: f.rule, severity: f.severity, message: f.message })),
+                maxSeverity: open.reduce((m, f) => Math.max(m, severityRank[f.severity]), 0),
+              }
+            : null,
+        };
+      })
+      .sort((x, y) => {
+        const rank = (r: (typeof rows)[number]) =>
+          !r.submission ? 0 : r.submission.status === "in_progress" ? 1 : r.submission.status === "viva_in_progress" ? 2 : 3;
+        return (y.submission?.maxSeverity ?? 0) - (x.submission?.maxSeverity ?? 0) || rank(y) - rank(x) || x.student.name.localeCompare(y.student.name);
+      });
+    res.set("Cache-Control", "no-store").json({
+      assignment: {
+        id: a.id,
+        title: a.title,
+        status: a.status,
+        dueAt: a.due_at,
+        marks: a.marks,
+        course: { id: a.course.id, code: a.course.code, name: a.course.name, section: a.course.section },
+        rules: a.rules && { pasteBlocked: a.rules.paste_blocked, workflow: a.rules.workflow, vivaQuestions: a.rules.viva_questions, vivaSecondsPerQ: a.rules.viva_seconds_per_q, vivaWeight: a.rules.viva_weight, variantsOn: a.rules.variants_on },
+      },
+      rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- one submission's integrity report
+async function teacherSubmission(sid: string, pid: string, id: string) {
+  if (!uuid(id)) throw notFound("That submission");
+  const [s] = await select<{
+    id: string;
+    status: SubStatus;
+    content: string;
+    last_output: string | null;
+    test_results: MarkedTest[] | null;
+    tests_passed: number | null;
+    tests_total: number | null;
+    viva_score: number | null;
+    suggested_grade: number | null;
+    final_grade: number | null;
+    teacher_comment: string | null;
+    teacher_decision: string | null;
+    started_at: string;
+    submitted_at: string | null;
+    event_source_id: string | null;
+    student: { id: string; full_name: string; initials: string };
+    variant: { params: Record<string, string>; rendered_instructions: string } | null;
+    assignment: {
+      id: string;
+      title: string;
+      marks: number;
+      starter_code: string;
+      instructions_md: string;
+      course: { id: string; code: string; teacher_id: string };
+      rules: { viva_weight: number; paste_blocked: boolean } | null;
+      secrets: { hidden_tests: HiddenTest[]; variant_spec: VariantSpec } | null;
+    };
+  }>(
+    `submissions?select=id,status,content,last_output,test_results,tests_passed,tests_total,viva_score,suggested_grade,final_grade,teacher_comment,teacher_decision,started_at,submitted_at,event_source_id,student:profiles(id,full_name,initials),variant:variants(params,rendered_instructions),assignment:assignments!inner(id,title,marks,starter_code,instructions_md,course:courses!inner(id,code,teacher_id),rules:integrity_rules(viva_weight,paste_blocked),secrets:assignment_secrets(hidden_tests,variant_spec))&id=${eq(id)}&sandbox_id=${eq(sid)}&assignment.course.teacher_id=${eq(pid)}`,
+  );
+  if (!s) throw notFound("That submission");
+  return s;
+}
+
+teacherRouter.get("/teacher/submissions/:id", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const s = await teacherSubmission(sid, pid, String(req.params.id));
+    const logId = s.event_source_id ?? s.id; // demo copies replay the seed submission's log
+    const [events, flags, vivas, messages] = await Promise.all([
+      select<{ seq: number; type: ProcessEvent["type"]; payload: unknown; client_time: string; server_time: string }>(
+        `process_events?select=seq,type,payload,client_time,server_time&submission_id=${eq(logId)}&order=seq`,
+      ),
+      select<FlagRow>(`flags?select=id,rule,severity,message,evidence,teacher_status&submission_id=${eq(s.id)}&order=created_at`),
+      select<{ status: string; questions: VivaQuestion[]; understanding_score: number | null; summary: string | null; rubric: Record<string, unknown> | null }>(
+        `viva_sessions?select=status,questions,understanding_score,summary,rubric&submission_id=${eq(s.id)}`,
+      ),
+      select<{ role: "student" | "ustaad"; body: string; hint: string | null; created_at: string }>(
+        `ustaad_messages?select=role,body,hint,created_at&submission_id=${eq(s.id)}&order=created_at`,
+      ),
+    ]);
+    const param = s.assignment.secrets?.variant_spec?.param;
+    const option = param && s.variant ? (s.variant.params[param] ?? null) : null;
+    const tests = (s.assignment.secrets?.hidden_tests ?? []).map((t) => {
+      const marked = s.test_results?.find((m) => m.name === t.name);
+      return { name: t.name, call: t.call, expected: expectedFor(t, option), actual: marked?.actual ?? null, passed: marked?.passed ?? null };
+    });
+    const viva = vivas[0];
+    res.set("Cache-Control", "no-store").json({
+      submission: {
+        id: s.id,
+        status: s.status,
+        code: s.content,
+        startedAt: s.started_at,
+        submittedAt: s.submitted_at,
+        testsPassed: s.tests_passed,
+        testsTotal: s.tests_total,
+        vivaScore: s.viva_score,
+        suggestedGrade: s.suggested_grade,
+        finalGrade: s.final_grade,
+        decision: s.teacher_decision,
+        comment: s.teacher_comment,
+      },
+      student: { id: s.student.id, name: s.student.full_name, initials: s.student.initials },
+      assignment: { id: s.assignment.id, title: s.assignment.title, marks: s.assignment.marks, starterCode: s.assignment.starter_code, courseCode: s.assignment.course.code, vivaWeight: s.assignment.rules?.viva_weight ?? 50, variant: option },
+      // Times: client time drives the replay; server time is the tamper-proof record.
+      events: events.map((e) => ({ seq: e.seq, t: Date.parse(e.client_time), serverTime: e.server_time, type: e.type, payload: e.payload })),
+      flags: flags.map((f) => ({ id: f.id, rule: f.rule, severity: f.severity, message: f.message, fromSeq: f.evidence.from_seq, toSeq: f.evidence.to_seq, status: f.teacher_status })),
+      viva: viva && {
+        status: viva.status,
+        score: viva.understanding_score,
+        summary: viva.summary,
+        rubric: viva.rubric,
+        questions: viva.questions.map((q) => ({
+          kind: q.kind,
+          prompt: q.prompt,
+          answer: q.answer ?? "",
+          secondsAllowed: q.seconds_allowed,
+          secondsTaken: q.answered_at ? Math.round((Date.parse(q.answered_at) - Date.parse(q.asked_at)) / 1000) : null,
+          late: Boolean(q.late),
+          awayMs: q.away_ms ?? 0,
+          check: q.auto_check ?? null,
+          score: q.score ?? null,
+          feedback: q.feedback ?? null,
+        })),
+      },
+      messages: messages.map((m) => ({ role: m.role, text: m.body, hint: m.hint, at: m.created_at })),
+      tests,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- the teacher's decision
+const DecisionBody = z.object({
+  decision: z.enum(["looks_fine", "talk_to_student"]),
+  comment: z.string().max(1000).optional(),
+  finalGrade: z.number().min(0).max(1000).nullable().optional(),
+});
+
+teacherRouter.post("/teacher/submissions/:id/decision", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const body = DecisionBody.safeParse(req.body);
+    if (!body.success) throw new PublicError(400, "Choose \"Looks fine\" or \"Talk to student\".", "bad_decision");
+    const s = await teacherSubmission(sid, pid, String(req.params.id));
+    if (s.status === "in_progress" || s.status === "viva_in_progress") throw new PublicError(409, "The student hasn't finished yet.", "not_finished");
+    if (body.data.finalGrade != null && body.data.finalGrade > s.assignment.marks) throw new PublicError(400, `The mark can't be more than ${s.assignment.marks}.`, "bad_grade");
+    const patch: Record<string, unknown> = { teacher_decision: body.data.decision };
+    if (body.data.comment !== undefined) patch.teacher_comment = body.data.comment;
+    if (body.data.finalGrade !== undefined) {
+      patch.final_grade = body.data.finalGrade;
+      patch.status = body.data.finalGrade == null ? "submitted" : "graded";
+      patch.graded_at = body.data.finalGrade == null ? null : new Date().toISOString();
+    }
+    await update("submissions", `id=${eq(s.id)}`, patch);
+    await update("flags", `submission_id=${eq(s.id)}&teacher_status=eq.open`, { teacher_status: body.data.decision === "looks_fine" ? "dismissed" : "followed_up" });
+    res.json({ ok: true, decision: body.data.decision });
+  } catch (err) {
+    next(err);
+  }
+});
