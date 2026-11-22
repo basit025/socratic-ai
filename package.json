@@ -2,7 +2,7 @@
   "name": "socratic-ai",
   "private": true,
   "version": "0.1.0",
-  "description": "Socratic AI: Strong Fundamentals in the Age of AI. A learning platform that verifies learning with process evidence and a viva on the student's own work.",
+  "description": "Socratic AI: Strong Fundamentals in the Age of AI. A learning platform where students do their work in one workspace and the AI mentor Ustaad runs a short viva on each student's own work, so marks reflect what they understand.",
   "type": "module",
   "engines": {
     "node": "22.x"
@@ -31,5 +31,10 @@
     "typescript": "5.9.3",
     "vite": "8.3.8",
     "vitest": "5.1.1"
+  },
+  "homepage": "https://socratic-ai-pk.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/basit025/socratic-ai.git"
   }
 }

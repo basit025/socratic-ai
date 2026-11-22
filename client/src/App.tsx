@@ -23,8 +23,8 @@ export function App() {
       <h1>Socratic AI</h1>
       <p className="tagline">Strong Fundamentals in the Age of AI</p>
       <p className="lead">
-        A learning platform where students do their work in one place, and an AI mentor asks each student
-        about their own work, so marks reflect what they understand.
+        A learning platform where students do their work in one workspace and the AI mentor Ustaad runs a
+        short viva on each student's own work, so marks reflect what they understand.
       </p>
       <p className="status" role="status">
         {failed && "Server: not reachable"}
