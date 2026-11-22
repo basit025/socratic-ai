@@ -126,6 +126,31 @@ async function main() {
     await s.waitForFunction(() => document.body.innerText.includes("In progress"), { timeout: 10000 });
     ok('student home now shows "In progress"');
 
+    // ------------------------------------------------ submit → hidden tests → viva → results
+    await s.locator("a ::-p-text(Continue assignment)").click();
+    await s.waitForSelector(".cm-content", { timeout: 20000 });
+    await s.locator("button ::-p-text(Submit (you can't edit after this))").click();
+    await s.waitForSelector("[role=dialog]");
+    ok("submit asks for confirmation and previews the viva");
+    await shot(s, "8-submit-dialog");
+    await s.locator("[role=dialog] button ::-p-text(Submit and start the viva)").click();
+    await s.waitForFunction(() => location.pathname.endsWith("/viva") && document.body.innerText.includes("Start viva"), { timeout: 40000 });
+    const testsChip = await s.$eval("body", (b) => /Hidden tests: (\d+)\/(\d+) passed/.exec(b.innerText)?.[0] ?? "none");
+    ok(`hidden tests ran in the browser and were marked on the server: ${testsChip}`);
+    await shot(s, "9-viva-intro");
+    await s.locator("button ::-p-text(Start viva)").click();
+    for (let i = 0; i < 3; i++) {
+      await s.waitForSelector("#viva-answer:not([disabled])", { timeout: 40000 });
+      await s.waitForFunction((n) => document.body.innerText.includes(`Question ${n} of 3`), { timeout: 40000 }, i + 1);
+      if (i === 0) await shot(s, "10-viva-question");
+      await s.type("#viva-answer", "It adds every ball's runs to the total, and counts a big hit when the runs are at least the boundary.");
+      await s.locator(`button ::-p-text(${i === 2 ? "Finish viva" : "Next question"})`).click();
+    }
+    await s.waitForFunction(() => document.body.innerText.includes("Submitted. Well done"), { timeout: 60000 });
+    const score = await s.$eval("body", (b) => /Viva score\s*(\S+)/.exec(b.innerText)?.[1] ?? "?");
+    ok(`viva finished; results screen shows viva score ${score}`);
+    await shot(s, "11-viva-results");
+
     await s.setViewport({ width: 390, height: 844, isMobile: true });
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "3-student-home-mobile");

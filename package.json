@@ -17,7 +17,8 @@
     "check-secrets": "bash scripts/check-secrets.sh",
     "smoke:llm": "tsx scripts/smoke-llm.ts",
     "seed": "tsx server/seed/seed.ts",
-    "smoke:ui": "tsx scripts/smoke-ui.ts"
+    "smoke:ui": "tsx scripts/smoke-ui.ts",
+    "e2e:viva": "tsx scripts/e2e-viva.ts"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
