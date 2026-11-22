@@ -1,0 +1,16 @@
+node_modules/
+dist/
+client/dist/
+.vercel/
+coverage/
+*.log
+.DS_Store
+
+# Secrets: never commit real env files
+.env
+.env.*
+!.env.example
+
+# Local-only inputs
+socratic-ai.zip
+04-hackathon.pdf
