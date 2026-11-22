@@ -3,8 +3,10 @@
  *
  * Fallback chain: LLM_PROVIDER first (default gemini), then the others in the order
  * gemini → groq → openrouter, skipping providers with no key.
- * - 429 / 5xx / timeout: retry once on the same provider, then move on. After a 429 the
- *   provider is skipped for 60 s (per function instance).
+ * - 429 / 5xx: retry once on the same provider, then move on. After a 429 the provider is
+ *   skipped for 60 s (per function instance).
+ * - Timeout (default 12 s, per request): move on immediately; a hung provider usually hangs again,
+ *   and a student is waiting.
  * - 400 / 401 / 403 / 404: a configuration problem; move on immediately.
  * - Output that isn't valid JSON or doesn't match the schema: retry once, then move on.
  * - Every attempt is logged to ai_usage (tokens, latency) for the cost slide. Never logs keys or prompts.
@@ -18,7 +20,7 @@ type Env = Record<string, string | undefined>;
 
 export const DEFAULT_ORDER: readonly Provider[] = ["gemini", "groq", "openrouter"];
 export const COOLDOWN_MS = 60_000;
-const CALL_TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_MS = 12_000;
 
 export function modelFor(provider: Provider, env: Env): string {
   if (provider === "gemini") return "gemini-3.1-flash-lite";
@@ -45,6 +47,7 @@ export interface LlmRequest<T> {
   temperature?: number;
   maxOutputTokens?: number;
   sandboxId?: string | null;
+  timeoutMs?: number;            // per provider call; interactive hints use ~6 s
 }
 
 export interface Attempt {
@@ -115,14 +118,14 @@ function classifyHttp(status: number): FailureKind {
   return "client";
 }
 
-async function postJson(fetchFn: typeof fetch, url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
+async function postJson(fetchFn: typeof fetch, url: string, headers: Record<string, string>, body: unknown, timeoutMs: number): Promise<unknown> {
   let res: Response;
   try {
     res = await fetchFn(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (err) {
     const name = (err as { name?: string })?.name;
@@ -152,6 +155,7 @@ async function callGemini<T>(req: LlmRequest<T>, model: string, key: string, fet
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     { "x-goog-api-key": key },
     body,
+    req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   )) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
     usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
@@ -184,7 +188,7 @@ async function callOpenAiCompatible<T>(
   }
   const headers: Record<string, string> = { Authorization: `Bearer ${key}` };
   if (provider === "openrouter") headers["X-Title"] = "Socratic AI";
-  const json = (await postJson(fetchFn, url, headers, body)) as {
+  const json = (await postJson(fetchFn, url, headers, body, req.timeoutMs ?? DEFAULT_TIMEOUT_MS)) as {
     choices?: { message?: { content?: string | null } }[];
     usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
@@ -257,7 +261,7 @@ export async function generateJson<T>(req: LlmRequest<T>, deps: LlmDeps = {}): P
         const attempt: Attempt = { provider, model, ok: false, errorCode: failure.code, latencyMs: now() - started };
         attempts.push(attempt);
         void logUsage(attempt, req.purpose, req.sandboxId ?? null).catch(() => {});
-        if (failure.kind === "client") break;                       // config problem: next provider
+        if (failure.kind === "client" || failure.kind === "timeout") break; // config problem or hung: next provider
         if (attemptNo === 2) {
           if (failure.kind === "rate_limited") cooldownUntil.set(provider, now() + COOLDOWN_MS);
           break;

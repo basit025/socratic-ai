@@ -84,6 +84,48 @@ async function main() {
       reprs?.[0] === "(14, 2)" && reprs?.[1] === "(0, 0)" && reprs?.[2]?.startsWith("error") ? ok(`hidden-test calls → ${JSON.stringify(reprs)}`) : fail(`tests: ${JSON.stringify(r7)}`);
     }
 
+    // ------------------------------------------------ workspace: a real student session
+    await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.waitForFunction(() => document.body.innerText.includes("Open assignment") || document.body.innerText.includes("Continue assignment"), { timeout: 15000 });
+    await s.locator("a ::-p-text(assignment)").click();
+    await s.waitForSelector(".cm-content", { timeout: 20000 });
+    ok("workspace opened with the code editor");
+    (await s.$eval("nav[aria-label='Your progress on this assignment']", (n) => (n as HTMLElement).innerText.includes("Submit + viva"))) ? ok("journey stepper visible") : fail("stepper missing");
+    await s.click(".cm-content");
+    await s.keyboard.down("Control");
+    await s.keyboard.press("a");
+    await s.keyboard.up("Control");
+    await s.keyboard.type("over_summary = lambda balls: (sum(balls), len([r for r in balls if r >= 6]))\nprint(over_summary([1, 4, 0, 6, 2, 1]))", { delay: 5 });
+    const typed = await s.$eval(".cm-content", (e) => (e as HTMLElement).innerText);
+    typed.includes("lambda balls") ? ok("typing recorded in the editor") : fail(`editor text: ${typed.slice(0, 80)}`);
+    await s.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.setData("text/plain", "print('pasted from ChatGPT')");
+      document.querySelector(".cm-content")!.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+    });
+    await s.waitForFunction(() => document.body.innerText.includes("Paste is off for this assignment"), { timeout: 5000 });
+    (await s.$eval(".cm-content", (e) => (e as HTMLElement).innerText.includes("pasted from ChatGPT"))) ? fail("paste got through") : ok("paste blocked, with an inline explanation");
+    await s.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => b.textContent?.includes("Run my code") && !b.disabled), { timeout: 30000 });
+    await s.locator("button ::-p-text(Run my code)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("(14, 1)"), { timeout: 15000 });
+    ok("Run my code → output (14, 1)");
+    await s.waitForFunction(() => /Saved (just now|\d+ s ago)/.test(document.body.innerText), { timeout: 15000 });
+    ok("autosaved");
+    await shot(s, "6-workspace-1440");
+    await s.reload({ waitUntil: "domcontentloaded" });
+    await s.waitForSelector(".cm-content", { timeout: 20000 });
+    (await s.$eval(".cm-content", (e) => (e as HTMLElement).innerText.includes("lambda balls"))) ? ok("work survives a page reload") : fail("work lost on reload");
+    await s.type("#ustaad-input", "Why does my code print 14 for the total?");
+    await s.keyboard.press("Enter");
+    const t4 = Date.now();
+    await s.waitForFunction(() => [...document.querySelectorAll("p")].filter((p) => p.textContent === "Ustaad").length >= 1, { timeout: 40000 });
+    ok(`Ustaad replied in ${Date.now() - t4} ms`);
+    await s.setViewport({ width: 1920, height: 1080 });
+    await shot(s, "7-workspace-ustaad-1920");
+    await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.waitForFunction(() => document.body.innerText.includes("In progress"), { timeout: 10000 });
+    ok('student home now shows "In progress"');
+
     await s.setViewport({ width: 390, height: 844, isMobile: true });
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "3-student-home-mobile");

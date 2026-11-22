@@ -20,6 +20,7 @@
     "smoke:ui": "tsx scripts/smoke-ui.ts"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/lang-python": "^6.2.1",
     "@codemirror/state": "^6.7.6",

@@ -237,6 +237,7 @@ workspaceRouter.post("/submissions/:id/ustaad", requireSession("student"), async
         schemaName: "ustaad_reply",
         maxOutputTokens: 600,
         sandboxId: sid,
+        timeoutMs: 6_000,
       },
     );
     const r = result.data;
