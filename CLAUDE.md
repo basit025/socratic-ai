@@ -38,6 +38,14 @@ Before any merge that touches these flows, run through the path manually on the 
 2. **Then:** written answers (FR-10); timed quizzes with fullscreen tracking (FR-13, FR-16); handwritten capture with code word + AI reading (FR-11, FR-12).
 
 **Rules for priority 2:** work starts only after the demo path runs end to end on the live link. Each feature stays behind a feature flag (off in production) until it works end to end, so a half-built feature never shows a judge a dead end. **Tripwire (from the proposal):** if the viva isn't working by Wednesday night, priority-2 features stay off for the demo; Friday is never used for feature work.
+**Canonical facts (use exactly these everywhere: README, GitHub About, page metadata, video, deck):**
+- Name and tagline: **Socratic AI: Strong Fundamentals in the Age of AI**
+- One-line description: "A learning platform where students do their work in one workspace and the AI mentor Ustaad runs a short viva on each student's own work, so marks reflect what they understand."
+- Live URL: **https://socratic-ai-pk.vercel.app** · Repo: **https://github.com/basit025/socratic-ai**
+- Event: Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education
+- Pitch line: "We can't stop a student from asking AI. We make sure they can't get marks for work they don't understand."
+If any of these change, update all of the places above in the same commit (GitHub About via `gh api -X PATCH repos/basit025/socratic-ai`).
+
 **Naming:** in the UI, README, video and deck, call it a **"learning platform"** (or "web platform"). Never call it a "portal", and never call it an "app" unless the installable PWA ships.
 **If time allows:** installable PWA (web manifest + icons, so students can use "Add to Home screen" on Android; no offline mode needed); voice viva.
 **Out of scope:** native Android/iOS app, public API for other LMSs (roadmap only), webcam proctoring, AI-text detectors, LMS export, Safe Exam Browser, admin role, payments.
