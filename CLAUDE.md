@@ -185,6 +185,8 @@ npm run lint       # tsc --noEmit (server + client); eslint to be added; must pa
 npm test           # unit tests: flags, viva JSON parsing, variants, grading
 npm run seed       # rebuild the demo seed on preview (add -- --production for prod); never calls AI
 npm run build
+npm run smoke:llm  # one tiny live call to each AI provider (uses .env.local)
+npm run smoke:ui -- http://localhost:3000   # headless Chrome: landing, both demo roles, Python runner, console errors, screenshots
 ```
 
 ## Definition of done (every feature)

@@ -29,6 +29,26 @@ function config(env: Env) {
   return { base: `${url.replace(/\/$/, "")}/rest/v1`, key };
 }
 
+/**
+ * Reads rows through PostgREST. `pathAndQuery` is e.g.
+ * `courses?select=id,code&teacher_id=eq.<uuid>`. Build filter values with `eq()` so they're encoded.
+ */
+export async function select<T>(pathAndQuery: string, opts: { env?: Env; fetchFn?: typeof fetch } = {}): Promise<T[]> {
+  const { base, key } = config(opts.env ?? process.env);
+  const res = await (opts.fetchFn ?? fetch)(`${base}/${pathAndQuery}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new DbError(`select ${pathAndQuery.split("?")[0]} failed (${res.status}): ${detail.slice(0, 300)}`, res.status);
+  }
+  return (await res.json()) as T[];
+}
+
+/** A PostgREST equality filter value, URL-encoded. */
+export const eq = (v: string) => `eq.${encodeURIComponent(v)}`;
+
 /** Inserts one row or many rows into a table. Returns nothing (use rpc for anything that must return data). */
 export async function insert(
   table: string,
