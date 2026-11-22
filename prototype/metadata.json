@@ -1,0 +1,8 @@
+{
+  "name": "Socratic AI",
+  "description": "A Socratic coding mentor for Pakistani students, teaching Python, JavaScript, and HTML through logic and conversation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

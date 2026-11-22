@@ -183,7 +183,7 @@ npm install
 npm run dev        # client + server on http://localhost:3000 (reads .env.local)
 npm run lint       # tsc --noEmit (server + client); eslint to be added; must pass before every commit
 npm test           # unit tests: flags, viva JSON parsing, variants, grading
-npm run seed       # rebuild demo data
+npm run seed       # rebuild the demo seed on preview (add -- --production for prod); never calls AI
 npm run build
 ```
 

@@ -29,6 +29,25 @@ function config(env: Env) {
   return { base: `${url.replace(/\/$/, "")}/rest/v1`, key };
 }
 
+/** Inserts one row or many rows into a table. Returns nothing (use rpc for anything that must return data). */
+export async function insert(
+  table: string,
+  rows: Record<string, unknown> | Record<string, unknown>[],
+  opts: { env?: Env; fetchFn?: typeof fetch } = {},
+): Promise<void> {
+  const { base, key } = config(opts.env ?? process.env);
+  const res = await (opts.fetchFn ?? fetch)(`${base}/${encodeURIComponent(table)}`, {
+    method: "POST",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify(rows),
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new DbError(`insert into ${table} failed (${res.status}): ${detail.slice(0, 300)}`, res.status);
+  }
+}
+
 /** Calls a Postgres function exposed through PostgREST (POST /rest/v1/rpc/<name>). */
 export async function rpc<T>(
   name: string,
