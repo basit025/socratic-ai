@@ -44,6 +44,9 @@ export function StudentHome() {
   useEffect(() => {
     document.title = "My courses · Socratic AI";
     preloadRunnerWhenIdle();
+    // Fetch the workspace code in the background so opening an assignment is instant.
+    const t = setTimeout(() => void import("./Workspace"), 1500);
+    return () => clearTimeout(t);
   }, []);
 
   const next =

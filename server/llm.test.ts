@@ -60,6 +60,17 @@ describe("generateJson", () => {
     expect(calls).toEqual(["gemini", "groq"]);
   });
 
+  it("moves on immediately after a timeout, without retrying the hung provider", async () => {
+    const timeout = () => {
+      throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
+    };
+    const { fn, calls } = fakeFetch({ gemini: [timeout], groq: [() => openAiOk(JSON.stringify(good))] });
+    const r = await generateJson(req, deps(fn));
+    expect(r.provider).toBe("groq");
+    expect(calls).toEqual(["gemini", "groq"]);
+    expect(r.attempts[0]!.errorCode).toBe("timeout");
+  });
+
   it("retries once when the output doesn't match the schema", async () => {
     const { fn, calls } = fakeFetch({ gemini: [() => geminiOk({ wrong: true }), () => geminiOk(good)] });
     const r = await generateJson(req, deps(fn));
