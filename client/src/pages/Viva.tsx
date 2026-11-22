@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
-import { ArrowLeft, CheckCircle2, ClipboardX, Loader2, Lightbulb, Timer, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardX, Loader2, Lightbulb, Timer, XCircle } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { Button, Card, Chip, DemoBadge, ErrorState, FullPageLoading, cx } from "../components/ui";
 import { api, ApiError } from "../lib/api";
@@ -98,6 +98,18 @@ export function Viva() {
   const awaySince = useRef<number | null>(null);
   const submitting = useRef(false);
   const runnerStatus = useRunnerStatus();
+  const [switching, setSwitching] = useState(false);
+
+  const seeTeacherView = async () => {
+    if (!state) return;
+    setSwitching(true);
+    try {
+      await api("/demo/switch", { body: {} });
+      window.location.assign(`/teacher/submissions/${state.submissionId}`);
+    } catch {
+      setSwitching(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setError(null);
@@ -283,7 +295,16 @@ export function Viva() {
             </ul>
           </Card>
         )}
-        <Link to="/student" className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-action px-5 font-semibold text-white hover:bg-action-hover">
+        <Card className="mt-6 flex flex-wrap items-center justify-between gap-3 border-action-line bg-action-soft p-5">
+          <p className="max-w-md">
+            <span className="block font-semibold">Trying the demo? See what your teacher sees.</span>
+            <span className="text-sm text-ink-2">Your own work, as an integrity report: the replay of how you wrote it, any flags, and this viva.</span>
+          </p>
+          <Button icon={ArrowRight} onClick={seeTeacherView} loading={switching}>
+            See what your teacher sees
+          </Button>
+        </Card>
+        <Link to="/student" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg px-1 font-semibold text-action hover:underline">
           <ArrowLeft className="size-5" aria-hidden /> Back to my courses
         </Link>
       </VivaFrame>

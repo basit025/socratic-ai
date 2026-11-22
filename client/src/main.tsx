@@ -12,6 +12,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 // The workspace (code editor) is loaded only when a student opens an assignment, keeping the landing page light.
 const Workspace = lazy(() => import("./pages/Workspace").then((m) => ({ default: m.Workspace })));
 const Viva = lazy(() => import("./pages/Viva").then((m) => ({ default: m.Viva })));
+const TeacherAssignment = lazy(() => import("./pages/TeacherAssignment").then((m) => ({ default: m.TeacherAssignment })));
+const Report = lazy(() => import("./pages/Report").then((m) => ({ default: m.Report })));
 import { NotFound } from "./pages/NotFound";
 import { runner } from "./runner/runner";
 import "./index.css";
@@ -33,7 +35,8 @@ createRoot(root).render(
         <Route path="/student/assignments/:id/viva" element={<RequireRole role="student"><Suspense fallback={<FullPageLoading label="Opening your viva…" />}><Viva /></Suspense></RequireRole>} />
         <Route path="/teacher" element={<RequireRole role="teacher"><TeacherHome /></RequireRole>} />
         <Route path="/teacher/assignments/new" element={<RequireRole role="teacher"><Placeholder title="The assignment builder" /></RequireRole>} />
-        <Route path="/teacher/assignments/:id" element={<RequireRole role="teacher"><Placeholder title="The submissions and integrity report" /></RequireRole>} />
+        <Route path="/teacher/assignments/:id" element={<RequireRole role="teacher"><Suspense fallback={<FullPageLoading label="Loading submissions…" />}><TeacherAssignment /></Suspense></RequireRole>} />
+        <Route path="/teacher/submissions/:id" element={<RequireRole role="teacher"><Suspense fallback={<FullPageLoading label="Loading the report…" />}><Report /></Suspense></RequireRole>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

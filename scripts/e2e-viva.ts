@@ -109,6 +109,19 @@ async function main() {
     console.log(`  tests ${r.tests} · viva ${r.vivaScore}/100 · suggested grade ${r.grade}/10 · next-question/score latency ${r.timings.map((ms) => `${(ms / 1000).toFixed(1)}s`).join(", ")}`);
     const state = await r.c.call<{ result?: { reviseNext: string | null } }>(`/submissions/${(await r.c.call<{ submission: { id: string } }>(`/student/assignments/${r.aid}`)).submission.id}/viva`);
     console.log(`  revise next: ${state.result?.reviseNext}`);
+
+    // ---- the teacher's view of this same sandbox ("See what your teacher sees")
+    await r.c.call("/demo/switch", {});
+    const list = await r.c.call<{ rows: { student: { name: string }; submission: { id: string; status: string; vivaScore: number | null; openFlags: { message: string }[] } | null }[] }>(`/teacher/assignments/${r.aid}`);
+    const mine = list.rows.find((x) => x.submission)!;
+    console.log(`  teacher list: ${list.rows.length} students; top row ${mine.student.name} · ${mine.submission!.status} · viva ${mine.submission!.vivaScore} · ${mine.submission!.openFlags.length} open flag(s)`);
+    const rep = await r.c.call<{ events: unknown[]; flags: { message: string; fromSeq: number }[]; viva: { questions: { check: unknown }[] } | null; tests: { passed: boolean | null; expected: string | null }[] }>(`/teacher/submissions/${mine.submission!.id}`);
+    console.log(`  report: ${rep.events.length} events · ${rep.flags.length} flags · ${rep.viva?.questions.length ?? 0} viva Qs (${rep.viva?.questions.filter((q) => q.check).length ?? 0} ground-truth checked) · tests with expected values: ${rep.tests.filter((t) => t.expected).length}/${rep.tests.length}`);
+    for (const f of rep.flags) console.log(`    flag (seq ${f.fromSeq}): ${f.message}`);
+    await r.c.call(`/teacher/submissions/${mine.submission!.id}/decision`, { decision: kind === "honest" ? "looks_fine" : "talk_to_student" });
+    const after = await r.c.call<{ rows: { submission: { decision: string | null; openFlags: unknown[] } | null }[] }>(`/teacher/assignments/${r.aid}`);
+    const row = after.rows.find((x) => x.submission)!;
+    console.log(`  decision saved: ${row.submission!.decision}; open flags now ${row.submission!.openFlags.length}`);
   }
 }
 

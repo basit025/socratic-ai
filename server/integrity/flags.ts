@@ -26,8 +26,6 @@ export const THRESHOLDS = {
   lowViva: 50,
 } as const;
 
-const clock = (t: number) =>
-  new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Karachi", hour: "numeric", minute: "2-digit" }).format(t);
 
 const duration = (ms: number) => {
   const s = Math.round(ms / 1000);
@@ -53,6 +51,9 @@ export interface FlagInput {
 export function computeFlags({ events, testsPassed, testsTotal, vivaScore, baselineCps }: FlagInput): Flag[] {
   const ev = [...events].sort((a, b) => a.seq - b.seq);
   const flags: Flag[] = [];
+  // Times are given as "how far into the session", which stays true in replays and demo copies.
+  const start = ev[0]?.t ?? 0;
+  const at = (t: number) => (t - start < 30_000 ? "at the start of the session" : `${duration(t - start)} into the session`);
 
   // 1. Large instant insertion: a single change inserting a big block at once.
   for (const e of ev) {
@@ -63,7 +64,7 @@ export function computeFlags({ events, testsPassed, testsTotal, vivaScore, basel
       flags.push({
         rule: "large_insertion",
         severity: "high",
-        message: `${big} characters (${lines} line${lines === 1 ? "" : "s"}) appeared in a single instant at ${clock(e.t)}, which can't be typed by hand.`,
+        message: `${big} characters (${lines} line${lines === 1 ? "" : "s"}) appeared in a single instant ${at(e.t)}, which can't be typed by hand.`,
         evidence: { from_seq: e.seq, to_seq: e.seq, t: e.t, chars: big },
       });
       break; // one is enough evidence; the replay shows the rest
@@ -98,7 +99,7 @@ export function computeFlags({ events, testsPassed, testsTotal, vivaScore, basel
     flags.push({
       rule: "typing_faster_than_baseline",
       severity: "medium",
-      message: `Typed ${worst.chars} characters at about ${cps.toFixed(0)} characters per second around ${clock(worst.r[0]!.e.t)}, roughly ${(cps / baseline).toFixed(0)}× ${ownBaseline ? "this student's usual pace" : "a typical student's pace"}.`,
+      message: `Typed ${worst.chars} characters at about ${cps.toFixed(0)} characters per second ${at(worst.r[0]!.e.t)}, roughly ${(cps / baseline).toFixed(0)}× ${ownBaseline ? "this student's usual pace" : "a typical student's pace"}.`,
       evidence: { from_seq: worst.r[0]!.e.seq, to_seq: worst.r.at(-1)!.e.seq, t: worst.r[0]!.e.t, cps: Math.round(cps), baseline_cps: Math.round(baseline * 10) / 10 },
     });
   }
@@ -112,7 +113,7 @@ export function computeFlags({ events, testsPassed, testsTotal, vivaScore, basel
       flags.push({
         rule: "focus_loss_then_burst",
         severity: "medium",
-        message: `Left the page for ${duration(e.payload.awayMs)}, then typed ${chars} characters within a minute of coming back (at ${clock(e.t)}).`,
+        message: `Left the page for ${duration(e.payload.awayMs)}, then typed ${chars} characters within a minute of coming back (${at(e.t)}).`,
         evidence: { from_seq: e.seq, to_seq: after.at(-1)!.seq, t: e.t, away_ms: e.payload.awayMs, chars },
       });
       break;

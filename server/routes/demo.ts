@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { rpc } from "../lib/db.js";
+import { eq, rpc, select } from "../lib/db.js";
 import { PublicError } from "../lib/errors.js";
 import { enforce } from "../lib/limits.js";
 import { requireSession } from "../lib/auth.js";
@@ -41,6 +41,26 @@ demoRouter.post("/demo/start", async (req, res, next) => {
 demoRouter.get("/me", requireSession(), (req, res) => {
   const s = req.session!;
   res.set("Cache-Control", "no-store").json({ role: s.role, name: s.name, expiresAt: new Date(s.exp).toISOString(), demo: true });
+});
+
+/**
+ * "See what your teacher sees": switches the visitor to the other demo role INSIDE the same sandbox,
+ * so a judge who just did the student journey sees their own submission in the teacher's report.
+ */
+demoRouter.post("/demo/switch", requireSession(), async (req, res, next) => {
+  try {
+    const s = req.session!;
+    const role = s.role === "student" ? "teacher" : "student";
+    const [p] = await select<{ id: string; full_name: string }>(
+      `profiles?select=id,full_name&sandbox_id=${eq(s.sid)}&email=${eq(`demo-${role}@pothohar.demo`)}`,
+    );
+    if (!p) throw new PublicError(404, "This demo has no " + role + " account.", "no_role");
+    const next: Session = { sid: s.sid, pid: p.id, role, name: p.full_name, exp: s.exp };
+    setSessionCookie(res, next);
+    res.json({ role, name: p.full_name, home: role === "teacher" ? "/teacher" : "/student" });
+  } catch (err) {
+    next(err);
+  }
 });
 
 /** Leaves the demo (the sandbox itself is deleted by the nightly reset). */
