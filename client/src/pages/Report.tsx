@@ -64,10 +64,12 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [decided, setDecided] = useState<ReportData["submission"]["decision"]>(null);
 
-  const highlight = useMemo(() => new Set(data.status === "ready" ? data.data.flags.map((f) => f.fromSeq) : []), [data]);
-  useEffect(() => {
-    if (data.status === "ready") setDecided(data.data.submission.decision);
-  }, [data]);
+  // Depend on primitive values only: `data` is a new object on every render, and resetting from it
+  // would wipe the teacher's just-saved decision off the screen.
+  const flagSeqs = data.status === "ready" ? data.data.flags.map((f) => f.fromSeq).join(",") : "";
+  const highlight = useMemo(() => new Set(flagSeqs ? flagSeqs.split(",").map(Number) : []), [flagSeqs]);
+  const serverDecision = data.status === "ready" ? data.data.submission.decision : null;
+  useEffect(() => setDecided(serverDecision), [serverDecision]);
 
   if (data.status === "loading") return <Skeleton className="h-[640px]" />;
   if (data.status === "error") return <ErrorState message={data.message} onRetry={data.reload} />;

@@ -161,8 +161,16 @@ async function main() {
     await s.setViewport({ width: 1920, height: 1080 });
     await shot(s, "12-teacher-report-1920");
     await s.locator("button ::-p-text(Looks fine)").click();
-    await s.waitForFunction(() => document.body.innerText.includes("Saved"), { timeout: 10000 });
-    ok("teacher decision saved");
+    await s
+      .waitForFunction(() => document.body.innerText.includes("Saved") || document.querySelector("[role=alert]"), { timeout: 20000 })
+      .catch(() => {});
+    const decisionText = await s.$eval("body", (b) => b.innerText);
+    if (decisionText.includes("Saved")) ok("teacher decision saved");
+    else {
+      const alert = await s.$eval("[role=alert]", (e) => (e as HTMLElement).innerText).catch(() => "no alert shown");
+      await shot(s, "fail-decision");
+      fail(`teacher decision not saved: ${alert}`);
+    }
     await s.locator("a ::-p-text(all submissions)").click();
     await s.waitForFunction(() => document.body.innerText.includes("Tick 2 students to compare"), { timeout: 15000 });
     (await s.$eval("body", (b) => b.innerText.includes("Looks fine"))) ? ok("submissions list shows the decision") : fail("decision not shown in list");

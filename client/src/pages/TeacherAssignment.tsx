@@ -54,9 +54,10 @@ export function TeacherAssignment() {
   const navigate = useNavigate();
   const [picked, setPicked] = useState<string[]>([]);
 
+  const title = data.status === "ready" ? data.data.assignment.title : null;
   useEffect(() => {
-    if (data.status === "ready") document.title = `${data.data.assignment.title} · Submissions · Socratic AI`;
-  }, [data]);
+    if (title) document.title = `${title} · Submissions · Socratic AI`;
+  }, [title]);
 
   const toggle = (sid: string) => setPicked((p) => (p.includes(sid) ? p.filter((x) => x !== sid) : [...p.slice(-1), sid]));
 
