@@ -87,7 +87,10 @@ vercel.json      build, rewrites, region, cron
 - **Migrations:** SQL files in `supabase/migrations/`, applied in order, **preview first, then production**: `npx supabase db query --remote=<ref> --yes -f supabase/migrations/<file>.sql` (needs `npx supabase login`). Never edit a migration that has been applied; add a new one. After applying, test as `service_role` through the REST API, not only through the CLI (the CLI's admin connection hides missing grants).
 - **Code runner:** Pyodide loads from the jsDelivr CDN in the browser, inside a Web Worker, so running student code costs no server time and an infinite loop can never freeze the page.
 
-### Git flow
+### Team and git flow (decided Nov 23: solo build)
+- **One builder:** R1 (Basit) with Claude Code writes all code. Teammates do **no code**: course content (in the plain formats under `content/`), Thursday's test, recorded sessions, research, video and deck.
+- Claude works on a branch per feature, opens a PR, checks the Vercel preview link, then merges. Basit reviews previews for product and UI decisions.
+- Judges' Q&A answer for "who built what": one engineer building with an AI coding assistant (disclosed in the README); four teammates on research, content, user testing, video and pitch.
 - Every push to `main` deploys to production; every pull request gets a Vercel preview URL for teammates to test.
 - Work on branches, open a PR, test on the preview URL, then merge. Only tested work merges to `main`, and `main` is always deployable.
 - `npm run lint && npm test && npm run build` must pass before every merge.
