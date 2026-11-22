@@ -9,12 +9,43 @@
  */
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { announcements, assignments, courses, modules, students, teachers } from "./content.js";
+import { computeFlags } from "../integrity/flags.js";
+import { suggestedGrade } from "../integrity/grading.js";
+import { renderInstructions } from "../lib/variants.js";
+import type { ProcessEvent } from "../../shared/events.js";
+import { REFS } from "./supabaseCli.js";
 
-const REFS = { preview: "eksckojfihwirwdgdrfc", production: "szenspgxfjrynhtwhixm" } as const;
+/** A real recorded session saved by `npm run session:export` (times in ms from its first event). */
+export interface SessionFile {
+  label: string;
+  student: string;
+  assignment: string;
+  submittedDaysAgo: number;
+  source: string;
+  variant: Record<string, string> | null;
+  content: string;
+  lastOutput: string | null;
+  testResults: unknown;
+  testsPassed: number | null;
+  testsTotal: number | null;
+  submittedAtMs: number | null;
+  events: { seq: number; ms: number; type: ProcessEvent["type"]; payload: unknown }[];
+  viva: { understanding: number | null; summary: string | null; rubric: unknown; startedAtMs: number | null; completedAtMs: number | null; questions: (Record<string, unknown> & { askedAtMs: number | null; answeredAtMs: number | null })[] } | null;
+  messages: { role: string; body: string; hint: string | null; ms: number }[];
+}
+
+export function loadSessions(dir = path.join(path.dirname(new URL(import.meta.url).pathname), "sessions")): SessionFile[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".json"))
+    .sort()
+    .map((f) => JSON.parse(readFileSync(path.join(dir, f), "utf8")) as SessionFile);
+}
+
 
 /** SQL string literal (standard_conforming_strings is on, so only quotes need doubling). */
 export const lit = (v: string | null | undefined): string => (v == null ? "null" : `'${v.replace(/'/g, "''")}'`);
@@ -25,7 +56,8 @@ const dayAt = (n: number, hhmm: string): string =>
   `((date_trunc('day', now() at time zone 'Asia/Karachi') + interval '${Number(n)} days' + interval '${hhmm.replace(/[^0-9:]/g, "")}') at time zone 'Asia/Karachi')`;
 const SEED = "(select public.seed_sandbox_id())";
 
-export function buildSeedSql(): string {
+export function buildSeedSql(opts: { recording?: boolean; sessions?: SessionFile[] } = {}): string {
+  const sessions = opts.sessions ?? [];
   const id = new Map<string, string>();
   const idFor = (key: string) => {
     if (!id.has(key)) id.set(key, randomUUID());
@@ -59,7 +91,7 @@ export function buildSeedSql(): string {
   for (const a of assignments) {
     const aid = idFor(`a:${a.key}`);
     out.push(
-      `insert into public.assignments (id, sandbox_id, course_id, module_id, type, title, instructions_md, language, starter_code, marks, status, opens_at, due_at) values (${lit(aid)}, ${SEED}, ${lit(idFor(`c:${a.course}`))}, ${lit(idFor(`m:${a.course}:${a.week}`))}, 'code', ${lit(a.title)}, ${lit(a.instructions)}, 'python', ${lit(a.starterCode)}, ${a.marks}, ${lit(a.status)}, ${dayAt(a.opensInDays, "08:00")}, ${dayAt(a.dueInDays, "23:59")});`,
+      `insert into public.assignments (id, sandbox_id, course_id, module_id, type, title, instructions_md, language, starter_code, marks, status, opens_at, due_at) values (${lit(aid)}, ${SEED}, ${lit(idFor(`c:${a.course}`))}, ${lit(idFor(`m:${a.course}:${a.week}`))}, 'code', ${lit(a.title)}, ${lit(a.instructions)}, 'python', ${lit(a.starterCode)}, ${a.marks}, ${lit(opts.recording ? "published" : a.status)}, ${dayAt(opts.recording ? -1 : a.opensInDays, "08:00")}, ${dayAt(opts.recording ? 7 : a.dueInDays, "23:59")});`,
       `insert into public.integrity_rules (assignment_id, sandbox_id, paste_blocked, workflow, viva_questions, viva_seconds_per_q, viva_weight, variants_on) values (${lit(aid)}, ${SEED}, ${a.rules.pasteBlocked}, ${lit(a.rules.workflow)}, ${a.rules.vivaQuestions}, ${a.rules.vivaSecondsPerQ}, ${a.rules.vivaWeight}, ${a.rules.variantsOn});`,
       `insert into public.assignment_secrets (assignment_id, sandbox_id, reference_solution, hidden_tests, variant_spec) values (${lit(aid)}, ${SEED}, ${lit(a.referenceSolution)}, ${json(a.tests)}, ${json(a.variantSpec ?? {})});`,
     );
@@ -71,13 +103,72 @@ export function buildSeedSql(): string {
     );
   }
 
+  // Real recorded sessions → past submissions of fictional classmates.
+  const taken = new Set<string>();
+  for (const f of sessions) {
+    const a = assignments.find((x) => x.title === f.assignment);
+    const student = students.find((x) => x.key === f.student);
+    if (!a) throw new Error(`Session ${f.label}: no seeded assignment titled "${f.assignment}".`);
+    if (!student || student.email) throw new Error(`Session ${f.label}: "${f.student}" must be a seeded classmate (not the demo identity).`);
+    if (taken.has(`${a.key}:${student.key}`)) throw new Error(`Session ${f.label}: ${student.key} already has a session for ${a.title}.`);
+    taken.add(`${a.key}:${student.key}`);
+    if (!f.events.length) throw new Error(`Session ${f.label} has no events.`);
+
+    const sid = randomUUID();
+    const pid = idFor(`p:${student.key}`);
+    const aid = idFor(`a:${a.key}`);
+    const end = Math.max(f.submittedAtMs ?? 0, f.events.at(-1)!.ms);
+    const submitted = dayAt(-Math.max(0, f.submittedDaysAgo), "21:30");
+    const at = (ms: number | null) => (ms == null ? "null" : `(${submitted} - interval '${Math.round(end - ms)} milliseconds')`);
+    let variantId: string | null = null;
+    if (f.variant && a.variantSpec) {
+      variantId = randomUUID();
+      const option = f.variant[a.variantSpec.param] ?? null;
+      out.push(
+        `insert into public.variants (id, sandbox_id, assignment_id, student_id, params, rendered_instructions, created_at) values (${lit(variantId)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${json(f.variant)}, ${lit(renderInstructions(a.instructions, a.variantSpec, option))}, ${at(0)});`,
+      );
+    }
+    const vivaScore = f.viva?.understanding ?? null;
+    const grade = suggestedGrade({ marks: a.marks, testsPassed: f.testsPassed, testsTotal: f.testsTotal, vivaScore, vivaWeight: a.rules.vivaWeight });
+    out.push(
+      `insert into public.submissions (id, sandbox_id, assignment_id, student_id, variant_id, status, content, last_output, test_results, tests_passed, tests_total, viva_score, suggested_grade, started_at, submitted_at) values (${lit(sid)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${lit(variantId)}, 'submitted', ${lit(f.content)}, ${lit(f.lastOutput)}, ${f.testResults == null ? "null" : json(f.testResults)}, ${f.testsPassed ?? "null"}, ${f.testsTotal ?? "null"}, ${vivaScore ?? "null"}, ${grade}, ${at(0)}, ${at(f.submittedAtMs ?? end)});`,
+    );
+    for (let i = 0; i < f.events.length; i += 200) {
+      const rows = f.events.slice(i, i + 200).map((e) => `(${SEED}, ${lit(sid)}, ${e.seq}, ${lit(e.type)}, ${json(e.payload)}, ${at(e.ms)})`);
+      out.push(`insert into public.process_events (sandbox_id, submission_id, seq, type, payload, client_time) values ${rows.join(", ")};`);
+    }
+    if (f.viva) {
+      const questions = f.viva.questions.map(({ askedAtMs, answeredAtMs, ...q }) => q);
+      // Store absolute times for the copied questions (they were saved relative to the session start).
+      const qSql = `(select jsonb_agg(q || jsonb_build_object('asked_at', a, 'answered_at', b) order by i) from jsonb_array_elements(${json(questions)}) with ordinality as x(q, i) join (values ${f.viva.questions
+        .map((q, i) => `(${i + 1}, ${at(q.askedAtMs)}, ${at(q.answeredAtMs)})`)
+        .join(", ")}) as t(n, a, b) on t.n = x.i)`;
+      out.push(
+        `insert into public.viva_sessions (sandbox_id, submission_id, status, questions, current_index, rubric, understanding_score, summary, started_at, completed_at) values (${SEED}, ${lit(sid)}, 'completed', ${qSql}, ${Math.max(0, f.viva.questions.length - 1)}, ${f.viva.rubric == null ? "null" : json(f.viva.rubric)}, ${vivaScore ?? "null"}, ${lit(f.viva.summary)}, ${at(f.viva.startedAtMs)}, ${at(f.viva.completedAtMs)});`,
+      );
+    }
+    for (const m of f.messages) {
+      out.push(`insert into public.ustaad_messages (sandbox_id, submission_id, role, body, hint, created_at) values (${SEED}, ${lit(sid)}, ${lit(m.role)}, ${lit(m.body)}, ${lit(m.hint)}, ${at(m.ms)});`);
+    }
+    const flags = computeFlags({ events: f.events.map((e) => ({ seq: e.seq, t: e.ms, type: e.type, payload: e.payload }) as ProcessEvent), testsPassed: f.testsPassed, testsTotal: f.testsTotal, vivaScore });
+    for (const fl of flags) {
+      out.push(`insert into public.flags (sandbox_id, submission_id, rule, severity, message, evidence) values (${SEED}, ${lit(sid)}, ${lit(fl.rule)}, ${lit(fl.severity)}, ${lit(fl.message)}, ${json(fl.evidence)});`);
+    }
+  }
+
   out.push("update public.sandboxes set seeded_at = now() where kind = 'seed';", "commit;");
   return out.join("\n") + "\n";
 }
 
 function main() {
   const args = process.argv.slice(2);
-  const sql = buildSeedSql();
+  const recording = args.includes("--recording");
+  if (recording && args.includes("--production")) {
+    console.error("--recording opens every assignment for recording sessions. It's for the preview database only.");
+    process.exit(1);
+  }
+  const sessions = loadSessions();
+  const sql = buildSeedSql({ recording, sessions });
   if (args.includes("--sql-only")) {
     process.stdout.write(sql);
     return;
@@ -94,7 +185,7 @@ function main() {
     console.error(`Seeding ${target} failed:\n${output.slice(-1500)}`);
     process.exit(1);
   }
-  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${sql.split("\n").length - 1} statements).`);
+  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${sql.split("\n").length - 1} statements, ${sessions.length} real session${sessions.length === 1 ? "" : "s"}${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join("seed", "seed.ts"))) main();
