@@ -20,3 +20,6 @@ socratic-ai.zip
 
 # Supabase CLI local state
 supabase/.temp/
+
+# Browser smoke-test screenshots
+smoke-screens/

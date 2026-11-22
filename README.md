@@ -49,6 +49,12 @@ Every external service, model and library used in this repository is listed here
 | [tsx](https://tsx.is) | Runs TypeScript in local development | MIT |
 | [Vitest](https://vitest.dev) | Unit tests | MIT |
 | [Zod](https://zod.dev) | Validates process events and AI responses | MIT |
+| [Tailwind CSS](https://tailwindcss.com) 4 | Styling and design tokens | MIT |
+| [React Router](https://reactrouter.com) | Page routing | MIT |
+| [Lucide](https://lucide.dev) (`lucide-react`) | Icons | ISC |
+| [Pyodide](https://pyodide.org) (loaded from the jsDelivr CDN) | Runs students' Python in the browser, inside a Web Worker | MPL-2.0 |
+| [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (Google Fonts) | Interface and code fonts | SIL Open Font License |
+| [Puppeteer](https://pptr.dev) (`puppeteer-core`) | Browser smoke tests (development only) | Apache-2.0 |
 | [Supabase CLI](https://supabase.com/docs/guides/cli) | Applies database migrations (development tool, run with `npx`) | MIT |
 
 ### AI coding assistants

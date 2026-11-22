@@ -20,6 +20,9 @@ const REFS = { preview: "eksckojfihwirwdgdrfc", production: "szenspgxfjrynhtwhix
 export const lit = (v: string | null | undefined): string => (v == null ? "null" : `'${v.replace(/'/g, "''")}'`);
 export const json = (v: unknown): string => `${lit(JSON.stringify(v))}::jsonb`;
 const days = (n: number): string => `now() + interval '${Number(n)} days'`;
+/** A clock time in Pakistan, n days from today: e.g. dayAt(3, "23:59") = Thursday 11:59 PM PKT. */
+const dayAt = (n: number, hhmm: string): string =>
+  `((date_trunc('day', now() at time zone 'Asia/Karachi') + interval '${Number(n)} days' + interval '${hhmm.replace(/[^0-9:]/g, "")}') at time zone 'Asia/Karachi')`;
 const SEED = "(select public.seed_sandbox_id())";
 
 export function buildSeedSql(): string {
@@ -56,7 +59,7 @@ export function buildSeedSql(): string {
   for (const a of assignments) {
     const aid = idFor(`a:${a.key}`);
     out.push(
-      `insert into public.assignments (id, sandbox_id, course_id, module_id, type, title, instructions_md, language, starter_code, marks, status, opens_at, due_at) values (${lit(aid)}, ${SEED}, ${lit(idFor(`c:${a.course}`))}, ${lit(idFor(`m:${a.course}:${a.week}`))}, 'code', ${lit(a.title)}, ${lit(a.instructions)}, 'python', ${lit(a.starterCode)}, ${a.marks}, ${lit(a.status)}, ${days(a.opensInDays)}, ${days(a.dueInDays)});`,
+      `insert into public.assignments (id, sandbox_id, course_id, module_id, type, title, instructions_md, language, starter_code, marks, status, opens_at, due_at) values (${lit(aid)}, ${SEED}, ${lit(idFor(`c:${a.course}`))}, ${lit(idFor(`m:${a.course}:${a.week}`))}, 'code', ${lit(a.title)}, ${lit(a.instructions)}, 'python', ${lit(a.starterCode)}, ${a.marks}, ${lit(a.status)}, ${dayAt(a.opensInDays, "08:00")}, ${dayAt(a.dueInDays, "23:59")});`,
       `insert into public.integrity_rules (assignment_id, sandbox_id, paste_blocked, workflow, viva_questions, viva_seconds_per_q, viva_weight, variants_on) values (${lit(aid)}, ${SEED}, ${a.rules.pasteBlocked}, ${lit(a.rules.workflow)}, ${a.rules.vivaQuestions}, ${a.rules.vivaSecondsPerQ}, ${a.rules.vivaWeight}, ${a.rules.variantsOn});`,
       `insert into public.assignment_secrets (assignment_id, sandbox_id, reference_solution, hidden_tests, variant_spec) values (${lit(aid)}, ${SEED}, ${lit(a.referenceSolution)}, ${json(a.tests)}, ${json(a.variantSpec ?? {})});`,
     );
