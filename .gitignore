@@ -14,3 +14,6 @@ coverage/
 # Local-only inputs
 socratic-ai.zip
 04-hackathon.pdf
+
+# Screenshots dropped into the project folder
+/image*.png
