@@ -7,7 +7,8 @@ import { Link, useNavigate, useParams } from "react-router";
 import { AlertTriangle, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, ClipboardX, Copy, Loader2, Lock, MessageCircleQuestion, Play, Send, Shuffle, Timer } from "lucide-react";
 import { Dialog } from "../components/Dialog";
 import { AppShell } from "../components/AppShell";
-import { Button, Card, Chip, ErrorState, Skeleton, cx } from "../components/ui";
+import { Button, Card, Chip, ErrorState, Skeleton, Ur, cx } from "../components/ui";
+import { Appear } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
 import { formatDateTime, formatDue } from "../lib/format";
 import { useMe } from "../lib/session";
@@ -415,7 +416,7 @@ export function Workspace() {
                       {editable && <SavedIndicator state={saveState} />}
                       {editable && (
                         <Button variant="secondary" icon={running ? Loader2 : Play} onClick={run} disabled={runnerStatus !== "ready" || running} title="Run my code (Ctrl+Enter)">
-                          {runnerStatus === "ready" ? (running ? "Running…" : "Run my code") : runnerStatus === "error" ? "Runner unavailable" : "Preparing the code runner…"}
+                          {runnerStatus === "ready" ? (running ? "Running…" : <>Run my code <Ur>اپنا کوڈ چلائیں</Ur></>) : runnerStatus === "error" ? "Runner unavailable" : "Preparing the code runner…"}
                         </Button>
                       )}
                     </div>
@@ -455,6 +456,7 @@ export function Workspace() {
                           </span>
                         ))}
                     </div>
+                    <Appear key={lastRun ? `${lastRun.output}|${lastRun.error}|${lastRun.durationMs}` : "empty"}>
                     <pre
                       aria-live="polite"
                       className={cx("max-h-56 min-h-24 overflow-auto px-4 pb-4 font-mono text-sm whitespace-pre-wrap", lastRun && !lastRun.ok ? "text-danger" : "text-ink")}
@@ -465,6 +467,7 @@ export function Workspace() {
                           ? 'Click "Run my code" to see what your program prints.'
                           : "Preparing the code runner… this happens once and takes a few seconds."}
                     </pre>
+                    </Appear>
                   </div>
                 </Card>
               )}
@@ -504,7 +507,7 @@ export function Workspace() {
             Keep working
           </Button>
           <Button icon={Send} loading={submitting} onClick={submitWork}>
-            Submit and start the viva
+            Submit and start the viva <Ur>جمع کروائیں</Ur>
           </Button>
         </div>
       </Dialog>

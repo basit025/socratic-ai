@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Link, useParams } from "react-router";
 import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardX, Loader2, Lightbulb, Timer, XCircle } from "lucide-react";
 import { Logo } from "../components/Logo";
-import { Button, Card, Chip, DemoBadge, ErrorState, FullPageLoading, cx } from "../components/ui";
+import { Button, Card, Chip, DemoBadge, ErrorState, FullPageLoading, Ur, cx } from "../components/ui";
+import { Appear } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
 import { runner, useRunnerStatus } from "../runner/runner";
 
@@ -332,7 +333,7 @@ export function Viva() {
           </ul>
           {error && <p role="alert" className="mt-4 text-danger">{error}</p>}
           <Button size="lg" className="mt-6" loading={phase === "thinking"} onClick={start}>
-            Start viva: {state.total} questions, about {Math.ceil((state.total * state.secondsPerQ) / 60)} min
+            Start viva: {state.total} questions, about {Math.ceil((state.total * state.secondsPerQ) / 60)} min <Ur>وائیوا شروع کریں</Ur>
           </Button>
         </Card>
       </VivaFrame>
@@ -356,9 +357,11 @@ export function Viva() {
         <TimerRing secondsLeft={secondsLeft} total={q.secondsAllowed} />
       </div>
 
-      <h1 className="mt-6 text-2xl leading-snug font-semibold text-balance">
-        <InlineCode text={q.prompt} />
-      </h1>
+      <Appear key={q.index}>
+        <h1 className="mt-6 text-2xl leading-snug font-semibold text-balance">
+          <InlineCode text={q.prompt} />
+        </h1>
+      </Appear>
 
       <label htmlFor="viva-answer" className="sr-only">
         Your answer
@@ -388,7 +391,7 @@ export function Viva() {
       <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-sm text-ink-3">{phase === "thinking" ? "Ustaad is reading your answer…" : "Short answers are fine. Explain the idea."}</p>
         <Button size="lg" loading={phase === "thinking"} onClick={() => void sendAnswer(answer)}>
-          {last ? "Finish viva" : "Next question"}
+          {last ? <>Finish viva <Ur>وائیوا ختم کریں</Ur></> : <>Next question <Ur>اگلا سوال</Ur></>}
         </Button>
       </div>
     </VivaFrame>

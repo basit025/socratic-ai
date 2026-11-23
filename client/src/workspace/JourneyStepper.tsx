@@ -4,6 +4,7 @@
  */
 import { Check, Lock } from "lucide-react";
 import { cx } from "../components/ui";
+import { Pop } from "../components/Motion";
 
 export interface JourneyStep {
   key: string;
@@ -37,7 +38,7 @@ export function JourneyStepper({ steps }: { steps: JourneyStep[] }) {
                 )}
                 aria-hidden
               >
-                {s.state === "done" ? <Check className="size-3.5" /> : s.state === "locked" ? <Lock className="size-3" /> : i + 1}
+                {s.state === "done" ? <Pop><Check className="size-3.5" /></Pop> : s.state === "locked" ? <Lock className="size-3" /> : i + 1}
               </span>
               <span className={cx("truncate text-sm font-semibold", s.state === "current" ? "text-action" : s.state === "done" ? "text-done" : "text-ink-3")}>
                 {s.label}

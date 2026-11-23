@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
-import { ArrowLeftRight, LogOut } from "lucide-react";
+import { ArrowLeftRight, LogOut, RotateCcw } from "lucide-react";
+import { Dialog } from "./Dialog";
 import { api } from "../lib/api";
 import { useMe } from "../lib/session";
 import { Logo } from "./Logo";
@@ -23,6 +24,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [leaving, setLeaving] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  // "Reset demo": a fresh private copy of the demo institution, in the same role.
+  const startOver = async () => {
+    setResetting(true);
+    try {
+      const r = await api<{ home: string }>("/demo/start", { body: { role: me.role } });
+      window.location.assign(r.home);
+    } catch {
+      setResetting(false);
+      setResetOpen(false);
+    }
+  };
 
   // Demo only: see the same sandbox through the other role's eyes.
   const switchRole = async () => {
@@ -65,6 +80,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button variant="ghost" icon={ArrowLeftRight} loading={switching} onClick={switchRole} title={`See this demo as the ${me.role === "teacher" ? "student" : "teacher"}`}>
               <span className="hidden lg:inline">{me.role === "teacher" ? "Student view" : "Teacher view"}</span>
             </Button>
+            <Button variant="ghost" icon={RotateCcw} onClick={() => setResetOpen(true)} title="Start over with a fresh copy of the demo">
+              <span className="hidden xl:inline">Start over</span>
+            </Button>
             <Button variant="ghost" icon={LogOut} loading={leaving} onClick={leave} title="Leave this demo and go back to the start page">
               <span className="hidden sm:inline">Leave demo</span>
             </Button>
@@ -72,6 +90,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <Dialog open={resetOpen} title="Start over with a fresh demo?" onClose={() => !resetting && setResetOpen(false)}>
+        <p className="text-ink-2">You'll get a brand-new private copy of the demo institution, as a {me.role}. Anything you did in this demo is left behind.</p>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setResetOpen(false)} disabled={resetting} data-autofocus>
+            Keep this demo
+          </Button>
+          <Button icon={RotateCcw} loading={resetting} onClick={startOver}>
+            Start over
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

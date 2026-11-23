@@ -167,3 +167,12 @@ export function Segmented<T extends string | number>({ value, options, onChange,
     </div>
   );
 }
+
+/** A short Urdu label beside an English action (NFR-09). Decorative for screen readers that read the English. */
+export function Ur({ children, className }: { children: string; className?: string }) {
+  return (
+    <span lang="ur" dir="rtl" className={cx("font-urdu text-[0.8em] leading-loose font-medium opacity-90", className)}>
+      {children}
+    </span>
+  );
+}
