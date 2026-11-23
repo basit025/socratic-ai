@@ -180,6 +180,10 @@ export function Landing() {
           ))}
         </section>
         <p className="mt-3 text-center text-sm text-ink-3">Opens your own private copy of a demo institution in about a second. No sign-up.</p>
+        <p className="mt-1 text-center text-sm text-ink-3">
+          Using Socratic AI with a real class?{" "}
+          <a href="/signin" className="font-semibold text-action hover:underline">Sign in or create an account</a>
+        </p>
         {error && (
           <p role="alert" className="mx-auto mt-4 max-w-xl rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-center text-danger">
             {error}

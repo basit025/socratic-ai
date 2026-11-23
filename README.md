@@ -78,6 +78,8 @@ The real test with 10 students and 1–2 teachers (honest versus copied submissi
 
 **Teachers:** an assignment builder (Task → Rules → Preview as student) with a template library, where expected test answers are computed by running your own solution · rules as toggle cards (paste, order of work, viva length and weighting, per-student variants) · submissions with flagged work first · an integrity report (story timeline, replay, flags with **Show me**, viva transcript with ground-truth checks) · side-by-side comparison · **Looks fine / Talk to student** · confirm or change any mark with a comment · a gradebook with average viva per assignment and CSV export.
 
+**Real classes:** teachers and students create accounts (passwords stored only as scrypt hashes); teachers create courses and share a 6-character join code; students join with it. Real accounts are kept apart from demo data.
+
 **Demo:** one-click **Try as teacher** and **Try as student**, each a private sandbox · **See what your teacher sees** · **Start over** · a nightly reset.
 
 ## How it works

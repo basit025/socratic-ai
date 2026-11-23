@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { BookOpen, Check, Copy, Flag, Inbox, Plus, Table2, Users } from "lucide-react";
 import { AppShell } from "../components/AppShell";
+import { NewCourseButton } from "../components/CourseActions";
 import { Card, Chip, EmptyState, ErrorState, PageHeader, Skeleton, Ur, type ChipTone } from "../components/ui";
 import { firstName, formatDue, greeting } from "../lib/format";
 import { useMe } from "../lib/session";
@@ -79,10 +80,13 @@ export function TeacherHome() {
         title={`${greeting()}, ${firstName(me.name)}`}
         subtitle="Your courses, what needs your attention, and every assignment's integrity report."
         action={
+          <div className="flex flex-wrap items-center gap-2">
+          <NewCourseButton onCreated={home.reload} />
           <Link to="/teacher/assignments/new" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-action px-4 font-semibold text-white hover:bg-action-hover">
             <Plus className="size-5" aria-hidden />
             Create assignment <Ur>اسائنمنٹ بنائیں</Ur>
           </Link>
+          </div>
         }
       />
 
@@ -114,7 +118,7 @@ export function TeacherHome() {
           </div>
 
           {home.data.courses.length === 0 ? (
-            <EmptyState icon={Users} title="No courses yet" body="Create your first course and share its join code with your students." />
+            <EmptyState icon={Users} title="No courses yet" body="Create your first course and share its join code with your students. It takes about a minute." action={<NewCourseButton onCreated={home.reload} />} />
           ) : (
             <div className="space-y-6">
               {home.data.courses.map((c) => (

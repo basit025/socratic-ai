@@ -364,6 +364,9 @@ export function Workspace() {
                 </li>
               )}
             </ul>
+            <p className="mt-2 text-sm text-ink-3">
+              Your teacher can see how this work was made: edits, runs and time away from the page. Only your teacher sees it. No webcam, no microphone.
+            </p>
           </div>
 
           {sub && sub.status === "viva_in_progress" && (

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router";
 import { ArrowRight, BookOpen, CalendarClock } from "lucide-react";
 import { AppShell } from "../components/AppShell";
+import { JoinCourseCard } from "../components/CourseActions";
 import { Card, Chip, EmptyState, ErrorState, PageHeader, Skeleton, type ChipTone } from "../components/ui";
 import { firstName, formatDue } from "../lib/format";
 import { useMe } from "../lib/session";
@@ -100,7 +101,7 @@ export function StudentHome() {
           )}
 
           {home.data.courses.length === 0 ? (
-            <EmptyState icon={BookOpen} title="You're not in a course yet" body="Ask your teacher for the 6-letter join code for your course." />
+            <EmptyState icon={BookOpen} title="You're not in a course yet" body="Ask your teacher for the 6-character join code for your course, then enter it below." />
           ) : (
             <div className="space-y-6">
               {home.data.courses.map((c) => (
@@ -143,6 +144,11 @@ export function StudentHome() {
             </div>
           )}
         </>
+      )}
+      {home.status === "ready" && (
+        <div className="mt-6">
+          <JoinCourseCard onJoined={home.reload} />
+        </div>
       )}
     </AppShell>
   );

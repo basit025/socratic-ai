@@ -263,6 +263,26 @@ async function main() {
     await t.goto(`${BASE}/teacher`, { waitUntil: "domcontentloaded" });
     await t.waitForFunction(() => document.body.innerText.includes("Create assignment"), { timeout: 15000 });
 
+    // New course with a join code (FR-02)
+    await t.locator("button ::-p-text(New course)").click();
+    await t.waitForSelector("[role=dialog] input[placeholder='CS-102']");
+    await t.type("[role=dialog] input[placeholder='CS-102']", "CS-102");
+    await t.type("[role=dialog] input[placeholder='Object-Oriented Programming']", "Object-Oriented Programming");
+    await t.locator("[role=dialog] button ::-p-text(Create course)").click();
+    await t.waitForFunction(() => document.body.innerText.includes("Share this join code"), { timeout: 15000 });
+    const join = await t.$eval("[role=dialog] p.font-mono", (e) => (e as HTMLElement).innerText.trim());
+    /^[A-Z2-9]{6}$/.test(join) ? ok(`new course created with join code ${join}`) : fail(`bad join code: ${join}`);
+    await t.keyboard.press("Escape");
+    await t.waitForFunction(() => document.body.innerText.includes("Object-Oriented Programming"), { timeout: 15000 });
+
+    // The sign-in page renders for real classes
+    const signin = await browser.newPage();
+    watch(signin, "signin");
+    await signin.goto(`${BASE}/signin?mode=signup`, { waitUntil: "domcontentloaded" });
+    await signin.waitForFunction(() => document.body.innerText.includes("Create your account"), { timeout: 15000 });
+    ok("sign-up page renders (real accounts)");
+    await signin.close();
+
     // ------------------------------------------------ builder: template → check tests → rules → preview → publish
     await t.locator("a ::-p-text(Create assignment)").click();
     await t.waitForFunction(() => document.body.innerText.includes("Start from a template"), { timeout: 20000 });
