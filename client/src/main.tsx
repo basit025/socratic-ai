@@ -13,6 +13,7 @@ const Workspace = lazy(() => import("./pages/Workspace").then((m) => ({ default:
 const Viva = lazy(() => import("./pages/Viva").then((m) => ({ default: m.Viva })));
 const TeacherAssignment = lazy(() => import("./pages/TeacherAssignment").then((m) => ({ default: m.TeacherAssignment })));
 const Builder = lazy(() => import("./pages/Builder").then((m) => ({ default: m.Builder })));
+const SignIn = lazy(() => import("./pages/SignIn").then((m) => ({ default: m.SignIn })));
 const CoursePage = lazy(() => import("./pages/CoursePage").then((m) => ({ default: m.CoursePage })));
 const Gradebook = lazy(() => import("./pages/Gradebook").then((m) => ({ default: m.Gradebook })));
 const Report = lazy(() => import("./pages/Report").then((m) => ({ default: m.Report })));
@@ -32,6 +33,7 @@ createRoot(root).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/signin" element={<Suspense fallback={<FullPageLoading label="Loading…" />}><SignIn /></Suspense>} />
         <Route path="/student" element={<RequireRole role="student"><StudentHome /></RequireRole>} />
         <Route path="/student/assignments/:id" element={<RequireRole role="student"><Suspense fallback={<FullPageLoading label="Opening the workspace…" />}><Workspace /></Suspense></RequireRole>} />
         <Route path="/student/assignments/:id/viva" element={<RequireRole role="student"><Suspense fallback={<FullPageLoading label="Opening your viva…" />}><Viva /></Suspense></RequireRole>} />

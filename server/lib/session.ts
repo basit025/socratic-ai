@@ -15,6 +15,7 @@ export interface Session {
   role: "teacher" | "student";
   name: string;
   exp: number;                      // expiry, ms since epoch
+  demo?: boolean;                   // false for real accounts (the 'live' sandbox)
 }
 
 type Env = Record<string, string | undefined>;

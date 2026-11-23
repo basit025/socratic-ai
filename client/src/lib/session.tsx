@@ -7,7 +7,7 @@ export interface Me {
   role: "teacher" | "student";
   name: string;
   expiresAt: string;
-  demo: boolean;
+  demo: boolean; // false for real accounts
 }
 
 const MeContext = createContext<Me | null>(null);

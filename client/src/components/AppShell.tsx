@@ -64,8 +64,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link to={me.role === "teacher" ? "/teacher" : "/student"} aria-label="Socratic AI home">
               <Logo />
             </Link>
-            <span className="hidden truncate text-sm text-ink-3 md:inline">{INSTITUTION}</span>
-            <DemoBadge />
+            {me.demo && <span className="hidden truncate text-sm text-ink-3 md:inline">{INSTITUTION}</span>}
+            {me.demo && <DemoBadge />}
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 sm:flex">
@@ -77,14 +77,18 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="block text-ink-3">{me.role === "teacher" ? "Teacher" : "Student"}</span>
               </span>
             </div>
-            <Button variant="ghost" icon={ArrowLeftRight} loading={switching} onClick={switchRole} title={`See this demo as the ${me.role === "teacher" ? "student" : "teacher"}`}>
-              <span className="hidden lg:inline">{me.role === "teacher" ? "Student view" : "Teacher view"}</span>
-            </Button>
-            <Button variant="ghost" icon={RotateCcw} onClick={() => setResetOpen(true)} title="Start over with a fresh copy of the demo">
-              <span className="hidden xl:inline">Start over</span>
-            </Button>
-            <Button variant="ghost" icon={LogOut} loading={leaving} onClick={leave} title="Leave this demo and go back to the start page">
-              <span className="hidden sm:inline">Leave demo</span>
+            {me.demo && (
+              <>
+                <Button variant="ghost" icon={ArrowLeftRight} loading={switching} onClick={switchRole} title={`See this demo as the ${me.role === "teacher" ? "student" : "teacher"}`}>
+                  <span className="hidden lg:inline">{me.role === "teacher" ? "Student view" : "Teacher view"}</span>
+                </Button>
+                <Button variant="ghost" icon={RotateCcw} onClick={() => setResetOpen(true)} title="Start over with a fresh copy of the demo">
+                  <span className="hidden xl:inline">Start over</span>
+                </Button>
+              </>
+            )}
+            <Button variant="ghost" icon={LogOut} loading={leaving} onClick={leave} title={me.demo ? "Leave this demo and go back to the start page" : "Sign out"}>
+              <span className="hidden sm:inline">{me.demo ? "Leave demo" : "Sign out"}</span>
             </Button>
           </div>
         </div>

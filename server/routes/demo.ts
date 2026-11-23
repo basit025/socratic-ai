@@ -40,7 +40,7 @@ demoRouter.post("/demo/start", async (req, res, next) => {
 /** Who am I? The front end calls this on load to decide what to show. */
 demoRouter.get("/me", requireSession(), (req, res) => {
   const s = req.session!;
-  res.set("Cache-Control", "no-store").json({ role: s.role, name: s.name, expiresAt: new Date(s.exp).toISOString(), demo: true });
+  res.set("Cache-Control", "no-store").json({ role: s.role, name: s.name, expiresAt: new Date(s.exp).toISOString(), demo: s.demo !== false });
 });
 
 /**
@@ -50,6 +50,7 @@ demoRouter.get("/me", requireSession(), (req, res) => {
 demoRouter.post("/demo/switch", requireSession(), async (req, res, next) => {
   try {
     const s = req.session!;
+    if (s.demo === false) throw new PublicError(403, "Switching roles is only for the demo.", "not_demo");
     const role = s.role === "student" ? "teacher" : "student";
     const [p] = await select<{ id: string; full_name: string }>(
       `profiles?select=id,full_name&sandbox_id=${eq(s.sid)}&email=${eq(`demo-${role}@pothohar.demo`)}`,
