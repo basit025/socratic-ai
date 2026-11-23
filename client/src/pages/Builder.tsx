@@ -12,9 +12,12 @@ import { api, ApiError } from "../lib/api";
 import { formatDue } from "../lib/format";
 import { useApi } from "../lib/useApi";
 import { runner, useRunnerStatus } from "../runner/runner";
+import { runnerFor } from "../runner/jsRunner";
 
 interface Template {
   key: string;
+  type: "code" | "written";
+  language: "python" | "javascript" | null;
   title: string;
   summary: string;
   instructions: string;
@@ -77,8 +80,11 @@ const mono = `${field} font-mono text-sm leading-6`;
 export function Builder() {
   const data = useApi<BuilderData>("/teacher/builder");
   const navigate = useNavigate();
-  const runnerStatus = useRunnerStatus();
+  const pythonStatus = useRunnerStatus();
   const [step, setStep] = useState<Step>(1);
+  const [type, setType] = useState<"code" | "written">("code");
+  const [language, setLanguage] = useState<"python" | "javascript">("python");
+  const runnerStatus = language === "javascript" ? "ready" : pythonStatus;
   const [courseId, setCourseId] = useState("");
   const [templateKey, setTemplateKey] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -106,6 +112,8 @@ export function Builder() {
 
   const pickTemplate = (t: Template | null) => {
     setTemplateKey(t?.key ?? "scratch");
+    setType(t?.type ?? "code");
+    setLanguage(t?.language ?? "python");
     setTitle(t?.title ?? "");
     setInstructions(t?.instructions ?? "");
     setStarterCode(t?.starterCode ?? "def solve():\n    # Write your function here\n    pass\n");
@@ -129,7 +137,7 @@ export function Builder() {
     const perTest: Record<string, string>[] = valid.map(() => ({}));
     for (const opt of options) {
       const code = fill(reference, opt != null ? variants?.fills[opt] : undefined);
-      const out = await runner.runTests(code, valid.map((t) => t.call));
+      const out = await runnerFor(language).runTests(code, valid.map((t) => t.call));
       if (!out.ok) {
         setChecked({ status: "error", message: `Your reference solution doesn't run${opt ? ` for version "${opt}"` : ""}: ${out.error?.split("\n").at(-1) ?? "error"}` });
         return;
@@ -150,15 +158,15 @@ export function Builder() {
   // Editing anything the expected values depend on asks for a fresh check.
   useEffect(() => setChecked((c) => (c.status === "ok" || c.status === "error" ? { status: "idle" } : c)), [reference, tests.length, rules.variantsOn]);
 
-  const taskReady = title.trim().length >= 2 && instructions.trim().length >= 10 && checked.status === "ok";
+  const taskReady = title.trim().length >= 2 && instructions.trim().length >= 10 && (type === "written" || checked.status === "ok");
   const course = data.status === "ready" ? data.data.courses.find((c) => c.id === courseId) : undefined;
 
   const save = async (status: "draft" | "published") => {
-    if (checked.status !== "ok") return;
+    if (type === "code" && checked.status !== "ok") return;
     setSaving(status);
     setError(null);
     try {
-      const payloadTests = tests.map((t, i) => {
+      const payloadTests = type === "written" || checked.status !== "ok" ? [] : tests.map((t, i) => {
         const vals = checked.values[i]!;
         const distinct = new Set(Object.values(vals));
         return { name: t.name.trim(), call: t.call.trim(), expected: rules.variantsOn && distinct.size > 1 ? vals : Object.values(vals)[0]! };
@@ -166,10 +174,12 @@ export function Builder() {
       const r = await api<{ id: string }>("/teacher/assignments", {
         body: {
           courseId,
+          type,
+          language: type === "code" ? language : null,
           title: title.trim(),
           instructions: instructions.trim(),
           starterCode,
-          referenceSolution: reference,
+          referenceSolution: type === "code" ? reference : "",
           tests: payloadTests,
           variants: rules.variantsOn ? variants : null,
           marks,
@@ -238,6 +248,7 @@ export function Builder() {
                     {t.variants && <Shuffle className="size-4 text-ink-3" aria-label="Has variants" />}
                   </span>
                   <span className="mt-1 block text-sm text-ink-2">{t.summary}</span>
+                  <span className="mt-2 inline-block rounded bg-locked-soft px-1.5 py-0.5 text-xs font-medium text-ink-2">{t.type === "written" ? "Written answer" : t.language === "javascript" ? "JavaScript" : "Python"}</span>
                 </button>
               ))}
               <button
@@ -254,6 +265,15 @@ export function Builder() {
           {templateKey && (
             <>
               <Card className="grid gap-4 p-5 lg:grid-cols-2">
+                {templateKey === "scratch" && (
+                  <div className="flex flex-wrap items-center gap-3 lg:col-span-2">
+                    <span className="text-sm font-semibold">Kind</span>
+                    <Segmented label="Kind of assignment" value={type} onChange={(v) => { setType(v); setChecked({ status: "idle" }); }} options={[{ value: "code", label: "Coding lab" }, { value: "written", label: "Written answer" }]} />
+                    {type === "code" && (
+                      <Segmented label="Language" value={language} onChange={(v) => { setLanguage(v); setChecked({ status: "idle" }); }} options={[{ value: "python", label: "Python" }, { value: "javascript", label: "JavaScript" }]} />
+                    )}
+                  </div>
+                )}
                 <label className="block">
                   <span className="mb-1 block text-sm font-semibold">Course</span>
                   <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={field}>
@@ -274,6 +294,7 @@ export function Builder() {
                   <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={5} className={field} />
                   <span className="mt-1 block text-xs text-ink-3">Use **bold** and `code`. {variants ? "Words in {braces} change for each version of the question." : ""}</span>
                 </label>
+                {type === "code" && (<>
                 <label className="block">
                   <span className="mb-1 block text-sm font-semibold">Starter code (students see this)</span>
                   <textarea value={starterCode} onChange={(e) => setStarterCode(e.target.value)} rows={8} spellCheck={false} className={mono} />
@@ -282,6 +303,7 @@ export function Builder() {
                   <span className="mb-1 block text-sm font-semibold">Your reference solution (never shown to students)</span>
                   <textarea value={reference} onChange={(e) => setReference(e.target.value)} rows={8} spellCheck={false} className={mono} />
                 </label>
+                </>)}
                 <div className="grid grid-cols-2 gap-4 lg:col-span-2 lg:grid-cols-4">
                   <label className="block">
                     <span className="mb-1 block text-sm font-semibold">Marks</span>
@@ -294,6 +316,7 @@ export function Builder() {
                 </div>
               </Card>
 
+              {type === "code" && (
               <Card className="p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -332,13 +355,14 @@ export function Builder() {
                   <p className="mt-3 flex items-start gap-2 text-danger" role="alert"><XCircle className="mt-0.5 size-5 shrink-0" aria-hidden /> {checked.message}</p>
                 )}
               </Card>
+              )}
 
               <div className="flex justify-end">
                 <Button size="lg" icon={ArrowRight} disabled={!taskReady} onClick={() => setStep(2)} title={taskReady ? undefined : "Add a title and task, then check your tests"}>
                   Next: set the rules
                 </Button>
               </div>
-              {!taskReady && <p className="text-right text-sm text-ink-3">To continue: add a title and task, then click "Check tests against my solution".</p>}
+              {!taskReady && <p className="text-right text-sm text-ink-3">{type === "written" ? "To continue: add a title and the task." : 'To continue: add a title and task, then click "Check tests against my solution".'}</p>}
             </>
           )}
         </div>
@@ -349,10 +373,10 @@ export function Builder() {
           <RuleCard icon={ClipboardX} title="Block paste" sentence="Students must type their answer. Paste attempts are blocked, explained to the student, and shown in your report.">
             <Toggle checked={rules.pasteBlocked} onChange={(v) => setRules({ ...rules, pasteBlocked: v })} label="Block paste" />
           </RuleCard>
-          <RuleCard icon={Play} title="Order of work" sentence={rules.workflow === "run_first" ? "Run first: students run their code, then explain to Ustaad why it gives that output." : "Explain first: students explain their plan to Ustaad before Run unlocks."}>
+          {type === "code" && <RuleCard icon={Play} title="Order of work" sentence={rules.workflow === "run_first" ? "Run first: students run their code, then explain to Ustaad why it gives that output." : "Explain first: students explain their plan to Ustaad before Run unlocks."}>
             <Segmented label="Order of work" value={rules.workflow} onChange={(v) => setRules({ ...rules, workflow: v })} options={[{ value: "run_first", label: "Run first" }, { value: "explain_first", label: "Explain first" }]} />
-          </RuleCard>
-          <RuleCard icon={MessageCircleQuestion} title="Viva on their own code" sentence={rules.vivaQuestions ? `After submitting, Ustaad asks ${rules.vivaQuestions} timed questions about the student's own code, ${rules.vivaSecondsPerQ} seconds each.` : "No viva: marks come from the hidden tests only (not recommended)."}>
+          </RuleCard>}
+          <RuleCard icon={MessageCircleQuestion} title="Viva on their own code" sentence={rules.vivaQuestions ? `After submitting, Ustaad asks ${rules.vivaQuestions} timed questions about the student's own ${type === "written" ? "answer" : "code"}, ${rules.vivaSecondsPerQ} seconds each.` : "No viva: marks come from the hidden tests only (not recommended)."}>
             <div className="flex flex-wrap items-center gap-2">
               <Segmented label="Viva questions" value={rules.vivaQuestions} onChange={(v) => setRules({ ...rules, vivaQuestions: v })} options={[{ value: 0, label: "Off" }, { value: 3, label: "3 Qs" }, { value: 4, label: "4 Qs" }, { value: 5, label: "5 Qs" }]} />
               {rules.vivaQuestions > 0 && <Segmented label="Seconds per question" value={rules.vivaSecondsPerQ} onChange={(v) => setRules({ ...rules, vivaSecondsPerQ: v })} options={[{ value: 60, label: "60 s" }, { value: 90, label: "90 s" }, { value: 120, label: "120 s" }]} />}
@@ -410,11 +434,15 @@ export function Builder() {
                 </div>
               </div>
               <div>
-                <h3 className="mb-2 font-semibold">Starter code</h3>
-                <pre className="overflow-auto rounded-lg border border-line bg-canvas p-3 font-mono text-sm leading-6">{starterCode}</pre>
+                <h3 className="mb-2 font-semibold">{type === "written" ? "Their answer box" : "Starter code"}</h3>
+                {type === "written" ? (
+                  <div className="min-h-40 rounded-lg border border-line bg-canvas p-3 text-sm text-ink-3">{starterCode || "Students type their answer here (paste is off)."}<span className="mt-2 block text-right">0 words</span></div>
+                ) : (
+                  <pre className="overflow-auto rounded-lg border border-line bg-canvas p-3 font-mono text-sm leading-6">{starterCode}</pre>
+                )}
               </div>
             </div>
-            <p className="mt-5 flex items-center gap-2 text-sm text-ink-3"><Sparkles className="size-4" aria-hidden /> Students follow the journey Understand → Write → {rules.workflow === "run_first" ? "Run → Explain" : "Explain → Run"} → Submit + viva, with Ustaad's hints on the side.</p>
+            <p className="mt-5 flex items-center gap-2 text-sm text-ink-3"><Sparkles className="size-4" aria-hidden /> Students follow the journey Understand → Write → {type === "written" ? "Explain" : rules.workflow === "run_first" ? "Run → Explain" : "Explain → Run"} → Submit + viva, with Ustaad's hints on the side.</p>
           </Card>
           {error && <p role="alert" className="text-danger">{error}</p>}
           <div className="flex flex-wrap justify-between gap-3">

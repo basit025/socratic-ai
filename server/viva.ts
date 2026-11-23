@@ -41,6 +41,12 @@ const KIND_GUIDE: Record<VivaKind, string> = {
     "Describe a small new requirement (one sentence) and ask how the student would change their code to meet it, answered in words, not code. It must be answerable in under a minute by someone who wrote the code.",
 };
 
+const KIND_GUIDE_WRITTEN: Record<VivaKind, string> = {
+  explain_line: "Quote ONE specific sentence or phrase from the student's answer (in quotation marks) and ask what they meant by it and why it is true.",
+  predict_output: "Describe a short NEW situation (one sentence) and ask how the student's main idea would apply to it.",
+  modify: "Ask how the student would change or strengthen one specific part of their answer if the reader or the requirement changed (for example: a shorter version, a different audience, a counter-argument).",
+};
+
 export const VIVA_SYSTEM_PROMPT = `You are Ustaad, running a short oral viva (exam) on a student's OWN submitted code. Your questions check whether the student understands the code they handed in.
 
 RULES
@@ -60,7 +66,8 @@ export function validInputCall(call: string | null, code: string): call is strin
   if (!m) return false;
   const name = m[1]!;
   if (/[;\n]|__|import|open\(|exec|eval/.test(call)) return false;
-  return new RegExp(`(^|\\n)\\s*(def\\s+${name}\\s*\\(|${name}\\s*=\\s*lambda)`).test(code);
+  // Python: def name( / name = lambda.  JavaScript: function name( / const|let|var name = (... or name = x =>
+  return new RegExp(`(^|\\n)\\s*(def\\s+${name}\\s*\\(|${name}\\s*=\\s*lambda|(async\\s+)?function\\s+${name}\\s*\\(|(const|let|var)\\s+${name}\\s*=)`).test(code);
 }
 
 /** A meaningful line to ask about when the AI is unavailable (deterministic, never fails). */
@@ -83,6 +90,7 @@ export interface QuestionContext {
   previous: { prompt: string; answer: string }[];
   kind: VivaKind;
   sandboxId: string;
+  mode?: "code" | "written";
 }
 
 export async function generateQuestion(c: QuestionContext): Promise<{ prompt: string; input_call: string | null; fallback: boolean }> {
@@ -90,11 +98,11 @@ export async function generateQuestion(c: QuestionContext): Promise<{ prompt: st
     `Assignment: ${c.title}`,
     `Brief:\n${c.instructions}`,
     `Hidden test results: ${c.testsSummary}`,
-    `<student_code>\n${c.code.slice(0, 8000)}\n</student_code>`,
+    c.mode === "written" ? `<student_code>\n(This is a WRITTEN answer, not code. Ask about the student's own words.)\n${c.code.slice(0, 8000)}\n</student_code>` : `<student_code>\n${c.code.slice(0, 8000)}\n</student_code>`,
     c.previous.length
       ? `<previous_answers>\n${c.previous.map((p, i) => `Q${i + 1}: ${p.prompt}\nA${i + 1}: ${p.answer || "(no answer)"}`).join("\n\n")}\n</previous_answers>`
       : "",
-    `Question kind: ${c.kind}\nHow to ask it: ${KIND_GUIDE[c.kind]}`,
+    `Question kind: ${c.kind}\nHow to ask it: ${(c.mode === "written" ? KIND_GUIDE_WRITTEN : KIND_GUIDE)[c.kind]}`,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -110,11 +118,18 @@ export async function generateQuestion(c: QuestionContext): Promise<{ prompt: st
       sandboxId: c.sandboxId,
       timeoutMs: 6_000,
     });
+    if (c.mode === "written") return { prompt: r.data.prompt.trim(), input_call: null, fallback: false };
     const call = c.kind === "predict_output" && validInputCall(r.data.input_call, c.code) ? r.data.input_call : null;
     if (c.kind === "predict_output" && !call) return { ...fallbackQuestion("explain_line", c.code), fallback: true };
     return { prompt: r.data.prompt.trim(), input_call: call, fallback: false };
   } catch (err) {
-    if (err instanceof LlmUnavailableError) return { ...fallbackQuestion(c.kind, c.code), fallback: true };
+    if (err instanceof LlmUnavailableError) {
+      if (c.mode === "written") {
+        const sentence = c.code.split(/(?<=[.!?])\s+/).find((x) => x.trim().length > 25)?.trim();
+        return { prompt: sentence ? `In your own words: what did you mean by "${sentence.slice(0, 160)}", and why is it true?` : "In your own words: what is the main point of your answer, and why?", input_call: null, fallback: true };
+      }
+      return { ...fallbackQuestion(c.kind, c.code), fallback: true };
+    }
     throw err;
   }
 }
@@ -151,6 +166,7 @@ export interface ScoreContext {
   code: string;
   questions: VivaQuestion[];
   sandboxId: string;
+  mode?: "code" | "written";
 }
 
 /** Normalises a predicted value for comparison with Python's repr (quotes, spaces, list/tuple brackets kept). */
@@ -188,7 +204,12 @@ export async function scoreViva(c: ScoreContext): Promise<{ score: VivaScore; un
     const r = await generateJson({
       purpose: "viva_score",
       system: SCORING_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: `Assignment: ${c.title}\n\n<student_code>\n${c.code.slice(0, 8000)}\n</student_code>\n\nViva transcript:\n${transcript}` }],
+      messages: [
+        {
+          role: "user",
+          content: `Assignment: ${c.title}\n\n${c.mode === "written" ? "This is a WRITTEN answer, not code: read output_prediction as 'applies the idea to a new case' and modification as 'can change or strengthen the answer'.\n\n" : ""}<student_code>\n${c.code.slice(0, 8000)}\n</student_code>\n\nViva transcript:\n${transcript}`,
+        },
+      ],
       schema: ScoreSchema,
       schemaName: "viva_score",
       maxOutputTokens: 700,

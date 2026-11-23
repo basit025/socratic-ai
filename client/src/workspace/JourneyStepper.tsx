@@ -16,7 +16,7 @@ export interface JourneyStep {
 export function JourneyStepper({ steps }: { steps: JourneyStep[] }) {
   return (
     <nav aria-label="Your progress on this assignment">
-      <ol className="grid grid-cols-5 gap-1 sm:gap-2">
+      <ol className="grid gap-1 sm:gap-2" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
         {steps.map((s, i) => (
           <li key={s.key} aria-current={s.state === "current" ? "step" : undefined} className="min-w-0">
             <div

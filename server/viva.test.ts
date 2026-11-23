@@ -11,6 +11,10 @@ describe("viva helpers", () => {
     expect(validInputCall("__import__('os')", code)).toBe(false);
     expect(validInputCall(null, code)).toBe(false);
     expect(validInputCall("f([1])", "f = lambda b: (sum(b), 0)")).toBe(true);
+    // JavaScript
+    expect(validInputCall("countVowels('chai')", "function countVowels(word) {\n  return 0;\n}")).toBe(true);
+    expect(validInputCall("total([1, 2])", "const total = (xs) => xs.reduce((a, b) => a + b, 0);")).toBe(true);
+    expect(validInputCall("alert(1)", "function countVowels(word) { return 0; }")).toBe(false);
   });
 
   it("matches predictions loosely on spacing and quotes, strictly on values", () => {

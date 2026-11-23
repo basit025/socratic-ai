@@ -228,6 +228,7 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
         <div className="grid gap-5 lg:grid-cols-2">
           <Card className="p-5">
             <h3 className="font-semibold">Hidden tests</h3>
+            {d.tests.length === 0 && <p className="mt-2 text-ink-3">No hidden tests: this is a written answer, marked by the viva and by you.</p>}
             <ul className="mt-3 space-y-2 text-sm">
               {d.tests.map((t) => (
                 <li key={t.name} className="flex items-start gap-2">

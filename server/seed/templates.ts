@@ -6,6 +6,8 @@
  */
 export interface Template {
   key: string;
+  type: "code" | "written";
+  language: "python" | "javascript" | null;
   title: string;
   summary: string;
   instructions: string;
@@ -19,6 +21,8 @@ export interface Template {
 export const templates: Template[] = [
   {
     key: "cricket",
+    type: "code",
+    language: "python",
     title: "Cricket Over Tracker",
     summary: "Loops and running totals: total runs and big hits in an over.",
     instructions:
@@ -45,6 +49,8 @@ export const templates: Template[] = [
   },
   {
     key: "loadshedding",
+    type: "code",
+    language: "python",
     title: "Load-shedding Planner",
     summary: "Sorting and streaks: the longest power cut in a day.",
     instructions:
@@ -64,6 +70,8 @@ export const templates: Template[] = [
   },
   {
     key: "results",
+    type: "code",
+    language: "python",
     title: "Exam Result Calculator",
     summary: "Conditions: turning marks into a grade.",
     instructions:
@@ -90,6 +98,8 @@ export const templates: Template[] = [
   },
   {
     key: "metro",
+    type: "code",
+    language: "python",
     title: "Metro Card Balance",
     summary: "Integer division and edge cases: rides left on a card.",
     instructions:
@@ -106,4 +116,79 @@ export const templates: Template[] = [
     variants: null,
     marks: 10,
   },
+  {
+    key: "vowels",
+    type: "code",
+    language: "javascript",
+    title: "Urdu Name Vowel Counter",
+    summary: "JavaScript strings and loops: counting vowels in a name.",
+    instructions:
+      "Write a JavaScript function `countVowels(name)` that returns **how many vowels** (a, e, i, o, u, upper or lower case) are in a name written in English letters.\n\nExample: `countVowels(\"Ayesha\")` returns `3`.\n\nAn empty name has `0` vowels.",
+    starterCode: "function countVowels(name) {\n  // Return the number of vowels in name\n}\n\nconsole.log(countVowels(\"Ayesha\"));\n",
+    referenceSolution:
+      "function countVowels(name) {\n  let count = 0;\n  for (const ch of name.toLowerCase()) {\n    if (\"aeiou\".includes(ch)) count++;\n  }\n  return count;\n}\n",
+    tests: [
+      { name: "Example from the brief", call: "countVowels(\"Ayesha\")" },
+      { name: "Empty name", call: "countVowels(\"\")" },
+      { name: "Capital letters", call: "countVowels(\"OMAR\")" },
+      { name: "No vowels", call: "countVowels(\"Rhythm\")" },
+      { name: "Two words", call: "countVowels(\"Sana Rauf\")" },
+    ],
+    variants: null,
+    marks: 10,
+  },
+  {
+    key: "attendance",
+    type: "code",
+    language: "javascript",
+    title: "Attendance Shortage List",
+    summary: "JavaScript arrays and objects: who is below the attendance limit.",
+    instructions:
+      "Each record looks like `{ name: \"Ali\", attendance: 72 }`. Write `shortList(records)` that returns an **array of names** whose attendance is **below {limit}%**, in the same order.\n\nExample: `shortList([{ name: \"Ali\", attendance: 72 }, { name: \"Sara\", attendance: 90 }])` returns `[\"Ali\"]`.",
+    starterCode: "function shortList(records) {\n  // Return the names below the attendance limit\n}\n\nconsole.log(shortList([{ name: \"Ali\", attendance: 72 }, { name: \"Sara\", attendance: 90 }]));\n",
+    referenceSolution:
+      "function shortList(records) {\n  const names = [];\n  for (const r of records) {\n    if (r.attendance < {limit}) names.push(r.name);\n  }\n  return names;\n}\n",
+    tests: [
+      { name: "Example from the brief", call: "shortList([{ name: \"Ali\", attendance: 72 }, { name: \"Sara\", attendance: 90 }])" },
+      { name: "Nobody short", call: "shortList([{ name: \"Omar\", attendance: 95 }])" },
+      { name: "Empty class", call: "shortList([])" },
+      { name: "Exactly 75%", call: "shortList([{ name: \"Zainab\", attendance: 75 }])" },
+      { name: "Several short", call: "shortList([{ name: \"A\", attendance: 50 }, { name: \"B\", attendance: 79 }, { name: \"C\", attendance: 81 }])" },
+    ],
+    variants: {
+      param: "limit",
+      options: ["75", "80"],
+      fills: { "75": { limit: "75" }, "80": { limit: "80" } },
+    },
+    marks: 10,
+  },
+  {
+    key: "email",
+    type: "written",
+    language: null,
+    title: "Formal Email to Your Teacher",
+    summary: "Written: a short, polite, clear request.",
+    instructions:
+      "You missed a lab because of a family emergency. Write a **formal email** (120–180 words) to your teacher asking to submit the lab late.\n\nInclude: a clear subject line, a polite greeting, the reason in one or two sentences, exactly what you are asking for, and a proper closing.",
+    starterCode: "Subject: \n\nDear ",
+    referenceSolution: "",
+    tests: [],
+    variants: null,
+    marks: 10,
+  },
+  {
+    key: "phones",
+    type: "written",
+    language: null,
+    title: "Should Phones Be Allowed in Class?",
+    summary: "Written: a short argument with a reason and an example.",
+    instructions:
+      "In **150–200 words**, argue **for or against** allowing phones in university classes.\n\nState your position in the first sentence, give **two reasons**, support one of them with a **real example** from your own experience, and answer one objection.",
+    starterCode: "",
+    referenceSolution: "",
+    tests: [],
+    variants: null,
+    marks: 10,
+  },
 ];
+
