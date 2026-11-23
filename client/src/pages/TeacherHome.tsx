@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Check, Copy, Flag, Inbox, Plus, Users } from "lucide-react";
+import { BookOpen, Check, Copy, Flag, Inbox, Plus, Table2, Users } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Card, Chip, EmptyState, ErrorState, PageHeader, Skeleton, Ur, type ChipTone } from "../components/ui";
 import { firstName, formatDue, greeting } from "../lib/format";
@@ -122,11 +122,15 @@ export function TeacherHome() {
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
                     <div>
                       <h2 className="text-lg font-semibold">
-                        {c.code} · {c.name}
+                        <Link to={`/teacher/courses/${c.id}`} className="hover:text-action">{c.code} · {c.name}</Link>
                       </h2>
                       <p className="text-sm text-ink-3">{[c.section, c.term, `${c.students} students`].filter(Boolean).join(" · ")}</p>
                     </div>
-                    <JoinCode code={c.joinCode} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link to={`/teacher/courses/${c.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-action hover:bg-action-soft"><BookOpen className="size-4" aria-hidden /> Course</Link>
+                      <Link to={`/teacher/courses/${c.id}/gradebook`} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-action hover:bg-action-soft"><Table2 className="size-4" aria-hidden /> Gradebook</Link>
+                      <JoinCode code={c.joinCode} />
+                    </div>
                   </div>
                   {c.assignments.length === 0 ? (
                     <p className="px-5 py-6 text-ink-3">No assignments yet. Create the first one in about 2 minutes.</p>

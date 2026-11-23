@@ -205,14 +205,34 @@ async function main() {
       await shot(s, "fail-decision");
       fail(`teacher decision not saved: ${alert}`);
     }
+    // Confirm the mark with a comment
+    await s.$eval("input[type=number]", (el) => {
+      const input = el as HTMLInputElement;
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(input, "7");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await s.type("input[placeholder^='e.g. Good work']", "Good effort. Let's go over the boundary condition in class.");
+    await s.locator("button ::-p-text(Confirm mark)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("Mark saved. The student can see it."), { timeout: 10000 });
+    ok("teacher confirmed the mark with a comment");
     await s.locator("a ::-p-text(all submissions)").click();
     await s.waitForFunction(() => document.body.innerText.includes("Tick 2 students to compare"), { timeout: 15000 });
-    (await s.$eval("body", (b) => b.innerText.includes("Looks fine"))) ? ok("submissions list shows the decision") : fail("decision not shown in list");
+    (await s.$eval("body", (b) => /Looks fine|Marked/.test(b.innerText))) ? ok("submissions list shows the teacher's decision") : fail("decision not shown in list");
     await shot(s, "13-teacher-submissions-1920");
     await s.setViewport({ width: 1440, height: 900 });
     await s.locator("button ::-p-text(Student view)").click();
     await s.waitForFunction(() => location.pathname === "/student", { timeout: 15000 });
     ok("switched back to the student view");
+
+    // Course page and the student's view of the teacher's mark
+    await s.locator("a ::-p-text(Weekly notes and announcements)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("this week") && document.body.innerText.includes("Announcements"), { timeout: 15000 });
+    ok("student course page: weeks (current week open) and announcements");
+    await shot(s, "17-course-page");
+    await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.waitForFunction(() => document.body.innerText.includes("Marked: 7/10"), { timeout: 15000 });
+    ok('student home shows the confirmed mark "Marked: 7/10"');
 
     await s.setViewport({ width: 390, height: 844, isMobile: true });
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
@@ -231,6 +251,14 @@ async function main() {
     await t.waitForFunction(() => location.pathname === "/teacher" && document.body.innerText.includes("Cricket Over Tracker"), { timeout: 15000 });
     ok(`"Try as teacher" → teacher home in ${Date.now() - t3} ms`);
     await shot(t, "5-teacher-home-1920");
+
+    // ------------------------------------------------ gradebook
+    await t.locator("a ::-p-text(Gradebook)").click();
+    await t.waitForFunction(() => document.body.innerText.includes("gradebook") && document.body.innerText.includes("Download CSV"), { timeout: 15000 });
+    ok("teacher gradebook renders with CSV export");
+    await shot(t, "18-gradebook-1920");
+    await t.goto(`${BASE}/teacher`, { waitUntil: "domcontentloaded" });
+    await t.waitForFunction(() => document.body.innerText.includes("Create assignment"), { timeout: 15000 });
 
     // ------------------------------------------------ builder: template → check tests → rules → preview → publish
     await t.locator("a ::-p-text(Create assignment)").click();

@@ -36,7 +36,7 @@ interface VivaState {
   language: string | null;
   tests: { passed: number; total: number; results: { name: string; passed: boolean }[] } | null;
   current?: Current;
-  result?: { vivaScore: number | null; grade: number | null; reviseNext: string | null; questions: { prompt: string; answer: string; score: number | null; feedback: string | null; late: boolean }[] };
+  result?: { vivaScore: number | null; grade: number | null; confirmedByTeacher?: boolean; teacherComment?: string | null; reviseNext: string | null; questions: { prompt: string; answer: string; score: number | null; feedback: string | null; late: boolean }[] };
 }
 
 /** Renders `code` spans inside a sentence. */
@@ -254,10 +254,16 @@ export function Viva() {
             <p className="text-2xl font-bold">{state.tests ? `${state.tests.passed}/${state.tests.total} passed` : "Not run"}</p>
           </Card>
           <Card className="p-4 text-center">
-            <p className="text-sm text-ink-3">Suggested mark</p>
+            <p className="text-sm text-ink-3">{r?.confirmedByTeacher ? "Mark from your teacher" : "Suggested mark"}</p>
             <p className="text-2xl font-bold">{r?.grade != null ? `${r.grade}/${state.marks}` : "Pending"}</p>
           </Card>
         </div>
+        {r?.teacherComment && (
+          <Card className="mt-5 border-action-line bg-action-soft p-4">
+            <p className="text-sm font-semibold text-action">From your teacher</p>
+            <p className="mt-1">{r.teacherComment}</p>
+          </Card>
+        )}
         {r?.reviseNext && (
           <Card className="mt-5 flex gap-3 p-4">
             <Lightbulb className="mt-0.5 size-5 shrink-0 text-attention" aria-hidden />

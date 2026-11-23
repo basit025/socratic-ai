@@ -105,13 +105,18 @@ export function StudentHome() {
             <div className="space-y-6">
               {home.data.courses.map((c) => (
                 <Card key={c.id}>
-                  <div className="border-b border-line px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4">
+                    <div>
                     <h2 className="text-lg font-semibold">
-                      {c.code} · {c.name}
+                      <Link to={`/student/courses/${c.id}`} className="hover:text-action">{c.code} · {c.name}</Link>
                     </h2>
                     <p className="text-sm text-ink-3">
                       {[c.section, c.term, c.teacher].filter(Boolean).join(" · ")}
                     </p>
+                    </div>
+                    <Link to={`/student/courses/${c.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-action hover:bg-action-soft">
+                      Weekly notes and announcements <ArrowRight className="size-4" aria-hidden />
+                    </Link>
                   </div>
                   {c.assignments.length === 0 ? (
                     <p className="px-5 py-6 text-ink-3">No assignments yet. Your teacher will post them here.</p>

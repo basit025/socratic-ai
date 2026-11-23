@@ -13,6 +13,8 @@ const Workspace = lazy(() => import("./pages/Workspace").then((m) => ({ default:
 const Viva = lazy(() => import("./pages/Viva").then((m) => ({ default: m.Viva })));
 const TeacherAssignment = lazy(() => import("./pages/TeacherAssignment").then((m) => ({ default: m.TeacherAssignment })));
 const Builder = lazy(() => import("./pages/Builder").then((m) => ({ default: m.Builder })));
+const CoursePage = lazy(() => import("./pages/CoursePage").then((m) => ({ default: m.CoursePage })));
+const Gradebook = lazy(() => import("./pages/Gradebook").then((m) => ({ default: m.Gradebook })));
 const Report = lazy(() => import("./pages/Report").then((m) => ({ default: m.Report })));
 import { NotFound } from "./pages/NotFound";
 import { runner } from "./runner/runner";
@@ -33,6 +35,9 @@ createRoot(root).render(
         <Route path="/student" element={<RequireRole role="student"><StudentHome /></RequireRole>} />
         <Route path="/student/assignments/:id" element={<RequireRole role="student"><Suspense fallback={<FullPageLoading label="Opening the workspace…" />}><Workspace /></Suspense></RequireRole>} />
         <Route path="/student/assignments/:id/viva" element={<RequireRole role="student"><Suspense fallback={<FullPageLoading label="Opening your viva…" />}><Viva /></Suspense></RequireRole>} />
+        <Route path="/student/courses/:id" element={<RequireRole role="student"><Suspense fallback={<FullPageLoading label="Opening the course…" />}><CoursePage /></Suspense></RequireRole>} />
+        <Route path="/teacher/courses/:id" element={<RequireRole role="teacher"><Suspense fallback={<FullPageLoading label="Opening the course…" />}><CoursePage /></Suspense></RequireRole>} />
+        <Route path="/teacher/courses/:id/gradebook" element={<RequireRole role="teacher"><Suspense fallback={<FullPageLoading label="Opening the gradebook…" />}><Gradebook /></Suspense></RequireRole>} />
         <Route path="/teacher" element={<RequireRole role="teacher"><TeacherHome /></RequireRole>} />
         <Route path="/teacher/assignments/new" element={<RequireRole role="teacher"><Suspense fallback={<FullPageLoading label="Opening the builder…" />}><Builder /></Suspense></RequireRole>} />
         <Route path="/teacher/assignments/:id" element={<RequireRole role="teacher"><Suspense fallback={<FullPageLoading label="Loading submissions…" />}><TeacherAssignment /></Suspense></RequireRole>} />
