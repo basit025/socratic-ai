@@ -24,7 +24,10 @@ function watch(page: Page, label: string) {
   page.on("pageerror", (e) => problems.push(`[${label}] page error: ${(e as Error).message}`));
 }
 
-const shot = (page: Page, name: string) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
+const shot = async (page: Page, name: string) => {
+  await page.evaluate(() => document.fonts.ready).catch(() => {}); // screenshots with the real fonts
+  await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
+};
 
 async function main() {
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox"] });
