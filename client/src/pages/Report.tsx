@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, Bot, CheckCircle2, CircleHelp, Flag, MessageSquare, ThumbsUp, Timer, XCircle } from "lucide-react";
 import { AppShell } from "../components/AppShell";
-import { Button, Card, Chip, ErrorState, Skeleton, cx } from "../components/ui";
+import { Button, Card, Chip, ErrorState, Skeleton, Ur, cx } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 import { useApi } from "../lib/useApi";
@@ -130,10 +130,10 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
           <span className="mr-1 text-sm font-medium text-ink-2">Your decision:</span>
           <Button variant={decided === "looks_fine" ? "primary" : "secondary"} icon={ThumbsUp} loading={deciding === "looks_fine"} onClick={() => decide("looks_fine")}>
-            Looks fine
+            Looks fine <Ur>ٹھیک ہے</Ur>
           </Button>
           <Button variant={decided === "talk_to_student" ? "primary" : "secondary"} icon={MessageSquare} loading={deciding === "talk_to_student"} onClick={() => decide("talk_to_student")}>
-            Talk to student
+            Talk to student <Ur>طالب علم سے بات کریں</Ur>
           </Button>
           {decided && (
             <span className="text-sm text-done" role="status">

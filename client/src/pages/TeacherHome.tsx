@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Check, Copy, Flag, Inbox, Plus, Users } from "lucide-react";
 import { AppShell } from "../components/AppShell";
-import { Card, Chip, EmptyState, ErrorState, PageHeader, Skeleton, type ChipTone } from "../components/ui";
+import { Card, Chip, EmptyState, ErrorState, PageHeader, Skeleton, Ur, type ChipTone } from "../components/ui";
 import { firstName, formatDue, greeting } from "../lib/format";
 import { useMe } from "../lib/session";
 import { useApi } from "../lib/useApi";
@@ -81,7 +81,7 @@ export function TeacherHome() {
         action={
           <Link to="/teacher/assignments/new" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-action px-4 font-semibold text-white hover:bg-action-hover">
             <Plus className="size-5" aria-hidden />
-            Create assignment
+            Create assignment <Ur>اسائنمنٹ بنائیں</Ur>
           </Link>
         }
       />

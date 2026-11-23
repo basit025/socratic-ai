@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Lightbulb, Loader2, Send } from "lucide-react";
 import { Button, cx } from "../components/ui";
+import { Appear } from "../components/Motion";
 
 export interface ChatMessage {
   role: "student" | "ustaad";
@@ -82,7 +83,7 @@ export function UstaadPanel({ studentName, messages, sending, error, disabled, d
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={cx("max-w-[92%]", m.role === "student" ? "ml-auto" : "mr-auto")}>
+          <Appear key={i} className={cx("max-w-[92%]", m.role === "student" ? "ml-auto" : "mr-auto")}>
             <p className="mb-0.5 text-xs font-semibold text-ink-3">{m.role === "student" ? "You" : "Ustaad"}</p>
             <div className={cx("rounded-xl px-3.5 py-2.5 text-[15px] whitespace-pre-wrap", m.role === "student" ? "bg-action text-white" : "border border-line bg-canvas text-ink")}>
               {m.text}
@@ -95,7 +96,7 @@ export function UstaadPanel({ studentName, messages, sending, error, disabled, d
                 </span>
               </p>
             )}
-          </div>
+          </Appear>
         ))}
         {sending && (
           <p className="flex items-center gap-2 text-sm text-ink-3" role="status">
