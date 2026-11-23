@@ -3,8 +3,8 @@
  * them side by side.
  */
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import { ArrowLeft, Columns2, Flag, Users } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { ArrowLeft, CheckCircle2, Columns2, Flag, Users } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Button, Card, Chip, EmptyState, ErrorState, Skeleton, type ChipTone } from "../components/ui";
 import { formatDue } from "../lib/format";
@@ -53,6 +53,8 @@ export function TeacherAssignment() {
   const data = useApi<Data>(`/teacher/assignments/${id}`);
   const navigate = useNavigate();
   const [picked, setPicked] = useState<string[]>([]);
+  const [params] = useSearchParams();
+  const created = params.get("created");
 
   const title = data.status === "ready" ? data.data.assignment.title : null;
   useEffect(() => {
@@ -70,6 +72,14 @@ export function TeacherAssignment() {
       {data.status === "error" && <ErrorState message={data.message} onRetry={data.reload} />}
       {data.status === "ready" && (
         <>
+          {created && (
+            <Card className="mb-5 flex items-center gap-3 border-done-line bg-done-soft p-4" >
+              <CheckCircle2 className="size-6 text-done" aria-hidden />
+              <p className="font-medium text-done" role="status">
+                {created === "published" ? "Published. Students in this course can see it now, and their work will appear below." : "Saved as a draft. Students can't see it yet."}
+              </p>
+            </Card>
+          )}
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-ink-3">

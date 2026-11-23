@@ -130,3 +130,40 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
     </div>
   );
 }
+
+// ---------------------------------------------------------------- toggle switch (role="switch")
+export function Toggle({ checked, onChange, label, id }: { checked: boolean; onChange: (v: boolean) => void; label: string; id?: string }) {
+  return (
+    <button
+      id={id}
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={cx("relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors", checked ? "bg-action" : "bg-line-strong")}
+    >
+      <span className={cx("inline-block size-5 rounded-full bg-white shadow transition-transform", checked ? "translate-x-6" : "translate-x-1")} />
+    </button>
+  );
+}
+
+/** A row of mutually exclusive options (radio semantics). */
+export function Segmented<T extends string | number>({ value, options, onChange, label }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap gap-1 rounded-lg bg-locked-soft p-1">
+      {options.map((o) => (
+        <button
+          key={String(o.value)}
+          type="button"
+          role="radio"
+          aria-checked={o.value === value}
+          onClick={() => onChange(o.value)}
+          className={cx("min-h-9 rounded-md px-3 text-sm font-semibold transition-colors", o.value === value ? "bg-surface text-action shadow-sm" : "text-ink-2 hover:text-ink")}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}

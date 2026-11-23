@@ -6,7 +6,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireSession } from "../lib/auth.js";
-import { eq, select, update } from "../lib/db.js";
+import { randomUUID } from "node:crypto";
+import { eq, insert, select, update } from "../lib/db.js";
+import { templates } from "../seed/templates.js";
 import { notFound, PublicError } from "../lib/errors.js";
 import { expectedFor, type HiddenTest, type MarkedTest } from "../integrity/grading.js";
 import type { VariantSpec } from "../lib/variants.js";
@@ -245,6 +247,94 @@ teacherRouter.post("/teacher/submissions/:id/decision", requireSession("teacher"
     await update("submissions", `id=${eq(s.id)}`, patch);
     await update("flags", `submission_id=${eq(s.id)}&teacher_status=eq.open`, { teacher_status: body.data.decision === "looks_fine" ? "dismissed" : "followed_up" });
     res.json({ ok: true, decision: body.data.decision });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- assignment builder
+teacherRouter.get("/teacher/builder", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const courses = await select<{ id: string; code: string; name: string; section: string | null }>(
+      `courses?select=id,code,name,section&teacher_id=${eq(pid)}&sandbox_id=${eq(sid)}&order=code`,
+    );
+    res.set("Cache-Control", "no-store").json({ courses, templates });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const Expected = z.union([z.string().max(2000), z.record(z.string(), z.string().max(2000))]);
+const CreateBody = z.object({
+  courseId: z.string().regex(/^[0-9a-f-]{36}$/i),
+  title: z.string().trim().min(2).max(120),
+  instructions: z.string().trim().min(10).max(10_000),
+  starterCode: z.string().max(20_000),
+  referenceSolution: z.string().max(20_000),
+  tests: z.array(z.object({ name: z.string().trim().min(1).max(80), call: z.string().trim().min(1).max(300), expected: Expected })).min(1).max(20),
+  variants: z
+    .object({ param: z.string().regex(/^[a-z_]{1,30}$/), options: z.array(z.string().trim().min(1).max(40)).min(2).max(6), fills: z.record(z.string(), z.record(z.string(), z.string().max(200))) })
+    .nullable(),
+  marks: z.number().int().min(1).max(100),
+  dueAt: z.string().datetime({ offset: true }),
+  status: z.enum(["draft", "published"]),
+  rules: z.object({
+    pasteBlocked: z.boolean(),
+    workflow: z.enum(["run_first", "explain_first"]),
+    vivaQuestions: z.number().int().min(0).max(5),
+    vivaSecondsPerQ: z.number().int().min(30).max(300),
+    vivaWeight: z.number().int().min(0).max(100),
+    variantsOn: z.boolean(),
+  }),
+});
+
+teacherRouter.post("/teacher/assignments", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const body = CreateBody.safeParse(req.body);
+    if (!body.success) {
+      const issue = body.error.issues[0];
+      throw new PublicError(400, `Please check "${issue?.path.join(" → ") || "the form"}": ${issue?.message ?? "invalid"}.`, "bad_assignment");
+    }
+    const b = body.data;
+    const [course] = await select<{ id: string }>(`courses?select=id&id=${eq(b.courseId)}&teacher_id=${eq(pid)}&sandbox_id=${eq(sid)}`);
+    if (!course) throw notFound("That course");
+    if (b.rules.variantsOn && !b.variants) throw new PublicError(400, "Variants are on, but no versions are set up.", "bad_variants");
+    if (Date.parse(b.dueAt) < Date.now() && b.status === "published") throw new PublicError(400, "The due date is in the past.", "bad_due");
+    const id = randomUUID();
+    await insert("assignments", {
+      id,
+      sandbox_id: sid,
+      course_id: course.id,
+      type: "code",
+      title: b.title,
+      instructions_md: b.instructions,
+      language: "python",
+      starter_code: b.starterCode,
+      marks: b.marks,
+      status: b.status,
+      opens_at: new Date().toISOString(),
+      due_at: b.dueAt,
+    });
+    await insert("integrity_rules", {
+      assignment_id: id,
+      sandbox_id: sid,
+      paste_blocked: b.rules.pasteBlocked,
+      workflow: b.rules.workflow,
+      viva_questions: b.rules.vivaQuestions,
+      viva_seconds_per_q: b.rules.vivaSecondsPerQ,
+      viva_weight: b.rules.vivaWeight,
+      variants_on: b.rules.variantsOn,
+    });
+    await insert("assignment_secrets", {
+      assignment_id: id,
+      sandbox_id: sid,
+      reference_solution: b.referenceSolution,
+      hidden_tests: b.tests,
+      variant_spec: b.rules.variantsOn && b.variants ? b.variants : {},
+    });
+    res.status(201).json({ id, status: b.status });
   } catch (err) {
     next(err);
   }
