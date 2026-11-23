@@ -198,6 +198,28 @@ async function main() {
     ok(`"Try as teacher" → teacher home in ${Date.now() - t3} ms`);
     await shot(t, "5-teacher-home-1920");
 
+    // ------------------------------------------------ builder: template → check tests → rules → preview → publish
+    await t.locator("a ::-p-text(Create assignment)").click();
+    await t.waitForFunction(() => document.body.innerText.includes("Start from a template"), { timeout: 20000 });
+    await t.locator("button ::-p-text(Load-shedding Planner)").click();
+    await t.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => b.textContent?.includes("Check tests against my solution") && !b.disabled), { timeout: 40000 });
+    await t.locator("button ::-p-text(Check tests against my solution)").click();
+    await t.waitForFunction(() => document.body.innerText.includes("tests run on your solution"), { timeout: 20000 });
+    ok("builder: template loaded, expected answers computed from the reference solution");
+    await shot(t, "14-builder-task-1920");
+    await t.locator("button ::-p-text(Next: set the rules)").click();
+    await t.waitForFunction(() => document.body.innerText.includes("Block paste"), { timeout: 5000 });
+    await shot(t, "15-builder-rules-1920");
+    await t.locator("button ::-p-text(Next: preview as student)").click();
+    await t.waitForFunction(() => document.body.innerText.includes("This is what a student"), { timeout: 5000 });
+    await shot(t, "16-builder-preview-1920");
+    await t.locator("button ::-p-text(Publish to)").click();
+    await t.waitForFunction(() => document.body.innerText.includes("Published. Students in this course can see it now"), { timeout: 20000 });
+    ok("builder: published, and the submissions page confirms it");
+    await t.locator("button ::-p-text(Student view)").click();
+    await t.waitForFunction(() => location.pathname === "/student" && document.body.innerText.includes("Load-shedding Planner"), { timeout: 20000 });
+    ok("the new assignment appears for the student in the same demo");
+
     // a student can't open teacher pages
     await s.setViewport({ width: 1440, height: 900 });
     await s.goto(`${BASE}/teacher`, { waitUntil: "domcontentloaded" });
