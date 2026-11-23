@@ -58,6 +58,7 @@ Every external service, model and library used in this repository is listed here
 | [Pyodide](https://pyodide.org) (loaded from the jsDelivr CDN) | Runs students' Python in the browser, inside a Web Worker | MPL-2.0 |
 | [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (Google Fonts) | Interface and code fonts | SIL Open Font License |
 | [Puppeteer](https://pptr.dev) (`puppeteer-core`) | Browser smoke tests (development only) | Apache-2.0 |
+| [Pyodide](https://pyodide.org) (npm, development only) | The seed script runs each reference solution to compute hidden-test answers | MPL-2.0 |
 | [Supabase CLI](https://supabase.com/docs/guides/cli) | Applies database migrations (development tool, run with `npx`) | MIT |
 
 ### AI coding assistants

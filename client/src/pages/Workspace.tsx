@@ -14,10 +14,12 @@ import { formatDateTime, formatDue } from "../lib/format";
 import { useMe } from "../lib/session";
 import { useApi } from "../lib/useApi";
 import { runner, useRunnerStatus } from "../runner/runner";
+import { runnerFor } from "../runner/jsRunner";
 import { CodeEditor, type CodeEditorHandle } from "../workspace/CodeEditor";
 import { JourneyStepper, type JourneyStep } from "../workspace/JourneyStepper";
 import { EventRecorder, type SaveState } from "../workspace/recorder";
 import { UstaadPanel, type ChatMessage } from "../workspace/UstaadPanel";
+import { WrittenEditor } from "../workspace/WrittenEditor";
 import type { Change } from "../../../shared/events";
 
 interface WorkspaceData {
@@ -104,7 +106,7 @@ export function Workspace() {
   const { id = "" } = useParams();
   const me = useMe();
   const data = useApi<WorkspaceData>(`/student/assignments/${id}`);
-  const runnerStatus = useRunnerStatus();
+  const pythonStatus = useRunnerStatus();
 
   const [doc, setDoc] = useState("");
   const [lastRun, setLastRun] = useState<RunView | null>(null);
@@ -124,6 +126,7 @@ export function Workspace() {
 
   const editor = useRef<CodeEditorHandle | null>(null);
   const chatInput = useRef<HTMLTextAreaElement | null>(null);
+  const textRef = useRef<HTMLTextAreaElement | null>(null);
   const docRef = useRef("");
   const outputRef = useRef<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -134,6 +137,8 @@ export function Workspace() {
   const editable = Boolean(a?.open && sub?.status === "in_progress");
   const workflow = a?.rules?.workflow ?? "run_first";
   const pasteBlocked = a?.rules?.pasteBlocked ?? false;
+  // JavaScript runs in a fresh worker each time (always ready); Python needs Pyodide loaded.
+  const runnerStatus = a?.language === "javascript" ? "ready" : pythonStatus;
 
   // Initialise local state once the data arrives.
   useEffect(() => {
@@ -163,8 +168,8 @@ export function Workspace() {
   }, [sub?.id, editable]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    void runner.preload().catch(() => {});
-  }, []);
+    if (a && a.language === "python") void runner.preload().catch(() => {});
+  }, [a?.language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showNotice = (text: string) => {
     setNotice(text);
@@ -197,7 +202,7 @@ export function Workspace() {
     }
     setRunning(true);
     const started = performance.now();
-    const r = await runner.run(docRef.current);
+    const r = await runnerFor(a?.language ?? "python").run(docRef.current);
     const view: RunView = { ok: r.ok, output: r.output, error: r.error, durationMs: r.durationMs, timedOut: r.timedOut };
     outputRef.current = [r.output, r.error].filter(Boolean).join("\n");
     setLastRun(view);
@@ -239,11 +244,18 @@ export function Workspace() {
   };
 
   // ------------------------------------------------ the journey
-  const explained = messages.some((m) => m.role === "student") && (workflow === "explain_first" || hasRun);
+  const isWritten = a?.type === "written";
+  const explained = messages.some((m) => m.role === "student") && (isWritten || workflow === "explain_first" || hasRun);
   const written = startedWriting && a != null && doc.trim() !== a.starterCode.trim();
   const steps: JourneyStep[] = useMemo(() => {
-    const raw =
-      workflow === "explain_first"
+    const raw = isWritten
+      ? [
+          { key: "understand", label: "Understand", done: startedWriting },
+          { key: "write", label: "Write", done: written },
+          { key: "explain", label: "Explain", done: explained },
+          { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null },
+        ]
+      : workflow === "explain_first"
         ? [
             { key: "understand", label: "Understand", done: startedWriting },
             { key: "write", label: "Write", done: written },
@@ -267,15 +279,21 @@ export function Workspace() {
       }
       return { key: s.key, label: s.label, state: s.lockedHint ? ("locked" as const) : ("upcoming" as const), hint: s.lockedHint };
     });
-  }, [workflow, startedWriting, written, explained, hasRun, runUnlocked, sub]);
+  }, [isWritten, workflow, startedWriting, written, explained, hasRun, runUnlocked, sub]);
   const current = steps.find((s) => s.state === "current")?.key ?? "submit";
 
   const vivaLine = a?.rules
-    ? `Ustaad will ask ${a.rules.vivaQuestions} questions about your own code, ${a.rules.vivaSecondsPerQ} seconds each. Paste is off. The viva is ${a.rules.vivaWeight}% of your marks.`
+    ? `Ustaad will ask ${a.rules.vivaQuestions} questions about your own ${isWritten ? "answer" : "code"}, ${a.rules.vivaSecondsPerQ} seconds each. Paste is off. The viva is ${a.rules.vivaWeight}% of your marks.`
     : "";
 
   const nextStep: { text: string; button?: { label: string; icon: typeof Play; onClick: () => void; disabled?: boolean } } = !editable
     ? { text: "" }
+    : isWritten && current !== "submit"
+      ? current === "understand"
+        ? { text: "Read the task, then start writing your answer in your own words.", button: { label: "Start writing", icon: Play, onClick: () => { setStartedWriting(true); textRef.current?.focus(); } } }
+        : current === "write"
+          ? { text: "Write your answer. When your main point is down, talk it through with Ustaad.", button: { label: "Talk it through with Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
+          : { text: "Tell Ustaad your main point and why you believe it, in plain words.", button: { label: "Explain to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
     : current === "understand"
       ? { text: "Read the task, then start writing your own code.", button: { label: "Start writing", icon: Play, onClick: () => { setStartedWriting(true); editor.current?.focus(); } } }
       : current === "write"
@@ -290,8 +308,9 @@ export function Workspace() {
               : { text: "Tell Ustaad, in your own words, why your code gives that output.", button: { label: "Explain to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
             : { text: `Ready to hand in? ${vivaLine}`, button: { label: "Submit (you can't edit after this)", icon: Send, onClick: () => setConfirmOpen(true) } };
 
-  const starters =
-    workflow === "explain_first"
+  const starters = isWritten
+    ? ["Here's my main point: …", "How should I start my answer?", "Ask me a question to check my argument holds up."]
+    : workflow === "explain_first"
       ? ["Here's my plan before I run anything: …", "Which part of the task should I think about first?", "Ask me a question to check my plan is ready."]
       : ["My code gave an error. Help me read it.", "Which part of the task should I start with?", "I ran my code. Ask me a question to check I understand it."];
 
@@ -408,7 +427,34 @@ export function Workspace() {
                 </div>
               </Card>
 
-              {(sub || !a.open) && (
+              {(sub || !a.open) && isWritten && (
+                <Card className="overflow-hidden">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
+                    <span className="text-sm font-semibold">Your answer</span>
+                    {editable && <SavedIndicator state={saveState} />}
+                  </div>
+                  <div className="relative">
+                    {data.status === "ready" && (
+                      <WrittenEditor
+                        initial={sub?.content ?? a.starterCode}
+                        readOnly={!editable}
+                        pasteBlocked={pasteBlocked}
+                        onChange={onChange}
+                        onBlocked={onBlocked}
+                        focusRef={(el) => (textRef.current = el)}
+                        label={`Your answer for ${a.title}`}
+                      />
+                    )}
+                    {notice && (
+                      <div role="alert" className="absolute inset-x-3 top-3 z-10 flex items-start gap-2 rounded-lg border border-attention-line bg-attention-soft px-3 py-2.5 text-sm text-ink shadow-sm">
+                        <ClipboardX className="mt-0.5 size-4 shrink-0 text-attention" aria-hidden />
+                        {notice}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+              {(sub || !a.open) && !isWritten && (
                 <Card className="overflow-hidden">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
                     <span className="font-mono text-sm font-medium">{a.language === "javascript" ? "solution.js" : "solution.py"}</span>
@@ -497,8 +543,8 @@ export function Workspace() {
       )}
       <Dialog open={confirmOpen} title="Submit and start your viva?" onClose={() => !submitting && setConfirmOpen(false)}>
         <ul className="space-y-2 text-[15px] text-ink-2">
-          <li className="flex gap-2"><Lock className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden /> Your code is locked: you can't edit it after this.</li>
-          <li className="flex gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden /> It's checked against the hidden tests straight away.</li>
+          <li className="flex gap-2"><Lock className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden /> Your {isWritten ? "answer" : "code"} is locked: you can't edit it after this.</li>
+          {!isWritten && <li className="flex gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden /> It's checked against the hidden tests straight away.</li>}
           <li className="flex gap-2"><Timer className="mt-0.5 size-4 shrink-0 text-ink-3" aria-hidden /> {vivaLine} It can't be paused.</li>
         </ul>
         {submitError && <p role="alert" className="mt-3 text-danger">{submitError}</p>}

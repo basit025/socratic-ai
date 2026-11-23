@@ -87,7 +87,41 @@ async function main() {
     // ------------------------------------------------ workspace: a real student session
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
     await s.waitForFunction(() => document.body.innerText.includes("Open assignment") || document.body.innerText.includes("Continue assignment"), { timeout: 15000 });
-    await s.locator("a ::-p-text(assignment)").click();
+    const courseCount = await s.$$eval("main section h2", (hs) => hs.length);
+    courseCount >= 3 ? ok(`student home lists ${courseCount} courses (lived-in institution)`) : fail(`only ${courseCount} course(s) on student home`);
+
+    // A JavaScript lab: runs in its own worker
+    await s.locator("a ::-p-text(Attendance Shortage List)").click();
+    await s.waitForSelector(".cm-content", { timeout: 20000 });
+    await s.click(".cm-content");
+    await s.keyboard.down("Control");
+    await s.keyboard.press("a");
+    await s.keyboard.up("Control");
+    await s.keyboard.type('const shortList = (rs) => rs.filter((r) => r.attendance < 75).map((r) => r.name);\nconsole.log(shortList([{ name: "Ali", attendance: 72 }]))', { delay: 3 });
+    await s.locator("button ::-p-text(Run my code)").click();
+    await s.waitForFunction(() => document.body.innerText.includes('["Ali"]'), { timeout: 15000 });
+    ok('JavaScript lab: Run my code → ["Ali"]');
+
+    // A written task: plain-text editor, paste blocked, live word count
+    await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.waitForFunction(() => document.body.innerText.includes("Should Phones Be Allowed in Class?"), { timeout: 15000 });
+    await s.locator("a ::-p-text(Should Phones Be Allowed in Class?)").click();
+    await s.waitForSelector("textarea[aria-label^='Your answer']", { timeout: 20000 });
+    await s.type("textarea[aria-label^='Your answer']", "Phones should be allowed in class because they help us look things up quickly.");
+    await s.waitForFunction(() => document.body.innerText.includes("14 words"), { timeout: 5000 });
+    await s.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.setData("text/plain", "an essay from ChatGPT");
+      document.querySelector("textarea[aria-label^='Your answer']")!.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+    });
+    await s.waitForFunction(() => document.body.innerText.includes("Paste is off"), { timeout: 5000 });
+    ok("written task: word count updates, paste blocked with an explanation");
+    await shot(s, "6b-written-task");
+
+    // The Python lab used for the full journey below
+    await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 15000 });
+    await s.locator("a ::-p-text(Cricket Over Tracker)").click();
     await s.waitForSelector(".cm-content", { timeout: 20000 });
     ok("workspace opened with the code editor");
     (await s.$eval("nav[aria-label='Your progress on this assignment']", (n) => (n as HTMLElement).innerText.includes("Submit + viva"))) ? ok("journey stepper visible") : fail("stepper missing");
@@ -127,7 +161,7 @@ async function main() {
     ok('student home now shows "In progress"');
 
     // ------------------------------------------------ submit → hidden tests → viva → results
-    await s.locator("a ::-p-text(Continue assignment)").click();
+    await s.locator("a ::-p-text(Cricket Over Tracker)").click();
     await s.waitForSelector(".cm-content", { timeout: 20000 });
     await s.locator("button ::-p-text(Submit (you can't edit after this))").click();
     await s.waitForSelector("[role=dialog]");

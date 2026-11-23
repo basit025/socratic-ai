@@ -12,7 +12,7 @@ import { enforceAi } from "../lib/limits.js";
 import { ipHash } from "../lib/session.js";
 import { chooseOption, renderInstructions, type VariantSpec } from "../lib/variants.js";
 import { generateJson } from "../llm.js";
-import { buildUstaadPrompt, USTAAD_SYSTEM_PROMPT, UstaadReplySchema } from "../ustaad.js";
+import { buildUstaadPrompt, USTAAD_SYSTEM_PROMPT, USTAAD_WRITING_PROMPT, UstaadReplySchema } from "../ustaad.js";
 import { EventBatchSchema, MAX_DOC_LENGTH } from "../../shared/events.js";
 
 export const workspaceRouter = Router();
@@ -219,6 +219,7 @@ workspaceRouter.post("/submissions/:id/ustaad", requireSession("student"), async
       assignmentTitle: a.title,
       instructions: variant?.rendered_instructions ?? renderInstructions(a.instructions_md, a.secrets?.variant_spec ?? {}, null),
       language: a.language ?? "text",
+      kind: a.type === "written" ? "written" : "code",
       workflow: a.rules?.workflow ?? "run_first",
       hasRun: body.data.hasRun,
       code: body.data.code,
@@ -228,7 +229,7 @@ workspaceRouter.post("/submissions/:id/ustaad", requireSession("student"), async
     const result = await generateJson(
       {
         purpose: "hint",
-        system: USTAAD_SYSTEM_PROMPT,
+        system: a.type === "written" ? USTAAD_WRITING_PROMPT : USTAAD_SYSTEM_PROMPT,
         messages: [
           ...history.reverse().map((m) => ({ role: m.role === "ustaad" ? ("assistant" as const) : ("user" as const), content: m.body })),
           { role: "user" as const, content: prompt },

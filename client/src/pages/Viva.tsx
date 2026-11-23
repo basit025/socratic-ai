@@ -10,6 +10,7 @@ import { Button, Card, Chip, DemoBadge, ErrorState, FullPageLoading, Ur, cx } fr
 import { Appear } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
 import { runner, useRunnerStatus } from "../runner/runner";
+import { runnerFor } from "../runner/jsRunner";
 
 interface Current {
   index: number;
@@ -32,6 +33,7 @@ interface VivaState {
   testsPending: boolean;
   testCalls: string[];
   code: string;
+  language: string | null;
   tests: { passed: number; total: number; results: { name: string; passed: boolean }[] } | null;
   current?: Current;
   result?: { vivaScore: number | null; grade: number | null; reviseNext: string | null; questions: { prompt: string; answer: string; score: number | null; feedback: string | null; late: boolean }[] };
@@ -121,8 +123,8 @@ export function Viva() {
       if (v.testsPending) {
         setState(v);
         setPhase("tests");
-        await runner.preload();
-        const out = await runner.runTests(v.code, v.testCalls);
+        if (v.language !== "javascript") await runner.preload();
+        const out = await runnerFor(v.language).runTests(v.code, v.testCalls);
         const results = v.testCalls.map((call) => out.results.find((r) => r.call === call) ?? { call, ok: false, error: out.error ?? "Didn't run" });
         await api(`/submissions/${v.submissionId}/tests`, { body: { results } });
         v = await api<VivaState>(`/submissions/${ws.submission.id}/viva`);
@@ -168,7 +170,7 @@ export function Viva() {
         let groundTruth: unknown;
         if (q.needsGroundTruth && q.call) {
           // Run the student's own submitted code on the question's input, AFTER they've answered.
-          const out = await runner.runTests(state.code, [q.call]);
+          const out = await runnerFor(state.language).runTests(state.code, [q.call]);
           groundTruth = out.results[0] ?? { call: q.call, ok: false, error: out.error ?? "Didn't run" };
         }
         const r = await api<{ current?: Current; done?: boolean }>(`/submissions/${state.submissionId}/viva/answer`, { body: { index: q.index, answer: text, awayMs: awayMs.current, groundTruth } });

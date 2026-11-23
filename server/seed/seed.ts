@@ -18,6 +18,7 @@ import { suggestedGrade } from "../integrity/grading.js";
 import { renderInstructions } from "../lib/variants.js";
 import type { ProcessEvent } from "../../shared/events.js";
 import { REFS } from "./supabaseCli.js";
+import { computeExpected } from "./expected.js";
 
 /** A real recorded session saved by `npm run session:export` (times in ms from its first event). */
 export interface SessionFile {
@@ -56,7 +57,7 @@ const dayAt = (n: number, hhmm: string): string =>
   `((date_trunc('day', now() at time zone 'Asia/Karachi') + interval '${Number(n)} days' + interval '${hhmm.replace(/[^0-9:]/g, "")}') at time zone 'Asia/Karachi')`;
 const SEED = "(select public.seed_sandbox_id())";
 
-export function buildSeedSql(opts: { recording?: boolean; sessions?: SessionFile[] } = {}): string {
+export async function buildSeedSql(opts: { recording?: boolean; sessions?: SessionFile[] } = {}): Promise<string> {
   const sessions = opts.sessions ?? [];
   const id = new Map<string, string>();
   const idFor = (key: string) => {
@@ -90,10 +91,12 @@ export function buildSeedSql(opts: { recording?: boolean; sessions?: SessionFile
 
   for (const a of assignments) {
     const aid = idFor(`a:${a.key}`);
+    // Expected answers come from running the reference solution (never typed by hand).
+    const tests = a.type === "code" && a.language ? await computeExpected(a.language, a.referenceSolution, a.tests, a.variantSpec ?? null) : [];
     out.push(
-      `insert into public.assignments (id, sandbox_id, course_id, module_id, type, title, instructions_md, language, starter_code, marks, status, opens_at, due_at) values (${lit(aid)}, ${SEED}, ${lit(idFor(`c:${a.course}`))}, ${lit(idFor(`m:${a.course}:${a.week}`))}, 'code', ${lit(a.title)}, ${lit(a.instructions)}, 'python', ${lit(a.starterCode)}, ${a.marks}, ${lit(opts.recording ? "published" : a.status)}, ${dayAt(opts.recording ? -1 : a.opensInDays, "08:00")}, ${dayAt(opts.recording ? 7 : a.dueInDays, "23:59")});`,
+      `insert into public.assignments (id, sandbox_id, course_id, module_id, type, title, instructions_md, language, starter_code, marks, status, opens_at, due_at) values (${lit(aid)}, ${SEED}, ${lit(idFor(`c:${a.course}`))}, ${lit(idFor(`m:${a.course}:${a.week}`))}, ${lit(a.type)}, ${lit(a.title)}, ${lit(a.instructions)}, ${lit(a.language)}, ${lit(a.starterCode)}, ${a.marks}, ${lit(opts.recording ? "published" : a.status)}, ${dayAt(opts.recording ? -1 : a.opensInDays, "08:00")}, ${dayAt(opts.recording ? 7 : a.dueInDays, "23:59")});`,
       `insert into public.integrity_rules (assignment_id, sandbox_id, paste_blocked, workflow, viva_questions, viva_seconds_per_q, viva_weight, variants_on) values (${lit(aid)}, ${SEED}, ${a.rules.pasteBlocked}, ${lit(a.rules.workflow)}, ${a.rules.vivaQuestions}, ${a.rules.vivaSecondsPerQ}, ${a.rules.vivaWeight}, ${a.rules.variantsOn});`,
-      `insert into public.assignment_secrets (assignment_id, sandbox_id, reference_solution, hidden_tests, variant_spec) values (${lit(aid)}, ${SEED}, ${lit(a.referenceSolution)}, ${json(a.tests)}, ${json(a.variantSpec ?? {})});`,
+      `insert into public.assignment_secrets (assignment_id, sandbox_id, reference_solution, hidden_tests, variant_spec) values (${lit(aid)}, ${SEED}, ${lit(a.referenceSolution)}, ${json(tests)}, ${json(a.variantSpec ?? {})});`,
     );
   }
 
@@ -160,7 +163,7 @@ export function buildSeedSql(opts: { recording?: boolean; sessions?: SessionFile
   return out.join("\n") + "\n";
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const recording = args.includes("--recording");
   if (recording && args.includes("--production")) {
@@ -168,7 +171,7 @@ function main() {
     process.exit(1);
   }
   const sessions = loadSessions();
-  const sql = buildSeedSql({ recording, sessions });
+  const sql = await buildSeedSql({ recording, sessions });
   if (args.includes("--sql-only")) {
     process.stdout.write(sql);
     return;
@@ -188,4 +191,9 @@ function main() {
   console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${sql.split("\n").length - 1} statements, ${sessions.length} real session${sessions.length === 1 ? "" : "s"}${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join("seed", "seed.ts"))) main();
+if (process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join("seed", "seed.ts"))) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

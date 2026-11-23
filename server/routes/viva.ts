@@ -27,6 +27,8 @@ interface Ctx {
   a: {
     id: string;
     title: string;
+    type: string;
+    language: string | null;
     marks: number;
     instructions_md: string;
     rules: { viva_questions: number; viva_seconds_per_q: number; viva_weight: number } | null;
@@ -38,7 +40,7 @@ interface Ctx {
 async function context(sid: string, pid: string, submissionId: string): Promise<Ctx> {
   const sub = await ownSubmission(sid, pid, submissionId);
   const [a] = await select<Ctx["a"]>(
-    `assignments?select=id,title,marks,instructions_md,rules:integrity_rules(viva_questions,viva_seconds_per_q,viva_weight),secrets:assignment_secrets(hidden_tests,variant_spec)&id=${eq(sub.assignment_id)}&sandbox_id=${eq(sid)}`,
+    `assignments?select=id,title,type,language,marks,instructions_md,rules:integrity_rules(viva_questions,viva_seconds_per_q,viva_weight),secrets:assignment_secrets(hidden_tests,variant_spec)&id=${eq(sub.assignment_id)}&sandbox_id=${eq(sid)}`,
   );
   if (!a) throw notFound("That assignment");
   const [variant] = await select<NonNullable<Ctx["variant"]>>(`variants?select=params,rendered_instructions&assignment_id=${eq(a.id)}&student_id=${eq(pid)}`);
@@ -51,6 +53,8 @@ const variantOption = (ctx: Ctx) => {
   return param && ctx.variant ? (ctx.variant.params[param] ?? null) : null;
 };
 const testCalls = (ctx: Ctx) => (ctx.a.secrets?.hidden_tests ?? []).map((t) => t.call);
+const hasTests = (ctx: Ctx) => testCalls(ctx).length > 0;
+const mode = (ctx: Ctx): "code" | "written" => (ctx.a.type === "written" ? "written" : "code");
 const instructions = (ctx: Ctx) => ctx.variant?.rendered_instructions ?? renderInstructions(ctx.a.instructions_md, ctx.a.secrets?.variant_spec ?? {}, null);
 const testsSummary = (ctx: Ctx) =>
   ctx.sub.tests_total ? `${ctx.sub.tests_passed}/${ctx.sub.tests_total} passed` : "not run";
@@ -121,6 +125,11 @@ vivaRouter.post("/submissions/:id/submit", requireSession("student"), async (req
     } else if (ctx.sub.status !== "viva_in_progress") {
       throw new PublicError(409, "This assignment has already been submitted.", "submitted");
     }
+    // Nothing to wait for (no hidden tests, no viva): finish now.
+    if (ctx.sub.status === "in_progress" && !hasTests(ctx) && (ctx.a.rules?.viva_questions ?? 0) === 0) {
+      ctx.sub.content = body.data.doc;
+      await finalize(sid, ctx, null, null, null, null, null, null);
+    }
     // Inputs only. Expected values stay on the server.
     res.json({ testCalls: ctx.sub.test_results ? [] : testCalls(ctx), code: ctx.sub.status === "in_progress" ? body.data.doc : ctx.sub.content });
   } catch (err) {
@@ -173,9 +182,11 @@ vivaRouter.get("/submissions/:id/viva", requireSession("student"), async (req, r
       secondsPerQ: ctx.a.rules?.viva_seconds_per_q ?? 90,
       vivaWeight: ctx.a.rules?.viva_weight ?? 50,
       marks: ctx.a.marks,
-      testsPending: ctx.sub.status === "viva_in_progress" && !ctx.sub.test_results,
+      testsPending: ctx.sub.status === "viva_in_progress" && !ctx.sub.test_results && hasTests(ctx),
       testCalls: ctx.sub.status === "viva_in_progress" && !ctx.sub.test_results ? testCalls(ctx) : [],
+      kind: mode(ctx),
       code: ctx.sub.content,
+      language: ctx.a.language,
       tests: ctx.sub.test_results ? { passed: ctx.sub.tests_passed, total: ctx.sub.tests_total, results: ctx.sub.test_results.map((t) => ({ name: t.name, passed: t.passed })) } : null,
     };
     if (ctx.sub.status === "in_progress") throw new PublicError(409, "Submit your work first. The viva starts after you submit.", "not_submitted");
@@ -215,7 +226,7 @@ vivaRouter.post("/submissions/:id/viva/start", requireSession("student"), async 
       return;
     }
     await enforceAi(sid, ipHash(req));
-    const q = await generateQuestion({ title: ctx.a.title, instructions: instructions(ctx), code: ctx.sub.content, testsSummary: testsSummary(ctx), previous: [], kind: KIND_ORDER[0]!, sandboxId: sid });
+    const q = await generateQuestion({ title: ctx.a.title, instructions: instructions(ctx), code: ctx.sub.content, testsSummary: testsSummary(ctx), previous: [], kind: KIND_ORDER[0]!, sandboxId: sid, mode: mode(ctx) });
     const question: VivaQuestion = { kind: KIND_ORDER[0]!, prompt: q.prompt, input_call: q.input_call, seconds_allowed: ctx.a.rules?.viva_seconds_per_q ?? 90, asked_at: new Date().toISOString(), ...(q.fallback ? { fallback: true } : {}) };
     await insert("viva_sessions", { sandbox_id: sid, submission_id: ctx.sub.id, questions: [question], current_index: 0 });
     res.status(201).json({ current: publicQuestion(question, 0) });
@@ -269,6 +280,7 @@ vivaRouter.post("/submissions/:id/viva/answer", requireSession("student"), async
         previous: viva.questions.map((x) => ({ prompt: x.prompt, answer: x.answer ?? "" })),
         kind,
         sandboxId: sid,
+        mode: mode(ctx),
       });
       const next: VivaQuestion = { kind, prompt: n.prompt, input_call: n.input_call, seconds_allowed: ctx.a.rules?.viva_seconds_per_q ?? 90, asked_at: new Date().toISOString(), ...(n.fallback ? { fallback: true } : {}) };
       const questions = [...viva.questions, next];
@@ -279,7 +291,7 @@ vivaRouter.post("/submissions/:id/viva/answer", requireSession("student"), async
 
     // Last answer: score, grade, flag.
     await update("viva_sessions", `id=${eq(viva.id)}`, { questions: viva.questions });
-    const scored = await scoreViva({ title: ctx.a.title, code: ctx.sub.content, questions: viva.questions, sandboxId: sid });
+    const scored = await scoreViva({ title: ctx.a.title, code: ctx.sub.content, questions: viva.questions, sandboxId: sid, mode: mode(ctx) });
     const grade = await finalize(
       sid,
       ctx,
