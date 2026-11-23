@@ -63,6 +63,10 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
   const [deciding, setDeciding] = useState<string | null>(null);
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [decided, setDecided] = useState<ReportData["submission"]["decision"]>(null);
+  const [mark, setMark] = useState<string>("");
+  const [comment, setComment] = useState("");
+  const [markState, setMarkState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [markError, setMarkError] = useState<string | null>(null);
 
   // Depend on primitive values only: `data` is a new object on every render, and resetting from it
   // would wipe the teacher's just-saved decision off the screen.
@@ -70,12 +74,36 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
   const highlight = useMemo(() => new Set(flagSeqs ? flagSeqs.split(",").map(Number) : []), [flagSeqs]);
   const serverDecision = data.status === "ready" ? data.data.submission.decision : null;
   useEffect(() => setDecided(serverDecision), [serverDecision]);
+  const serverMark = data.status === "ready" ? (data.data.submission.finalGrade ?? data.data.submission.suggestedGrade) : null;
+  const serverComment = data.status === "ready" ? (data.data.submission.comment ?? "") : "";
+  useEffect(() => {
+    setMark(serverMark != null ? String(serverMark) : "");
+    setComment(serverComment);
+  }, [serverMark, serverComment]);
 
   if (data.status === "loading") return <Skeleton className="h-[640px]" />;
   if (data.status === "error") return <ErrorState message={data.message} onRetry={data.reload} />;
   const d = data.data;
   const f = facts(d);
   const grade = d.submission.finalGrade ?? d.submission.suggestedGrade;
+
+  const confirmMark = async () => {
+    const n = Number(mark);
+    if (mark.trim() === "" || Number.isNaN(n)) {
+      setMarkError("Enter a mark as a number.");
+      setMarkState("error");
+      return;
+    }
+    setMarkState("saving");
+    setMarkError(null);
+    try {
+      await api(`/teacher/submissions/${d.submission.id}/grade`, { body: { finalGrade: n, comment: comment.trim() || undefined } });
+      setMarkState("saved");
+    } catch (err) {
+      setMarkError(err instanceof ApiError ? err.message : "Couldn't save the mark.");
+      setMarkState("error");
+    }
+  };
 
   const decide = async (decision: "looks_fine" | "talk_to_student") => {
     setDeciding(decision);
@@ -143,6 +171,28 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
           )}
           {decisionError && <span role="alert" className="text-sm text-danger">{decisionError}</span>}
         </div>
+        {(d.submission.status === "submitted" || d.submission.status === "graded") && (
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-ink-2">Final mark</span>
+              <span className="flex items-center gap-1.5">
+                <input type="number" min={0} max={d.assignment.marks} step={0.5} value={mark} onChange={(e) => { setMark(e.target.value); setMarkState("idle"); }} className="min-h-11 w-24 rounded-lg border border-line-strong px-3 tabular-nums focus:border-action focus:outline-none" />
+                <span className="text-ink-3">/ {d.assignment.marks}</span>
+              </span>
+            </label>
+            {!compact && (
+              <label className="block min-w-48 flex-1">
+                <span className="mb-1 block text-sm font-medium text-ink-2">Comment for the student (optional)</span>
+                <input value={comment} onChange={(e) => { setComment(e.target.value); setMarkState("idle"); }} maxLength={1000} placeholder="e.g. Good work. Let's talk about line 4 in class." className="min-h-11 w-full rounded-lg border border-line-strong px-3 focus:border-action focus:outline-none" />
+              </label>
+            )}
+            <Button variant="secondary" loading={markState === "saving"} onClick={confirmMark}>
+              {d.submission.finalGrade != null || markState === "saved" ? "Update mark" : "Confirm mark"}
+            </Button>
+            {markState === "saved" && <span role="status" className="pb-2.5 text-sm text-done"><CheckCircle2 className="mr-1 inline size-4" aria-hidden />Mark saved. The student can see it.</span>}
+            {markError && <span role="alert" className="pb-2.5 text-sm text-danger">{markError}</span>}
+          </div>
+        )}
       </Card>
 
       {/* What stands out */}

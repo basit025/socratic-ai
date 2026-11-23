@@ -342,3 +342,76 @@ teacherRouter.post("/teacher/assignments", requireSession("teacher"), async (req
     next(err);
   }
 });
+
+// ---------------------------------------------------------------- gradebook (FR-24, FR-25)
+teacherRouter.get("/teacher/courses/:id/gradebook", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const id = String(req.params.id);
+    if (!uuid(id)) throw notFound("That course");
+    const [c] = await select<{ id: string; code: string; name: string; section: string | null }>(`courses?select=id,code,name,section&id=${eq(id)}&teacher_id=${eq(pid)}&sandbox_id=${eq(sid)}`);
+    if (!c) throw notFound("That course");
+    const [roster, assignments] = await Promise.all([
+      select<{ student: { id: string; full_name: string; initials: string } }>(`enrollments?select=student:profiles(id,full_name,initials)&course_id=${eq(c.id)}`),
+      select<{ id: string; title: string; status: string; marks: number; due_at: string | null; submissions: { id: string; student_id: string; status: SubStatus; viva_score: number | null; suggested_grade: number | null; final_grade: number | null; teacher_decision: string | null; flags: { teacher_status: string }[] }[] }>(
+        `assignments?select=id,title,status,marks,due_at,submissions(id,student_id,status,viva_score,suggested_grade,final_grade,teacher_decision,flags(teacher_status))&course_id=${eq(c.id)}&status=neq.draft&order=due_at`,
+      ),
+    ]);
+    const students = roster.map((r) => r.student).sort((a, b) => a.full_name.localeCompare(b.full_name));
+    const cols = assignments.map((a) => {
+      const done = a.submissions.filter((s) => s.status === "submitted" || s.status === "graded");
+      const vivas = done.map((s) => s.viva_score).filter((v): v is number => v != null);
+      return {
+        id: a.id,
+        title: a.title,
+        status: a.status,
+        marks: a.marks,
+        handedIn: done.length,
+        avgViva: vivas.length ? Math.round(vivas.reduce((x, y) => x + y, 0) / vivas.length) : null,
+        flagged: a.submissions.filter((s) => s.flags.some((f) => f.teacher_status === "open")).length,
+      };
+    });
+    const cells: Record<string, Record<string, { submissionId: string; status: SubStatus; grade: number | null; final: boolean; viva: number | null; flagged: boolean; decision: string | null }>> = {};
+    for (const a of assignments) {
+      for (const s of a.submissions) {
+        (cells[s.student_id] ??= {})[a.id] = {
+          submissionId: s.id,
+          status: s.status,
+          grade: s.final_grade ?? s.suggested_grade,
+          final: s.final_grade != null,
+          viva: s.viva_score,
+          flagged: s.flags.some((f) => f.teacher_status === "open"),
+          decision: s.teacher_decision,
+        };
+      }
+    }
+    const flaggedStudents = students.filter((st) => Object.values(cells[st.id] ?? {}).some((x) => x.flagged)).map((st) => st.full_name);
+    res.set("Cache-Control", "no-store").json({
+      course: c,
+      assignments: cols,
+      students: students.map((s) => ({ id: s.id, name: s.full_name, initials: s.initials })),
+      cells,
+      flaggedStudents,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- confirm or override a mark, with a comment
+const GradeBody = z.object({ finalGrade: z.number().min(0).max(1000), comment: z.string().max(1000).optional() });
+
+teacherRouter.post("/teacher/submissions/:id/grade", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const body = GradeBody.safeParse(req.body);
+    if (!body.success) throw new PublicError(400, "Enter a mark as a number.", "bad_grade");
+    const s = await teacherSubmission(sid, pid, String(req.params.id));
+    if (s.status === "in_progress" || s.status === "viva_in_progress") throw new PublicError(409, "The student hasn't finished yet.", "not_finished");
+    if (body.data.finalGrade > s.assignment.marks) throw new PublicError(400, `The mark can't be more than ${s.assignment.marks}.`, "bad_grade");
+    await update("submissions", `id=${eq(s.id)}`, { final_grade: body.data.finalGrade, teacher_comment: body.data.comment ?? null, status: "graded", graded_at: new Date().toISOString() });
+    res.json({ ok: true, finalGrade: body.data.finalGrade });
+  } catch (err) {
+    next(err);
+  }
+});

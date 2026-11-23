@@ -195,13 +195,15 @@ vivaRouter.get("/submissions/:id/viva", requireSession("student"), async (req, r
       return;
     }
     if (viva.status === "completed") {
-      const [s] = await select<{ suggested_grade: number | null; final_grade: number | null; viva_score: number | null }>(`submissions?select=suggested_grade,final_grade,viva_score&id=${eq(ctx.sub.id)}`);
+      const [s] = await select<{ suggested_grade: number | null; final_grade: number | null; viva_score: number | null; teacher_comment: string | null }>(`submissions?select=suggested_grade,final_grade,viva_score,teacher_comment&id=${eq(ctx.sub.id)}`);
       res.set("Cache-Control", "no-store").json({
         ...base,
         status: "completed",
         result: {
           vivaScore: s?.viva_score ?? null,
           grade: s?.final_grade ?? s?.suggested_grade ?? null,
+          confirmedByTeacher: s?.final_grade != null,
+          teacherComment: s?.teacher_comment ?? null,
           reviseNext: (viva.rubric as { revise_next?: string } | null)?.revise_next ?? null,
           questions: viva.questions.map((q) => ({ prompt: q.prompt, answer: q.answer ?? "", score: q.score ?? null, feedback: q.feedback ?? null, late: Boolean(q.late) })),
         },

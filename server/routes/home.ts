@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { eq, select } from "../lib/db.js";
 import { requireSession } from "../lib/auth.js";
+import { notFound } from "../lib/errors.js";
 
 export const homeRouter = Router();
 
@@ -101,6 +102,56 @@ homeRouter.get("/teacher/home", requireSession("teacher"), async (req, res, next
       };
     });
     res.set("Cache-Control", "no-store").json({ name, courses });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- a course page (both roles)
+homeRouter.get("/courses/:id", requireSession(), async (req, res, next) => {
+  try {
+    const { sid, pid, role } = req.session!;
+    const id = String(req.params.id);
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw notFound("That course");
+    const [c] = await select<{ id: string; code: string; name: string; section: string | null; term: string | null; join_code: string; teacher_id: string; teacher: { full_name: string } }>(
+      `courses?select=id,code,name,section,term,join_code,teacher_id,teacher:profiles!courses_teacher_id_fkey(full_name)&id=${eq(id)}&sandbox_id=${eq(sid)}`,
+    );
+    if (!c) throw notFound("That course");
+    if (role === "teacher" && c.teacher_id !== pid) throw notFound("That course");
+    if (role === "student") {
+      const [e] = await select<{ student_id: string }>(`enrollments?select=student_id&course_id=${eq(c.id)}&student_id=${eq(pid)}`);
+      if (!e) throw notFound("That course");
+    }
+    const [modules, announcements, assignmentRows, enrolled, mySubs] = await Promise.all([
+      select<{ id: string; week: number; title: string; notes_md: string }>(`modules?select=id,week,title,notes_md&course_id=${eq(c.id)}&order=week`),
+      select<{ title: string; body: string; posted_at: string }>(`announcements?select=title,body,posted_at&course_id=${eq(c.id)}&order=posted_at.desc`),
+      select<AssignmentRow & { module_id: string | null; submissions: { status: SubmissionStatus }[] }>(
+        `assignments?select=id,title,type,status,due_at,marks,module_id,submissions(status)&course_id=${eq(c.id)}&order=due_at`,
+      ),
+      select<{ count: number }>(`enrollments?select=count&course_id=${eq(c.id)}`),
+      role === "student"
+        ? select<{ assignment_id: string; status: SubmissionStatus; final_grade: number | null; suggested_grade: number | null }>(`submissions?select=assignment_id,status,final_grade,suggested_grade&student_id=${eq(pid)}&sandbox_id=${eq(sid)}`)
+        : Promise.resolve([]),
+    ]);
+    const mine = new Map(mySubs.map((s) => [s.assignment_id, s]));
+    const visible = assignmentRows.filter((a) => role === "teacher" || a.status !== "draft");
+    const toItem = (a: (typeof visible)[number]) => ({
+      id: a.id,
+      title: a.title,
+      type: a.type,
+      status: a.status,
+      dueAt: a.due_at,
+      marks: a.marks,
+      ...(role === "teacher"
+        ? { handedIn: a.submissions.filter((s) => s.status !== "in_progress").length }
+        : { submission: mine.has(a.id) ? { status: mine.get(a.id)!.status, grade: mine.get(a.id)!.final_grade ?? mine.get(a.id)!.suggested_grade } : null }),
+    });
+    res.set("Cache-Control", "no-store").json({
+      course: { id: c.id, code: c.code, name: c.name, section: c.section, term: c.term, teacher: c.teacher.full_name, students: enrolled[0]?.count ?? 0, ...(role === "teacher" ? { joinCode: c.join_code } : {}) },
+      weeks: modules.map((m) => ({ week: m.week, title: m.title, notes: m.notes_md, assignments: visible.filter((a) => a.module_id === m.id).map(toItem) })),
+      unscheduled: visible.filter((a) => !a.module_id || !modules.some((m) => m.id === a.module_id)).map(toItem),
+      announcements: announcements.map((a) => ({ title: a.title, body: a.body, postedAt: a.posted_at })),
+    });
   } catch (err) {
     next(err);
   }
