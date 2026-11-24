@@ -87,7 +87,7 @@ export function StudentHome() {
                   to={`/student/assignments/${next.id}`}
                   className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-action px-5 font-semibold text-white hover:bg-action-hover"
                 >
-                  {next.submission ? "Continue assignment" : "Open assignment"}
+                  {next.type === "quiz" ? (next.submission ? "Continue quiz" : "Open quiz") : next.submission ? "Continue assignment" : "Open assignment"}
                   <ArrowRight className="size-5" aria-hidden />
                 </Link>
               </div>

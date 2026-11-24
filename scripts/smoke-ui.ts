@@ -238,7 +238,7 @@ async function main() {
     ok('student home shows the confirmed mark "Marked: 7/10"');
 
     // ------------------------------------------------ timed quiz: one question at a time → result
-    await s.locator("::-p-text(Quiz 1: Python Basics)").click();
+    await s.locator("a[href^='/student/assignments/'] ::-p-text(Quiz 1: Python Basics)").click();
     await s.waitForSelector("::-p-text(What happens when you press Start)", { timeout: 15000 });
     await shot(s, "19-quiz-intro");
     await s.locator("button ::-p-text(Start quiz)").click();
