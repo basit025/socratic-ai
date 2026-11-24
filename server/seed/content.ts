@@ -6,6 +6,7 @@
  * reference solution, see ./expected.ts).
  * Dates are offsets in days from the moment of seeding; demo sandboxes shift them to "now".
  */
+import { quizAssignments } from "./quizzes.js";
 
 export const INSTITUTION = "Pothohar Institute of Computing (Demo)";
 
@@ -155,7 +156,7 @@ export interface SeedAssignment {
   key: string;
   course: string;
   week: number;
-  type: "code" | "written";
+  type: "code" | "written" | "quiz";
   language: "python" | "javascript" | null;
   title: string;
   status: "draft" | "published" | "closed";
@@ -168,6 +169,15 @@ export interface SeedAssignment {
   tests: SeedTestInput[];
   variantSpec?: { param: string; options: string[]; fills: Record<string, Record<string, string>> };
   rules: { pasteBlocked: boolean; workflow: "run_first" | "explain_first"; vivaQuestions: number; vivaSecondsPerQ: number; vivaWeight: number; variantsOn: boolean };
+  quiz?: SeedQuiz;
+}
+
+/** A timed quiz: each student gets `draw` questions from the pool, in their own order (see quizzes.ts). */
+export interface SeedQuiz {
+  draw: number;
+  timeLimitMinutes: number;
+  fullscreen: boolean;
+  questions: ({ kind: "mcq"; prompt: string; options: string[]; correct: number } | { kind: "short"; prompt: string; accepted: string[] })[];
 }
 
 const labRules = (o: Partial<SeedAssignment["rules"]> = {}): SeedAssignment["rules"] => ({ pasteBlocked: true, workflow: "run_first", vivaQuestions: 3, vivaSecondsPerQ: 90, vivaWeight: 50, variantsOn: false, ...o });
@@ -396,6 +406,7 @@ export const assignments: SeedAssignment[] = [
     instructions: "In **150–200 words**, reflect honestly on how you have used AI tools this term. Describe one time AI **helped you learn** and one time it **did the thinking for you**, and say what you will do differently.",
     starterCode: "", referenceSolution: "", tests: [], rules: labRules(),
   },
+  ...quizAssignments,
 ];
 
 export interface SeedAnnouncement {

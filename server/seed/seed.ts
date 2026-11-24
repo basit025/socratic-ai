@@ -95,9 +95,15 @@ export async function buildSeedSql(opts: { recording?: boolean; sessions?: Sessi
     const tests = a.type === "code" && a.language ? await computeExpected(a.language, a.referenceSolution, a.tests, a.variantSpec ?? null) : [];
     out.push(
       `insert into public.assignments (id, sandbox_id, course_id, module_id, type, title, instructions_md, language, starter_code, marks, status, opens_at, due_at) values (${lit(aid)}, ${SEED}, ${lit(idFor(`c:${a.course}`))}, ${lit(idFor(`m:${a.course}:${a.week}`))}, ${lit(a.type)}, ${lit(a.title)}, ${lit(a.instructions)}, ${lit(a.language)}, ${lit(a.starterCode)}, ${a.marks}, ${lit(opts.recording ? "published" : a.status)}, ${dayAt(opts.recording ? -1 : a.opensInDays, "08:00")}, ${dayAt(opts.recording ? 7 : a.dueInDays, "23:59")});`,
-      `insert into public.integrity_rules (assignment_id, sandbox_id, paste_blocked, workflow, viva_questions, viva_seconds_per_q, viva_weight, variants_on) values (${lit(aid)}, ${SEED}, ${a.rules.pasteBlocked}, ${lit(a.rules.workflow)}, ${a.rules.vivaQuestions}, ${a.rules.vivaSecondsPerQ}, ${a.rules.vivaWeight}, ${a.rules.variantsOn});`,
-      `insert into public.assignment_secrets (assignment_id, sandbox_id, reference_solution, hidden_tests, variant_spec) values (${lit(aid)}, ${SEED}, ${lit(a.referenceSolution)}, ${json(tests)}, ${json(a.variantSpec ?? {})});`,
+      `insert into public.integrity_rules (assignment_id, sandbox_id, paste_blocked, workflow, viva_questions, viva_seconds_per_q, viva_weight, variants_on, time_limit_minutes, fullscreen_required) values (${lit(aid)}, ${SEED}, ${a.rules.pasteBlocked}, ${lit(a.rules.workflow)}, ${a.rules.vivaQuestions}, ${a.rules.vivaSecondsPerQ}, ${a.rules.vivaWeight}, ${a.rules.variantsOn}, ${a.quiz ? a.quiz.timeLimitMinutes : "null"}, ${a.quiz ? a.quiz.fullscreen : false});`,
+      `insert into public.assignment_secrets (assignment_id, sandbox_id, reference_solution, hidden_tests, variant_spec) values (${lit(aid)}, ${SEED}, ${lit(a.referenceSolution)}, ${json(tests)}, ${json(a.quiz ? { draw: a.quiz.draw } : (a.variantSpec ?? {}))});`,
     );
+    // Quiz question pool (answer keys stay server-side, like hidden tests).
+    for (const [i, q] of (a.quiz?.questions ?? []).entries()) {
+      out.push(
+        `insert into public.quiz_questions (sandbox_id, assignment_id, position, kind, prompt_md, options, answer_key, marks) values (${SEED}, ${lit(aid)}, ${i + 1}, ${lit(q.kind)}, ${lit(q.prompt)}, ${q.kind === "mcq" ? json(q.options) : "null"}, ${json(q.kind === "mcq" ? { correct: q.correct } : { accepted: q.accepted })}, 1);`,
+      );
+    }
   }
 
   for (const n of announcements) {

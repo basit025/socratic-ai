@@ -32,13 +32,15 @@ export class EventRecorder {
   private getDoc: () => string;
   private getOutput: () => string | null;
   private stopped = false;
+  private sendDoc: boolean;
 
   constructor(
     private readonly submissionId: string,
     firstSeq: number,
-    opts: { getDoc: () => string; getOutput: () => string | null },
+    opts: { getDoc: () => string; getOutput: () => string | null; sendDoc?: boolean },
   ) {
     this.seq = firstSeq;
+    this.sendDoc = opts.sendDoc ?? true; // quizzes keep their answers on the server, so they never send a doc
     this.getDoc = opts.getDoc;
     this.getOutput = opts.getOutput;
     this.flushTimer = setInterval(() => void this.flush(), FLUSH_INTERVAL_MS);
@@ -105,6 +107,13 @@ export class EventRecorder {
     this.push({ type: "paste_attempt", payload: { length, source } });
   }
 
+  /** Left fullscreen during a fullscreen-required task (a timed quiz). Sent right away. */
+  recordFullscreenExit() {
+    this.endBurst();
+    this.push({ type: "fullscreen_exit", payload: {} });
+    void this.flush();
+  }
+
   recordRun(ok: boolean, durationMs: number, error?: string) {
     this.endBurst();
     this.push({ type: "run", payload: { ok, durationMs: Math.round(durationMs), docLength: this.getDoc().length } });
@@ -144,7 +153,7 @@ export class EventRecorder {
   // ------------------------------------------------ sending
   private body(events: ProcessEvent[]) {
     const output = this.getOutput();
-    return JSON.stringify({ events: events.length ? events : undefined, doc: this.getDoc(), ...(output != null ? { lastOutput: output.slice(0, 10_000) } : {}) });
+    return JSON.stringify({ events: events.length ? events : undefined, ...(this.sendDoc ? { doc: this.getDoc() } : {}), ...(output != null ? { lastOutput: output.slice(0, 10_000) } : {}) });
   }
 
   /** Sends queued events + the current text. Returns true when everything queued is saved. */

@@ -55,6 +55,19 @@ const tests: HiddenTest[] = [
 ];
 
 describe("grading", () => {
+  it("flags leaving a timed quiz, and never raises code flags on a perfect quiz", () => {
+    const fsExit = (t: number): ProcessEvent => ({ seq: ++seq, t, type: "fullscreen_exit", payload: {} });
+    const clean = [submit(T0 + 1000)];
+    expect(computeFlags({ events: clean, testsPassed: 5, testsTotal: 5, vivaScore: null, quiz: true })).toEqual([]);
+    const events = [fsExit(T0 + 60_000), ...away(T0 + 61_000, 25_000), fsExit(T0 + 200_000), submit(T0 + 300_000)];
+    const [f, ...rest] = computeFlags({ events, testsPassed: 5, testsTotal: 5, vivaScore: null, quiz: true });
+    expect(rest).toEqual([]);
+    expect(f!.rule).toBe("left_quiz_screen");
+    expect(f!.severity).toBe("high"); // 3 exits
+    expect(f!.message).toMatch(/left fullscreen 2 times and switched away from the tab once, 25 s away/);
+    expect(f!.evidence.from_seq).toBe(events[0]!.seq);
+  });
+
   it("marks against the student's own variant", () => {
     const results = [
       { call: "f([1, 4])", ok: true, repr: "(5, 0)" },

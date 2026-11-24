@@ -12,7 +12,7 @@ import { Appear } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
 import { formatDateTime, formatDue } from "../lib/format";
 import { useMe } from "../lib/session";
-import { useApi } from "../lib/useApi";
+import { useApi, type Loadable } from "../lib/useApi";
 import { runner, useRunnerStatus } from "../runner/runner";
 import { runnerFor } from "../runner/jsRunner";
 import { CodeEditor, type CodeEditorHandle } from "../workspace/CodeEditor";
@@ -20,6 +20,7 @@ import { JourneyStepper, type JourneyStep } from "../workspace/JourneyStepper";
 import { EventRecorder, type SaveState } from "../workspace/recorder";
 import { UstaadPanel, type ChatMessage } from "../workspace/UstaadPanel";
 import { WrittenEditor } from "../workspace/WrittenEditor";
+import { QuizPlayer } from "./Quiz";
 import type { Change } from "../../../shared/events";
 
 interface WorkspaceData {
@@ -102,10 +103,19 @@ function SavedIndicator({ state }: { state: SaveState }) {
   return <span className="text-sm text-ink-3">Autosaves every 10 s</span>;
 }
 
+/** Opens an assignment: timed quizzes get the quiz player, everything else the workspace. */
 export function Workspace() {
   const { id = "" } = useParams();
-  const me = useMe();
   const data = useApi<WorkspaceData>(`/student/assignments/${id}`);
+  if (data.status === "ready" && data.data.assignment.type === "quiz") {
+    const { assignment: a, submission: s } = data.data;
+    return <QuizPlayer assignment={a} submissionId={s?.id ?? null} nextSeq={s?.nextSeq ?? 1} />;
+  }
+  return <CodeWorkspace data={data} />;
+}
+
+function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () => void } }) {
+  const me = useMe();
   const pythonStatus = useRunnerStatus();
 
   const [doc, setDoc] = useState("");
