@@ -19,7 +19,8 @@
     "seed": "tsx server/seed/seed.ts",
     "smoke:ui": "tsx scripts/smoke-ui.ts",
     "e2e:viva": "tsx scripts/e2e-viva.ts",
-    "session:export": "tsx scripts/session-export.ts"
+    "session:export": "tsx scripts/session-export.ts",
+    "demo:generate": "tsx scripts/generate-demo-class.ts"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

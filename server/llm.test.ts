@@ -71,6 +71,22 @@ describe("generateJson", () => {
     expect(r.attempts[0]!.errorCode).toBe("timeout");
   });
 
+  it("skips an overloaded provider (repeated 503) or a hung one for a while", async () => {
+    const { fn, calls } = fakeFetch({ gemini: [() => status(503), () => status(503)], groq: [() => openAiOk(JSON.stringify(good)), () => openAiOk(JSON.stringify(good))] });
+    await generateJson(req, deps(fn));
+    await generateJson(req, deps(fn));
+    expect(calls).toEqual(["gemini", "gemini", "groq", "groq"]);
+
+    resetCooldowns();
+    const timeout = () => {
+      throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
+    };
+    const t = fakeFetch({ gemini: [timeout], groq: [() => openAiOk(JSON.stringify(good)), () => openAiOk(JSON.stringify(good))] });
+    await generateJson(req, deps(t.fn));
+    await generateJson(req, deps(t.fn));
+    expect(t.calls).toEqual(["gemini", "groq", "groq"]);
+  });
+
   it("retries once when the output doesn't match the schema", async () => {
     const { fn, calls } = fakeFetch({ gemini: [() => geminiOk({ wrong: true }), () => geminiOk(good)] });
     const r = await generateJson(req, deps(fn));
@@ -92,6 +108,8 @@ describe("generateJson", () => {
     expect(err.status).toBe(503);
     expect(err.publicMessage).toMatch(/Ustaad is busy/);
     expect(err.attempts).toHaveLength(6);
+    // Everything is cooling down now, but the next request still tries every provider.
+    expect(providerOrder(allKeys, Date.now())).toEqual(["gemini", "groq", "openrouter"]);
   });
 
   it("skips providers without a key and respects LLM_PROVIDER", () => {

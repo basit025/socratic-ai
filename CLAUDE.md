@@ -56,7 +56,7 @@ If any of these change, update all of the places above in the same commit (GitHu
 - Back end: Express (Node, TypeScript). Database, auth and storage: Supabase (Postgres).
 - AI: `server/llm.ts` is the **only** module that calls a model.
   - **Fallback chain: Gemini → Groq → OpenRouter.** Primary: Google Gemini `gemini-3.1-flash-lite`. Backup 1: Groq `openai/gpt-oss-120b` (also Whisper for the voice viva). Backup 2: OpenRouter, model set by `OPENROUTER_MODEL` (must support structured outputs).
-  - `LLM_PROVIDER` picks the first provider. On a 429, 5xx or timeout: retry once, then move to the next configured provider in the chain; a provider that returned 429 is skipped for 60 s. Providers with no key are skipped.
+  - `LLM_PROVIDER` picks the first provider. On a 429, 5xx or timeout: retry once, then move to the next configured provider in the chain; a provider that returned 429, a repeated 5xx or a timeout is skipped for 60 s (if every provider is cooling down, all are tried anyway). Providers with no key are skipped.
   - **Key policy:** one account per provider per environment (Production = R1's accounts, Preview = one teammate's accounts, local = each developer's own accounts). Never rotate keys from several accounts of the same provider to multiply free quota: it breaks the providers' terms (Google's API terms forbid circumventing limits) and risks a ban during judging. If quota runs short, add paid credit instead.
   - All model output uses structured JSON validated against a schema (zod); on invalid JSON, retry once, then show a friendly error. Never crash the workspace.
   - Separate keys for development and demo (`GEMINI_API_KEY`, `GROQ_API_KEY`, set per environment). Gemini's free daily quota resets at midnight Pacific = **1 PM PKT**.
@@ -172,8 +172,10 @@ The site must explain itself in five seconds **without a feature list**. Follow 
 
 - The UI must look excellent at **1920×1080** at 100% and 125% zoom: no overflow, no cut-off text, no console errors.
 - `?recording=1` hides dev-only elements and any debug badges, except "Demo data".
-- Seed data: a fictional institution ("Pothohar Institute of Computing: Demo"), 3 teachers, 4 courses (CS-101, WEB-102, CS-201, ENG-101), 6 weekly modules each, about 22 assignments, 30 fictional students per course, about 400 past submissions reusing **real recorded team sessions**, and announcements. **Dates are relative to today.** One empty "New course" shows the creation flow.
-- `npm run seed` rebuilds everything in under a minute and **never calls an AI model**. Past submissions come ONLY from real recorded sessions in `server/seed/sessions/*.json` (saved with `npm run session:export`, see `docs/recording-guide.md`), shown under fictional classmates' names, with flags and grades recomputed by the current rules. Never write or edit session files by hand; simulated test sessions must never be committed.
+- Seed data: a fictional institution ("Pothohar Institute of Computing: Demo"), 3 teachers, 4 courses (CS-101, WEB-102, CS-201, ENG-101), 6 weekly modules each, about 22 assignments, 30 fictional students per course, past submissions from **simulated students** (strong, struggling and copying personas) worked through the real platform, each reused under several classmates, and announcements. **Dates are relative to today.** One empty "New course" shows the creation flow.
+- `npm run seed` rebuilds everything in under a minute and **never calls an AI model**. Past submissions come from session files in `server/seed/sessions/*.json`, shown under fictional classmates' names, with flags and grades recomputed by the current rules. Never write or edit session files by hand.
+  - **Simulated demo students (decision, Nov 24):** `npm run demo:generate` runs persona-driven simulated students (their code, drafts and viva answers written by an AI playing the student) through the REAL platform: its own viva questions, AI scoring, hidden tests and flag rules produce every score and flag. Files are marked `"simulated": true`. They are demo data, disclosed in the README and the "Demo data" badge, and are **never presented as a measured result** (measured results come only from real users, e.g. Thursday's test).
+  - Real recorded sessions (`npm run session:export`, see `docs/recording-guide.md`) can be added alongside at any time.
 - Landing page: "Try as teacher" and "Try as student" one-click logins; nightly reset; a "Reset demo" button.
 
 ## Commands
@@ -188,6 +190,7 @@ npm run build
 npm run smoke:llm  # one tiny live call to each AI provider (uses .env.local)
 npm run smoke:ui -- http://localhost:3000   # headless Chrome: landing, both roles, runner, full student session incl. viva; fails on console errors
 npm run session:export -- --submission <id> --as <classmate> --label <name>   # save a REAL recorded session for the seed
+RATE_LIMITS=off PORT=3001 npx tsx server/dev.ts   then   npm run demo:generate -- http://localhost:3001   # simulated demo class (preview DB in --recording mode; uses preview AI quota; resumable)
 npm run seed -- --recording   # preview only: all assignments open, for recording sessions (docs/recording-guide.md)
 npm run e2e:viva -- http://localhost:3000   # API + real AI: simulated honest vs copier through submit, tests, viva, grade, flags (engineering check, never a pitch result)
 ```

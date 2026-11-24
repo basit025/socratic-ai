@@ -176,6 +176,53 @@ export function predictionMatches(answer: string, actual: string): boolean {
   return a.length > 0 && norm(answer).includes(a);
 }
 
+/** How far the overall score may sit from what the answers themselves show (per-question average). */
+export const MAX_GAP_FROM_ANSWERS = 15;
+
+/**
+ * Makes the overall score traceable to the answers, so a teacher never sees "0, 0, 7 out of 10"
+ * next to an overall of 60:
+ * - Ground truth beats the model: a wrong prediction can't score high, a right one can't score low
+ *   (both for that question and for the rubric's output_prediction).
+ * - The rubric total is kept within MAX_GAP_FROM_ANSWERS of the per-question average (×10); the
+ *   rubric parts are scaled to add up to the final score.
+ */
+export function reconcileScore(s: VivaScore, questions: VivaQuestion[]): { score: VivaScore; understanding: number } {
+  const perQ = questions.map((q, i) => {
+    let v = s.per_question[i]?.score ?? 0;
+    if (!(q.answer ?? "").trim()) v = 0;
+    else if (q.auto_check && q.auto_check.predicted_match === false) v = Math.min(v, 3);
+    else if (q.auto_check && q.auto_check.predicted_match === true) v = Math.max(v, 8);
+    return v;
+  });
+  const per_question = questions.map((_, i) => ({ score: perQ[i]!, feedback: s.per_question[i]?.feedback ?? "" }));
+  const rubric = { ...s.rubric };
+  const checks = questions.filter((q) => q.auto_check && q.auto_check.predicted_match !== null);
+  if (checks.length) {
+    const anyRight = checks.some((q) => q.auto_check!.predicted_match);
+    rubric.output_prediction = anyRight ? Math.max(rubric.output_prediction, 18) : Math.min(rubric.output_prediction, 8);
+  }
+  const total = rubric.goal + rubric.logic + rubric.output_prediction + rubric.modification;
+  const fromAnswers = perQ.length ? (perQ.reduce((a, b) => a + b, 0) / perQ.length) * 10 : total;
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  const final = Math.round(clamp(clamp(total, fromAnswers - MAX_GAP_FROM_ANSWERS, fromAnswers + MAX_GAP_FROM_ANSWERS), 0, 100));
+  if (final !== total) {
+    // Scale the parts to the final score, then hand out the rounding remainder one point at a time.
+    const keys = ["goal", "logic", "output_prediction", "modification"] as const;
+    for (const key of keys) rubric[key] = total > 0 ? clamp(Math.round((rubric[key] * final) / total), 0, 25) : Math.round(final / 4);
+    let diff = final - keys.reduce((n, key) => n + rubric[key], 0);
+    for (let i = 0; diff !== 0 && i < 400; i++) {
+      const key = keys[i % 4]!;
+      const step = diff > 0 ? 1 : -1;
+      if (rubric[key] + step >= 0 && rubric[key] + step <= 25) {
+        rubric[key] += step;
+        diff -= step;
+      }
+    }
+  }
+  return { score: { ...s, rubric, per_question }, understanding: final };
+}
+
 export async function scoreViva(c: ScoreContext): Promise<{ score: VivaScore; understanding: number } | null> {
   const answered = c.questions.filter((q) => (q.answer ?? "").trim().length > 0);
   if (answered.length === 0) {
@@ -217,15 +264,7 @@ export async function scoreViva(c: ScoreContext): Promise<{ score: VivaScore; un
       sandboxId: c.sandboxId,
       timeoutMs: 15_000,
     });
-    const s = r.data;
-    // Ground truth beats the model: a wrong prediction can't score high, a right one can't score low.
-    const checks = c.questions.filter((q) => q.auto_check && q.auto_check.predicted_match !== null);
-    if (checks.length) {
-      const anyRight = checks.some((q) => q.auto_check!.predicted_match);
-      s.rubric.output_prediction = anyRight ? Math.max(s.rubric.output_prediction, 18) : Math.min(s.rubric.output_prediction, 8);
-    }
-    const understanding = s.rubric.goal + s.rubric.logic + s.rubric.output_prediction + s.rubric.modification;
-    return { score: s, understanding: Math.max(0, Math.min(100, understanding)) };
+    return reconcileScore(r.data, c.questions);
   } catch (err) {
     if (err instanceof LlmUnavailableError) return null; // the teacher reviews the transcript by hand
     throw err;

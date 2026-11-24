@@ -1,0 +1,975 @@
+{
+  "label": "sim-cricket-strong-2",
+  "student": "ayaan",
+  "alsoAs": [
+    {
+      "student": "zeeshan",
+      "daysAgo": 2
+    },
+    {
+      "student": "saad",
+      "daysAgo": 1
+    },
+    {
+      "student": "noor",
+      "daysAgo": 2
+    }
+  ],
+  "assignment": "Cricket Over Tracker",
+  "submittedDaysAgo": 1,
+  "recordedAt": "2026-11-24 15:31:39.027+00",
+  "source": "simulated demo student (persona: strong) run through the real platform",
+  "simulated": true,
+  "persona": "strong",
+  "note": "",
+  "variant": {
+    "boundary": "4"
+  },
+  "content": "def over_summary(balls):\n    # balls is a list of runs, for example [1, 4, 0, 6, 2, 1]\n    # Return (total_runs, big_hits)\n    total = 0\n    big = 0\n    for run in balls:\n        total += run\n        if run >= 4:\n            big += 1\n    return (total, big)\n\nprint(over_summary([1, 4, 0, 6, 2, 1]))\n",
+  "lastOutput": null,
+  "testResults": [
+    {
+      "actual": "(14, 2)",
+      "name": "Example from the brief",
+      "passed": true
+    },
+    {
+      "actual": "(0, 0)",
+      "name": "Empty over",
+      "passed": true
+    },
+    {
+      "actual": "(36, 6)",
+      "name": "Six sixes",
+      "passed": true
+    },
+    {
+      "actual": "(1, 0)",
+      "name": "A quiet over",
+      "passed": true
+    },
+    {
+      "actual": "(22, 4)",
+      "name": "Mixed over",
+      "passed": true
+    }
+  ],
+  "testsPassed": 5,
+  "testsTotal": 5,
+  "submittedAtMs": 225875,
+  "events": [
+    {
+      "seq": 1,
+      "ms": 0,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 131,
+            "insert": "",
+            "to": 132
+          },
+          {
+            "from": 130,
+            "insert": "",
+            "to": 131
+          },
+          {
+            "from": 129,
+            "insert": "",
+            "to": 130
+          },
+          {
+            "from": 128,
+            "insert": "",
+            "to": 129
+          },
+          {
+            "from": 127,
+            "insert": "",
+            "to": 128
+          },
+          {
+            "from": 127,
+            "insert": "t",
+            "to": 127
+          },
+          {
+            "from": 128,
+            "insert": "o",
+            "to": 128
+          },
+          {
+            "from": 129,
+            "insert": "t",
+            "to": 129
+          },
+          {
+            "from": 130,
+            "insert": "a",
+            "to": 130
+          },
+          {
+            "from": 131,
+            "insert": "l",
+            "to": 131
+          },
+          {
+            "from": 132,
+            "insert": " ",
+            "to": 132
+          },
+          {
+            "from": 133,
+            "insert": "=",
+            "to": 133
+          },
+          {
+            "from": 134,
+            "insert": " ",
+            "to": 134
+          },
+          {
+            "from": 135,
+            "insert": "0",
+            "to": 135
+          },
+          {
+            "from": 136,
+            "insert": "\n",
+            "to": 136
+          }
+        ],
+        "chars": 10
+      }
+    },
+    {
+      "seq": 2,
+      "ms": 6404,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 137,
+            "insert": " ",
+            "to": 137
+          },
+          {
+            "from": 138,
+            "insert": " ",
+            "to": 138
+          },
+          {
+            "from": 139,
+            "insert": " ",
+            "to": 139
+          },
+          {
+            "from": 140,
+            "insert": " ",
+            "to": 140
+          },
+          {
+            "from": 141,
+            "insert": "b",
+            "to": 141
+          },
+          {
+            "from": 142,
+            "insert": "i",
+            "to": 142
+          },
+          {
+            "from": 143,
+            "insert": "g",
+            "to": 143
+          },
+          {
+            "from": 144,
+            "insert": " ",
+            "to": 144
+          },
+          {
+            "from": 145,
+            "insert": "=",
+            "to": 145
+          },
+          {
+            "from": 146,
+            "insert": " ",
+            "to": 146
+          },
+          {
+            "from": 147,
+            "insert": "0",
+            "to": 147
+          },
+          {
+            "from": 148,
+            "insert": "\n",
+            "to": 148
+          }
+        ],
+        "chars": 12
+      }
+    },
+    {
+      "seq": 3,
+      "ms": 17505,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 149,
+            "insert": " ",
+            "to": 149
+          },
+          {
+            "from": 150,
+            "insert": " ",
+            "to": 150
+          },
+          {
+            "from": 151,
+            "insert": " ",
+            "to": 151
+          },
+          {
+            "from": 152,
+            "insert": " ",
+            "to": 152
+          },
+          {
+            "from": 153,
+            "insert": "f",
+            "to": 153
+          },
+          {
+            "from": 154,
+            "insert": "o",
+            "to": 154
+          },
+          {
+            "from": 155,
+            "insert": "r",
+            "to": 155
+          },
+          {
+            "from": 156,
+            "insert": " ",
+            "to": 156
+          },
+          {
+            "from": 157,
+            "insert": "r",
+            "to": 157
+          },
+          {
+            "from": 158,
+            "insert": "u",
+            "to": 158
+          },
+          {
+            "from": 159,
+            "insert": "a",
+            "to": 159
+          },
+          {
+            "from": 159,
+            "insert": "",
+            "to": 160
+          },
+          {
+            "from": 159,
+            "insert": "n",
+            "to": 159
+          },
+          {
+            "from": 160,
+            "insert": " ",
+            "to": 160
+          },
+          {
+            "from": 161,
+            "insert": "i",
+            "to": 161
+          },
+          {
+            "from": 162,
+            "insert": "n",
+            "to": 162
+          },
+          {
+            "from": 163,
+            "insert": " ",
+            "to": 163
+          },
+          {
+            "from": 164,
+            "insert": "b",
+            "to": 164
+          },
+          {
+            "from": 165,
+            "insert": "a",
+            "to": 165
+          },
+          {
+            "from": 166,
+            "insert": "l",
+            "to": 166
+          },
+          {
+            "from": 167,
+            "insert": "l",
+            "to": 167
+          },
+          {
+            "from": 168,
+            "insert": "s",
+            "to": 168
+          },
+          {
+            "from": 169,
+            "insert": "\n",
+            "to": 169
+          }
+        ],
+        "chars": 22
+      }
+    },
+    {
+      "seq": 4,
+      "ms": 31255,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 170,
+            "insert": " ",
+            "to": 170
+          },
+          {
+            "from": 171,
+            "insert": " ",
+            "to": 171
+          },
+          {
+            "from": 172,
+            "insert": " ",
+            "to": 172
+          },
+          {
+            "from": 173,
+            "insert": " ",
+            "to": 173
+          },
+          {
+            "from": 174,
+            "insert": " ",
+            "to": 174
+          },
+          {
+            "from": 175,
+            "insert": " ",
+            "to": 175
+          },
+          {
+            "from": 176,
+            "insert": " ",
+            "to": 176
+          },
+          {
+            "from": 177,
+            "insert": " ",
+            "to": 177
+          },
+          {
+            "from": 178,
+            "insert": "t",
+            "to": 178
+          },
+          {
+            "from": 178,
+            "insert": "",
+            "to": 179
+          },
+          {
+            "from": 178,
+            "insert": "t",
+            "to": 178
+          },
+          {
+            "from": 179,
+            "insert": "o",
+            "to": 179
+          },
+          {
+            "from": 180,
+            "insert": "t",
+            "to": 180
+          },
+          {
+            "from": 181,
+            "insert": "a",
+            "to": 181
+          },
+          {
+            "from": 182,
+            "insert": "l",
+            "to": 182
+          },
+          {
+            "from": 183,
+            "insert": " ",
+            "to": 183
+          },
+          {
+            "from": 184,
+            "insert": "+",
+            "to": 184
+          },
+          {
+            "from": 185,
+            "insert": "=",
+            "to": 185
+          },
+          {
+            "from": 186,
+            "insert": " ",
+            "to": 186
+          },
+          {
+            "from": 187,
+            "insert": "r",
+            "to": 187
+          },
+          {
+            "from": 188,
+            "insert": "u",
+            "to": 188
+          },
+          {
+            "from": 189,
+            "insert": "n",
+            "to": 189
+          },
+          {
+            "from": 190,
+            "insert": "\n",
+            "to": 190
+          }
+        ],
+        "chars": 22
+      }
+    },
+    {
+      "seq": 5,
+      "ms": 42756,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 191,
+            "insert": " ",
+            "to": 191
+          },
+          {
+            "from": 192,
+            "insert": " ",
+            "to": 192
+          },
+          {
+            "from": 193,
+            "insert": " ",
+            "to": 193
+          },
+          {
+            "from": 194,
+            "insert": " ",
+            "to": 194
+          },
+          {
+            "from": 195,
+            "insert": " ",
+            "to": 195
+          },
+          {
+            "from": 196,
+            "insert": " ",
+            "to": 196
+          },
+          {
+            "from": 197,
+            "insert": " ",
+            "to": 197
+          },
+          {
+            "from": 198,
+            "insert": " ",
+            "to": 198
+          },
+          {
+            "from": 199,
+            "insert": "i",
+            "to": 199
+          },
+          {
+            "from": 200,
+            "insert": "f",
+            "to": 200
+          },
+          {
+            "from": 201,
+            "insert": " ",
+            "to": 201
+          },
+          {
+            "from": 202,
+            "insert": "r",
+            "to": 202
+          },
+          {
+            "from": 203,
+            "insert": "u",
+            "to": 203
+          },
+          {
+            "from": 204,
+            "insert": "n",
+            "to": 204
+          },
+          {
+            "from": 205,
+            "insert": " ",
+            "to": 205
+          },
+          {
+            "from": 206,
+            "insert": ">",
+            "to": 206
+          },
+          {
+            "from": 207,
+            "insert": "=",
+            "to": 207
+          },
+          {
+            "from": 208,
+            "insert": " ",
+            "to": 208
+          },
+          {
+            "from": 209,
+            "insert": "4",
+            "to": 209
+          },
+          {
+            "from": 210,
+            "insert": ":",
+            "to": 210
+          },
+          {
+            "from": 211,
+            "insert": "\n",
+            "to": 211
+          }
+        ],
+        "chars": 21
+      }
+    },
+    {
+      "seq": 6,
+      "ms": 86620,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 212,
+            "insert": " ",
+            "to": 212
+          },
+          {
+            "from": 213,
+            "insert": " ",
+            "to": 213
+          },
+          {
+            "from": 214,
+            "insert": " ",
+            "to": 214
+          },
+          {
+            "from": 215,
+            "insert": " ",
+            "to": 215
+          },
+          {
+            "from": 216,
+            "insert": " ",
+            "to": 216
+          },
+          {
+            "from": 217,
+            "insert": " ",
+            "to": 217
+          },
+          {
+            "from": 218,
+            "insert": " ",
+            "to": 218
+          },
+          {
+            "from": 219,
+            "insert": " ",
+            "to": 219
+          },
+          {
+            "from": 220,
+            "insert": " ",
+            "to": 220
+          },
+          {
+            "from": 221,
+            "insert": " ",
+            "to": 221
+          },
+          {
+            "from": 222,
+            "insert": " ",
+            "to": 222
+          },
+          {
+            "from": 223,
+            "insert": " ",
+            "to": 223
+          },
+          {
+            "from": 224,
+            "insert": "b",
+            "to": 224
+          },
+          {
+            "from": 225,
+            "insert": "i",
+            "to": 225
+          },
+          {
+            "from": 226,
+            "insert": "g",
+            "to": 226
+          },
+          {
+            "from": 227,
+            "insert": " ",
+            "to": 227
+          },
+          {
+            "from": 228,
+            "insert": "+",
+            "to": 228
+          },
+          {
+            "from": 229,
+            "insert": "=",
+            "to": 229
+          },
+          {
+            "from": 230,
+            "insert": " ",
+            "to": 230
+          },
+          {
+            "from": 231,
+            "insert": "1",
+            "to": 231
+          },
+          {
+            "from": 232,
+            "insert": "\n",
+            "to": 232
+          }
+        ],
+        "chars": 21
+      }
+    },
+    {
+      "seq": 7,
+      "ms": 99208,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 233,
+            "insert": " ",
+            "to": 233
+          },
+          {
+            "from": 234,
+            "insert": " ",
+            "to": 234
+          },
+          {
+            "from": 235,
+            "insert": " ",
+            "to": 235
+          },
+          {
+            "from": 236,
+            "insert": " ",
+            "to": 236
+          },
+          {
+            "from": 237,
+            "insert": "r",
+            "to": 237
+          },
+          {
+            "from": 238,
+            "insert": "e",
+            "to": 238
+          },
+          {
+            "from": 239,
+            "insert": "t",
+            "to": 239
+          },
+          {
+            "from": 240,
+            "insert": "u",
+            "to": 240
+          },
+          {
+            "from": 241,
+            "insert": "r",
+            "to": 241
+          },
+          {
+            "from": 242,
+            "insert": "n",
+            "to": 242
+          },
+          {
+            "from": 243,
+            "insert": " ",
+            "to": 243
+          },
+          {
+            "from": 244,
+            "insert": "(",
+            "to": 244
+          },
+          {
+            "from": 245,
+            "insert": "t",
+            "to": 245
+          },
+          {
+            "from": 246,
+            "insert": "o",
+            "to": 246
+          },
+          {
+            "from": 247,
+            "insert": "t",
+            "to": 247
+          },
+          {
+            "from": 248,
+            "insert": "a",
+            "to": 248
+          },
+          {
+            "from": 249,
+            "insert": "l",
+            "to": 249
+          },
+          {
+            "from": 250,
+            "insert": ",",
+            "to": 250
+          },
+          {
+            "from": 251,
+            "insert": " ",
+            "to": 251
+          },
+          {
+            "from": 252,
+            "insert": "b",
+            "to": 252
+          },
+          {
+            "from": 253,
+            "insert": "i",
+            "to": 253
+          },
+          {
+            "from": 254,
+            "insert": "g",
+            "to": 254
+          },
+          {
+            "from": 255,
+            "insert": ")",
+            "to": 255
+          }
+        ],
+        "chars": 23
+      }
+    },
+    {
+      "seq": 8,
+      "ms": 102618,
+      "type": "run",
+      "payload": {
+        "docLength": 298,
+        "durationMs": 19,
+        "ok": false
+      }
+    },
+    {
+      "seq": 9,
+      "ms": 102618,
+      "type": "error",
+      "payload": {
+        "message": "SyntaxError: invalid syntax (missing colon after 'for run in balls')"
+      }
+    },
+    {
+      "seq": 10,
+      "ms": 102618,
+      "type": "snapshot",
+      "payload": {
+        "doc": "def over_summary(balls):\n    # balls is a list of runs, for example [1, 4, 0, 6, 2, 1]\n    # Return (total_runs, big_hits)\n    total = 0\n    big = 0\n    for run in balls\n        total += run\n        if run >= 4:\n            big += 1\n    return (total, big)\n\nprint(over_summary([1, 4, 0, 6, 2, 1]))\n"
+      }
+    },
+    {
+      "seq": 11,
+      "ms": 146777,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 169,
+            "insert": ":",
+            "to": 169
+          }
+        ],
+        "chars": 1
+      }
+    },
+    {
+      "seq": 12,
+      "ms": 152764,
+      "type": "run",
+      "payload": {
+        "docLength": 299,
+        "durationMs": 16,
+        "ok": true
+      }
+    },
+    {
+      "seq": 13,
+      "ms": 152764,
+      "type": "snapshot",
+      "payload": {
+        "doc": "def over_summary(balls):\n    # balls is a list of runs, for example [1, 4, 0, 6, 2, 1]\n    # Return (total_runs, big_hits)\n    total = 0\n    big = 0\n    for run in balls:\n        total += run\n        if run >= 4:\n            big += 1\n    return (total, big)\n\nprint(over_summary([1, 4, 0, 6, 2, 1]))\n"
+      }
+    },
+    {
+      "seq": 14,
+      "ms": 211536,
+      "type": "run",
+      "payload": {
+        "docLength": 299,
+        "durationMs": 26,
+        "ok": true
+      }
+    },
+    {
+      "seq": 15,
+      "ms": 211536,
+      "type": "snapshot",
+      "payload": {
+        "doc": "def over_summary(balls):\n    # balls is a list of runs, for example [1, 4, 0, 6, 2, 1]\n    # Return (total_runs, big_hits)\n    total = 0\n    big = 0\n    for run in balls:\n        total += run\n        if run >= 4:\n            big += 1\n    return (total, big)\n\nprint(over_summary([1, 4, 0, 6, 2, 1]))\n"
+      }
+    },
+    {
+      "seq": 16,
+      "ms": 225875,
+      "type": "snapshot",
+      "payload": {
+        "doc": "def over_summary(balls):\n    # balls is a list of runs, for example [1, 4, 0, 6, 2, 1]\n    # Return (total_runs, big_hits)\n    total = 0\n    big = 0\n    for run in balls:\n        total += run\n        if run >= 4:\n            big += 1\n    return (total, big)\n\nprint(over_summary([1, 4, 0, 6, 2, 1]))\n"
+      }
+    },
+    {
+      "seq": 17,
+      "ms": 225875,
+      "type": "submit",
+      "payload": {
+        "docLength": 299
+      }
+    }
+  ],
+  "viva": {
+    "understanding": 100,
+    "summary": "The student demonstrates a complete understanding of their code, including loop iteration, conditional logic, and variable management. They were able to accurately predict outputs and propose logical extensions to the existing function.",
+    "rubric": {
+      "goal": 25,
+      "logic": 25,
+      "modification": 25,
+      "output_prediction": 25,
+      "revise_next": "You have a strong grasp of these fundamentals, so try practicing how to handle edge cases or invalid inputs next!"
+    },
+    "startedAtMs": 245875,
+    "completedAtMs": 383875,
+    "questions": [
+      {
+        "answer": "Ye line check karti hai ke har ball ka run 4 ya us se zyada hai? Agar haan, to big_hits count ko ek se barha deti hai, is se humein pata chalta hai kitni boundaries ya sixes aaye, jo output ka second value hai.",
+        "away_ms": 0,
+        "feedback": "You correctly identified that this condition tracks boundaries to satisfy the requirement of counting big hits.",
+        "input_call": null,
+        "kind": "explain_line",
+        "late": false,
+        "prompt": "What does the line `if run >= 4:` do in your function, and why is it necessary for the required output?",
+        "score": 10,
+        "seconds_allowed": 90,
+        "askedAtMs": 245875,
+        "answeredAtMs": 304875
+      },
+      {
+        "answer": "Yeh function (0+3+4+5, big_hits) return karega, total runs 12 aur big_hits 2 (kyunki 4 aur 5 >=4 hain). So tuple (12, 2)",
+        "auto_check": {
+          "actual": "(12, 2)",
+          "call": "over_summary([0, 3, 4, 5])",
+          "predicted_match": true
+        },
+        "away_ms": 0,
+        "feedback": "Your calculation is perfectly accurate and you correctly identified the logic behind the tuple output.",
+        "input_call": "over_summary([0, 3, 4, 5])",
+        "kind": "predict_output",
+        "late": false,
+        "prompt": "What tuple does your function return when called with the list [0, 3, 4, 5]?",
+        "score": 10,
+        "seconds_allowed": 90,
+        "askedAtMs": 308875,
+        "answeredAtMs": 347875
+      },
+      {
+        "answer": "Sir, main loop ke andar ek aur variable 'dot_balls' bana kar usay zero se initialize karunga. Phir loop mein 'if run == 0' ki condition laga kar us variable ko increment kar dunga.",
+        "away_ms": 0,
+        "feedback": "Your proposed logic for tracking dot balls is correct and follows the existing structure of your code.",
+        "input_call": null,
+        "kind": "modify",
+        "late": false,
+        "prompt": "If we wanted to also count how many times a dot ball (zero runs) occurred in the over, what change would you make to the loop logic?",
+        "score": 10,
+        "seconds_allowed": 90,
+        "askedAtMs": 351875,
+        "answeredAtMs": 383875
+      }
+    ]
+  },
+  "messages": []
+}

@@ -1,9 +1,9 @@
 /**
  * Demo content for the fictional "Pothohar Institute of Computing (Demo)".
  * Written by the team for this project; every person and the institution are fictional.
- * Rules: no fabricated process logs (past submissions come only from real recorded sessions in
- * ./sessions), and no hand-typed expected test values (the seed computes them by running each
- * reference solution, see ./expected.ts).
+ * Rules: process logs are never hand-written (past submissions come from ./sessions: simulated
+ * persona students run through the real platform, or real recorded sessions), and no hand-typed
+ * expected test values (the seed computes them by running each reference solution, see ./expected.ts).
  * Dates are offsets in days from the moment of seeding; demo sandboxes shift them to "now".
  */
 import { quizAssignments } from "./quizzes.js";
