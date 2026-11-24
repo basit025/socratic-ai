@@ -237,6 +237,27 @@ async function main() {
     await s.waitForFunction(() => document.body.innerText.includes("Marked: 7/10"), { timeout: 15000 });
     ok('student home shows the confirmed mark "Marked: 7/10"');
 
+    // ------------------------------------------------ timed quiz: one question at a time → result
+    await s.locator("::-p-text(Quiz 1: Python Basics)").click();
+    await s.waitForSelector("::-p-text(What happens when you press Start)", { timeout: 15000 });
+    await shot(s, "19-quiz-intro");
+    await s.locator("button ::-p-text(Start quiz)").click();
+    await s.waitForSelector("::-p-text(Question 1 of 6)", { timeout: 15000 });
+    (await s.$("[role='timer']")) ? ok("quiz started: question 1 of 6 with the timer running") : fail("quiz timer missing");
+    for (let i = 0; i < 6; i++) {
+      await s.waitForSelector(`::-p-text(Question ${i + 1} of 6)`, { timeout: 15000 });
+      const options = await s.$$("fieldset label");
+      if (options.length) await options[0]!.click();
+      else await s.type("#quiz-answer", "len");
+      if (i === 0) await shot(s, "20-quiz-question");
+      await s.locator(i === 5 ? "button ::-p-text(Hand in quiz)" : "button ::-p-text(Next question)").click();
+    }
+    await s.waitForSelector("::-p-text(of 6 right)", { timeout: 15000 });
+    ok(`quiz handed in: ${await s.$eval("h1", (e) => e.textContent)}`);
+    await shot(s, "21-quiz-result");
+    await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 15000 });
+
     await s.setViewport({ width: 390, height: 844, isMobile: true });
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "3-student-home-mobile");
