@@ -24,6 +24,9 @@ import { computeExpected } from "./expected.js";
 export interface SessionFile {
   label: string;
   student: string;
+  alsoAs?: { student: string; daysAgo: number }[]; // the same session reused under other classmates (shares its event log)
+  simulated?: boolean;                              // a persona-driven demo student run through the real platform
+  persona?: string | null;
   assignment: string;
   submittedDaysAgo: number;
   source: string;
@@ -112,56 +115,64 @@ export async function buildSeedSql(opts: { recording?: boolean; sessions?: Sessi
     );
   }
 
-  // Real recorded sessions → past submissions of fictional classmates.
+  // Recorded sessions → past submissions of fictional classmates. A session can be reused under
+  // several classmates (alsoAs): each copy is its own submission that replays the first one's log.
   const taken = new Set<string>();
   for (const f of sessions) {
     const a = assignments.find((x) => x.title === f.assignment);
-    const student = students.find((x) => x.key === f.student);
     if (!a) throw new Error(`Session ${f.label}: no seeded assignment titled "${f.assignment}".`);
-    if (!student || student.email) throw new Error(`Session ${f.label}: "${f.student}" must be a seeded classmate (not the demo identity).`);
-    if (taken.has(`${a.key}:${student.key}`)) throw new Error(`Session ${f.label}: ${student.key} already has a session for ${a.title}.`);
-    taken.add(`${a.key}:${student.key}`);
     if (!f.events.length) throw new Error(`Session ${f.label} has no events.`);
+    let sourceSid: string | null = null;
+    const owners = [{ student: f.student, daysAgo: f.submittedDaysAgo }, ...(f.alsoAs ?? [])];
+    for (const [ownerNo, owner] of owners.entries()) {
+      const student = students.find((x) => x.key === owner.student);
+      if (!student || student.email) throw new Error(`Session ${f.label}: "${owner.student}" must be a seeded classmate (not the demo identity).`);
+      if (taken.has(`${a.key}:${student.key}`)) throw new Error(`Session ${f.label}: ${student.key} already has a session for ${a.title}.`);
+      taken.add(`${a.key}:${student.key}`);
 
-    const sid = randomUUID();
-    const pid = idFor(`p:${student.key}`);
-    const aid = idFor(`a:${a.key}`);
-    const end = Math.max(f.submittedAtMs ?? 0, f.events.at(-1)!.ms);
-    const submitted = dayAt(-Math.max(0, f.submittedDaysAgo), "21:30");
-    const at = (ms: number | null) => (ms == null ? "null" : `(${submitted} - interval '${Math.round(end - ms)} milliseconds')`);
-    let variantId: string | null = null;
-    if (f.variant && a.variantSpec) {
-      variantId = randomUUID();
-      const option = f.variant[a.variantSpec.param] ?? null;
+      const sid = randomUUID();
+      const pid = idFor(`p:${student.key}`);
+      const aid = idFor(`a:${a.key}`);
+      const end = Math.max(f.submittedAtMs ?? 0, f.events.at(-1)!.ms);
+      // Spread submission times through the evening so reused copies don't line up to the minute.
+      const clock = ownerNo === 0 ? "21:30" : `${String(17 + (ownerNo * 7) % 6).padStart(2, "0")}:${String((ownerNo * 17) % 60).padStart(2, "0")}`;
+      const submitted = dayAt(-Math.max(0, owner.daysAgo), clock);
+      const at = (ms: number | null) => (ms == null ? "null" : `(${submitted} - interval '${Math.round(end - ms)} milliseconds')`);
+      let variantId: string | null = null;
+      if (f.variant && a.variantSpec) {
+        variantId = randomUUID();
+        const option = f.variant[a.variantSpec.param] ?? null;
+        out.push(
+          `insert into public.variants (id, sandbox_id, assignment_id, student_id, params, rendered_instructions, created_at) values (${lit(variantId)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${json(f.variant)}, ${lit(renderInstructions(a.instructions, a.variantSpec, option))}, ${at(0)});`,
+        );
+      }
+      const vivaScore = f.viva?.understanding ?? null;
+      const grade = suggestedGrade({ marks: a.marks, testsPassed: f.testsPassed, testsTotal: f.testsTotal, vivaScore, vivaWeight: a.rules.vivaWeight });
       out.push(
-        `insert into public.variants (id, sandbox_id, assignment_id, student_id, params, rendered_instructions, created_at) values (${lit(variantId)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${json(f.variant)}, ${lit(renderInstructions(a.instructions, a.variantSpec, option))}, ${at(0)});`,
+        `insert into public.submissions (id, sandbox_id, assignment_id, student_id, variant_id, status, content, last_output, test_results, tests_passed, tests_total, viva_score, suggested_grade, started_at, submitted_at, event_source_id) values (${lit(sid)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${lit(variantId)}, 'submitted', ${lit(f.content)}, ${lit(f.lastOutput)}, ${f.testResults == null ? "null" : json(f.testResults)}, ${f.testsPassed ?? "null"}, ${f.testsTotal ?? "null"}, ${vivaScore ?? "null"}, ${grade}, ${at(0)}, ${at(f.submittedAtMs ?? end)}, ${lit(sourceSid)});`,
       );
-    }
-    const vivaScore = f.viva?.understanding ?? null;
-    const grade = suggestedGrade({ marks: a.marks, testsPassed: f.testsPassed, testsTotal: f.testsTotal, vivaScore, vivaWeight: a.rules.vivaWeight });
-    out.push(
-      `insert into public.submissions (id, sandbox_id, assignment_id, student_id, variant_id, status, content, last_output, test_results, tests_passed, tests_total, viva_score, suggested_grade, started_at, submitted_at) values (${lit(sid)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${lit(variantId)}, 'submitted', ${lit(f.content)}, ${lit(f.lastOutput)}, ${f.testResults == null ? "null" : json(f.testResults)}, ${f.testsPassed ?? "null"}, ${f.testsTotal ?? "null"}, ${vivaScore ?? "null"}, ${grade}, ${at(0)}, ${at(f.submittedAtMs ?? end)});`,
-    );
-    for (let i = 0; i < f.events.length; i += 200) {
-      const rows = f.events.slice(i, i + 200).map((e) => `(${SEED}, ${lit(sid)}, ${e.seq}, ${lit(e.type)}, ${json(e.payload)}, ${at(e.ms)})`);
-      out.push(`insert into public.process_events (sandbox_id, submission_id, seq, type, payload, client_time) values ${rows.join(", ")};`);
-    }
-    if (f.viva) {
-      const questions = f.viva.questions.map(({ askedAtMs, answeredAtMs, ...q }) => q);
-      // Store absolute times for the copied questions (they were saved relative to the session start).
-      const qSql = `(select jsonb_agg(q || jsonb_build_object('asked_at', a, 'answered_at', b) order by i) from jsonb_array_elements(${json(questions)}) with ordinality as x(q, i) join (values ${f.viva.questions
-        .map((q, i) => `(${i + 1}, ${at(q.askedAtMs)}, ${at(q.answeredAtMs)})`)
-        .join(", ")}) as t(n, a, b) on t.n = x.i)`;
-      out.push(
-        `insert into public.viva_sessions (sandbox_id, submission_id, status, questions, current_index, rubric, understanding_score, summary, started_at, completed_at) values (${SEED}, ${lit(sid)}, 'completed', ${qSql}, ${Math.max(0, f.viva.questions.length - 1)}, ${f.viva.rubric == null ? "null" : json(f.viva.rubric)}, ${vivaScore ?? "null"}, ${lit(f.viva.summary)}, ${at(f.viva.startedAtMs)}, ${at(f.viva.completedAtMs)});`,
-      );
-    }
-    for (const m of f.messages) {
-      out.push(`insert into public.ustaad_messages (sandbox_id, submission_id, role, body, hint, created_at) values (${SEED}, ${lit(sid)}, ${lit(m.role)}, ${lit(m.body)}, ${lit(m.hint)}, ${at(m.ms)});`);
-    }
-    const flags = computeFlags({ events: f.events.map((e) => ({ seq: e.seq, t: e.ms, type: e.type, payload: e.payload }) as ProcessEvent), testsPassed: f.testsPassed, testsTotal: f.testsTotal, vivaScore });
-    for (const fl of flags) {
-      out.push(`insert into public.flags (sandbox_id, submission_id, rule, severity, message, evidence) values (${SEED}, ${lit(sid)}, ${lit(fl.rule)}, ${lit(fl.severity)}, ${lit(fl.message)}, ${json(fl.evidence)});`);
+      if (sourceSid === null) for (let i = 0; i < f.events.length; i += 200) {
+        const rows = f.events.slice(i, i + 200).map((e) => `(${SEED}, ${lit(sid)}, ${e.seq}, ${lit(e.type)}, ${json(e.payload)}, ${at(e.ms)})`);
+        out.push(`insert into public.process_events (sandbox_id, submission_id, seq, type, payload, client_time) values ${rows.join(", ")};`);
+      }
+      if (f.viva) {
+        const questions = f.viva.questions.map(({ askedAtMs, answeredAtMs, ...q }) => q);
+        // Store absolute times for the copied questions (they were saved relative to the session start).
+        const qSql = `(select jsonb_agg(q || jsonb_build_object('asked_at', a, 'answered_at', b) order by i) from jsonb_array_elements(${json(questions)}) with ordinality as x(q, i) join (values ${f.viva.questions
+          .map((q, i) => `(${i + 1}, ${at(q.askedAtMs)}, ${at(q.answeredAtMs)})`)
+          .join(", ")}) as t(n, a, b) on t.n = x.i)`;
+        out.push(
+          `insert into public.viva_sessions (sandbox_id, submission_id, status, questions, current_index, rubric, understanding_score, summary, started_at, completed_at) values (${SEED}, ${lit(sid)}, 'completed', ${qSql}, ${Math.max(0, f.viva.questions.length - 1)}, ${f.viva.rubric == null ? "null" : json(f.viva.rubric)}, ${vivaScore ?? "null"}, ${lit(f.viva.summary)}, ${at(f.viva.startedAtMs)}, ${at(f.viva.completedAtMs)});`,
+        );
+      }
+      for (const m of f.messages) {
+        out.push(`insert into public.ustaad_messages (sandbox_id, submission_id, role, body, hint, created_at) values (${SEED}, ${lit(sid)}, ${lit(m.role)}, ${lit(m.body)}, ${lit(m.hint)}, ${at(m.ms)});`);
+      }
+      const flags = computeFlags({ events: f.events.map((e) => ({ seq: e.seq, t: e.ms, type: e.type, payload: e.payload }) as ProcessEvent), testsPassed: f.testsPassed, testsTotal: f.testsTotal, vivaScore });
+      for (const fl of flags) {
+        out.push(`insert into public.flags (sandbox_id, submission_id, rule, severity, message, evidence) values (${SEED}, ${lit(sid)}, ${lit(fl.rule)}, ${lit(fl.severity)}, ${lit(fl.message)}, ${json(fl.evidence)});`);
+      }
+      sourceSid ??= sid;
     }
   }
 
@@ -194,7 +205,7 @@ async function main() {
     console.error(`Seeding ${target} failed:\n${output.slice(-1500)}`);
     process.exit(1);
   }
-  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${sql.split("\n").length - 1} statements, ${sessions.length} real session${sessions.length === 1 ? "" : "s"}${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
+  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${sql.split("\n").length - 1} statements, ${sessions.filter((x) => !x.simulated).length} real + ${sessions.filter((x) => x.simulated).length} simulated sessions, ${sessions.reduce((n, x) => n + 1 + (x.alsoAs?.length ?? 0), 0)} past submissions${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join("seed", "seed.ts"))) {

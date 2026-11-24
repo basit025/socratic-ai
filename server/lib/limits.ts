@@ -16,6 +16,8 @@ export const LIMITS = {
 type LimitName = keyof typeof LIMITS;
 
 export async function enforce(name: LimitName, subject: string): Promise<void> {
+  // Local only: the demo-class generator drives many sessions from one machine. Never honoured on Vercel.
+  if (!process.env.VERCEL && process.env.RATE_LIMITS === "off") return;
   const l = LIMITS[name];
   const allowed = await rpc<boolean>("hit_rate_limit", { p_key: `${name}:${subject}`, p_window_seconds: l.window, p_max: l.max });
   if (!allowed) throw tooMany(l.message);
