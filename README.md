@@ -20,7 +20,7 @@ Built for the **Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education**,
 4. On the results screen, click **See what your teacher sees**: your own work as an integrity report, with a replay of how you wrote it.
 5. Or start with **Try as teacher**: create an assignment from a template in three steps, open the gradebook, or compare two submissions side by side.
 
-Everything in the demo (the institution, people and their work) is fictional and labelled **Demo data**.
+Everything in the demo (the institution, people and their work) is fictional and labelled **Demo data**. Classmates' past submissions come from **simulated students** (strong, struggling and copying personas) who worked through the real platform: the platform's own viva questions, AI scoring and flag rules produced every score and flag you see. They show how the platform behaves; they are not measured results.
 
 ---
 
