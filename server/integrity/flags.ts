@@ -5,7 +5,7 @@
  */
 import type { ProcessEvent } from "../../shared/events.js";
 
-export type FlagRule = "large_insertion" | "typing_faster_than_baseline" | "focus_loss_then_burst" | "correct_without_runs" | "perfect_tests_low_viva";
+export type FlagRule = "large_insertion" | "typing_faster_than_baseline" | "focus_loss_then_burst" | "correct_without_runs" | "perfect_tests_low_viva" | "left_quiz_screen";
 
 export interface Flag {
   rule: FlagRule;
@@ -24,6 +24,8 @@ export const THRESHOLDS = {
   burstWindowMs: 60_000,           // ... then within a minute of returning ...
   burstChars: 100,                 // ... typing at least this much
   lowViva: 50,
+  quizAwayHighMs: 30_000,          // a timed quiz: this long away in total (or 3+ exits) is "high"
+  quizExitsHigh: 3,
 } as const;
 
 
@@ -46,9 +48,12 @@ export interface FlagInput {
   /** The student's median pace from their OTHER submissions. Never measured from this one: if the
    *  whole answer was retyped, its own pace would look normal. */
   baselineCps?: number | null;
+  /** A timed quiz: testsPassed/testsTotal are correct answers, and leaving the screen is the signal. */
+  quiz?: boolean;
 }
 
-export function computeFlags({ events, testsPassed, testsTotal, vivaScore, baselineCps }: FlagInput): Flag[] {
+export function computeFlags({ events, testsPassed, testsTotal, vivaScore, baselineCps, quiz }: FlagInput): Flag[] {
+  if (quiz) return quizFlags(events);
   const ev = [...events].sort((a, b) => a.seq - b.seq);
   const flags: Flag[] = [];
   // Times are given as "how far into the session", which stays true in replays and demo copies.
@@ -145,4 +150,26 @@ export function computeFlags({ events, testsPassed, testsTotal, vivaScore, basel
   }
 
   return flags;
+}
+
+/** 6. Leaving a timed quiz (fullscreen exits and tab switches), with the total time away. */
+function quizFlags(events: ProcessEvent[]): Flag[] {
+  const ev = [...events].sort((a, b) => a.seq - b.seq);
+  const exits = ev.filter((e) => e.type === "fullscreen_exit" || e.type === "focus_lost");
+  if (!exits.length) return [];
+  const start = ev[0]!.t;
+  const away = ev.reduce((n, e) => n + (e.type === "focus_back" ? e.payload.awayMs : 0), 0);
+  const fsExits = exits.filter((e) => e.type === "fullscreen_exit").length;
+  const tabs = exits.length - fsExits;
+  const parts = [fsExits ? `left fullscreen ${fsExits === 1 ? "once" : `${fsExits} times`}` : "", tabs ? `switched away from the tab ${tabs === 1 ? "once" : `${tabs} times`}` : ""].filter(Boolean);
+  const first = exits[0]!;
+  const high = away >= THRESHOLDS.quizAwayHighMs || exits.length >= THRESHOLDS.quizExitsHigh;
+  return [
+    {
+      rule: "left_quiz_screen",
+      severity: high ? "high" : "medium",
+      message: `During this timed quiz the student ${parts.join(" and ")}${away ? `, ${duration(away)} away from the quiz in total` : ""}. The first time was ${first.t - start < 30_000 ? "at the start" : `${duration(first.t - start)} in`}.`,
+      evidence: { from_seq: first.seq, to_seq: exits.at(-1)!.seq, t: first.t, exits: exits.length, away_ms: away },
+    },
+  ];
 }

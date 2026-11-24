@@ -16,7 +16,8 @@ import { fmtOffset, Replay, type ReplayEvent } from "../teacher/Replay";
 interface ReportData {
   submission: { id: string; status: string; code: string; startedAt: string; submittedAt: string | null; testsPassed: number | null; testsTotal: number | null; vivaScore: number | null; suggestedGrade: number | null; finalGrade: number | null; decision: "looks_fine" | "talk_to_student" | null; comment: string | null };
   student: { id: string; name: string; initials: string };
-  assignment: { id: string; title: string; marks: number; starterCode: string; courseCode: string; vivaWeight: number; variant: string | null };
+  assignment: { id: string; title: string; type: string; marks: number; starterCode: string; courseCode: string; vivaWeight: number; variant: string | null };
+  quiz: { startedAt: string; finishedAt: string | null; correct: number; total: number; questions: { index: number; kind: "mcq" | "short"; prompt: string; answer: string | null; correctAnswer: string | null; correct: boolean; seconds: number | null }[] } | null;
   events: ReplayEvent[];
   flags: { id: string; rule: string; severity: "low" | "medium" | "high"; message: string; fromSeq: number; toSeq: number; status: "open" | "dismissed" | "followed_up" }[];
   viva: { status: string; score: number | null; summary: string | null; questions: { kind: string; prompt: string; answer: string; secondsAllowed: number; secondsTaken: number | null; late: boolean; awayMs: number; check: { call: string; actual: string; predicted_match: boolean | null } | null; score: number | null; feedback: string | null }[] } | null;
@@ -54,7 +55,45 @@ function facts(d: ReportData) {
     pastes: ev.filter((e) => e.type === "paste_attempt").length,
     away,
     hints: d.messages.filter((m) => m.role === "student").length,
+    fullscreenExits: ev.filter((e) => e.type === "fullscreen_exit").length,
+    tabSwitches: ev.filter((e) => e.type === "focus_lost").length,
   };
+}
+
+/** A timed quiz, question by question: their answer, the right answer, and how long they took. */
+function QuizAnswers({ d }: { d: ReportData }) {
+  if (!d.quiz) return <Card className="p-5"><h3 className="font-semibold">Quiz answers</h3><p className="mt-2 text-ink-3">The student hasn't started this quiz yet.</p></Card>;
+  const away = d.events.filter((e) => e.type === "fullscreen_exit" || e.type === "focus_lost");
+  const start = d.events[0]?.t ?? 0;
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">Quiz answers, in the order this student saw them</h3>
+        <Chip tone={d.quiz.correct === d.quiz.total ? "done" : "locked"} icon={CheckCircle2}>{d.quiz.correct}/{d.quiz.total} right</Chip>
+      </div>
+      <ol className="mt-3 space-y-2.5">
+        {d.quiz.questions.map((q) => (
+          <li key={q.index} className="flex items-start gap-3 rounded-lg border border-line px-3.5 py-3">
+            {q.correct ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-done" aria-label="Right" /> : <XCircle className="mt-0.5 size-5 shrink-0 text-danger" aria-label="Not right" />}
+            <div className="min-w-0 flex-1">
+              <p className="font-medium"><span className="text-ink-3">Q{q.index + 1}.</span> <Code text={q.prompt} /></p>
+              <p className="mt-1 text-[15px] text-ink-2">
+                {q.answer != null ? <>Answered <strong className="text-ink"><Code text={q.answer} /></strong></> : <em className="text-ink-3">No answer</em>}
+                {!q.correct && q.correctAnswer && <> · right answer <Code text={q.correctAnswer} /></>}
+              </p>
+            </div>
+            {q.seconds != null && <span className="shrink-0 text-sm tabular-nums text-ink-3">{q.seconds} s</span>}
+          </li>
+        ))}
+      </ol>
+      {away.length > 0 && (
+        <p className="mt-3 text-sm text-ink-3">
+          Left the quiz at {away.map((e) => fmtOffset(e.t - start)).join(", ")} (times from the start of the quiz).
+        </p>
+      )}
+      <p className="mt-2 text-xs text-ink-3">Each student gets their own questions from the pool, in their own order, with the options shuffled.</p>
+    </Card>
+  );
 }
 
 function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
@@ -86,6 +125,7 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
   const d = data.data;
   const f = facts(d);
   const grade = d.submission.finalGrade ?? d.submission.suggestedGrade;
+  const isQuiz = d.assignment.type === "quiz";
 
   const confirmMark = async () => {
     const n = Number(mark);
@@ -140,14 +180,23 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
           )}
         </div>
         <dl className={cx("mt-4 grid gap-3 text-center", compact ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-6")}>
-          {[
+          {(isQuiz
+            ? [
+                ["Right answers", d.quiz ? `${d.quiz.correct}/${d.quiz.total}` : "–", d.quiz ? d.quiz.correct === d.quiz.total : null],
+                ["Suggested mark", grade != null ? `${grade}/${d.assignment.marks}` : "–", null],
+                ["Time taken", fmtOffset(f.time), null],
+                ["Left fullscreen", String(f.fullscreenExits), f.fullscreenExits ? false : null],
+                ["Tab switches", String(f.tabSwitches), f.tabSwitches ? false : null],
+                ["Time away", f.away ? fmtOffset(f.away) : "None", null],
+              ]
+            : [
             ["Hidden tests", d.submission.testsTotal ? `${d.submission.testsPassed}/${d.submission.testsTotal}` : "–", d.submission.testsTotal != null && d.submission.testsPassed === d.submission.testsTotal],
             ["Viva", d.submission.vivaScore != null ? `${d.submission.vivaScore}/100` : "–", d.submission.vivaScore != null && d.submission.vivaScore >= 50],
             ["Suggested mark", grade != null ? `${grade}/${d.assignment.marks}` : "–", null],
             ["Time spent", fmtOffset(f.time), null],
             ["Runs (errors)", `${f.runs} (${f.errors})`, null],
             ["Time away", f.away ? fmtOffset(f.away) : "None", null],
-          ].map(([label, value, good]) => (
+          ]).map(([label, value, good]) => (
             <div key={String(label)} className="rounded-lg bg-canvas px-2 py-2.5">
               <dt className="text-xs text-ink-3">{label}</dt>
               <dd className={cx("text-lg font-bold tabular-nums", good === true && "text-done", good === false && "text-attention")}>{value}</dd>
@@ -211,9 +260,11 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
                     {x.status !== "open" && <span className="ml-1 text-sm text-ink-3">({x.status === "dismissed" ? "you marked it fine" : "followed up"})</span>}
                   </span>
                 </p>
-                <button onClick={() => setJump({ seq: x.fromSeq, nonce: Date.now() })} className="min-h-9 rounded-md px-2 text-sm font-semibold text-action hover:underline">
-                  Show me
-                </button>
+                {!isQuiz && (
+                  <button onClick={() => setJump({ seq: x.fromSeq, nonce: Date.now() })} className="min-h-9 rounded-md px-2 text-sm font-semibold text-action hover:underline">
+                    Show me
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -221,6 +272,9 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
         <p className="mt-3 text-xs text-ink-3">Flags come from simple rules about how the work was made. They are evidence, never proof: you decide.</p>
       </Card>
 
+      {isQuiz && <QuizAnswers d={d} />}
+
+      {!isQuiz && (<>
       {/* How it was made */}
       <Card className="p-5">
         <h3 className="mb-3 font-semibold">How the work was made</h3>
@@ -274,7 +328,9 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
         )}
       </Card>
 
-      {!compact && (
+      </>)}
+
+      {!compact && !isQuiz && (
         <div className="grid gap-5 lg:grid-cols-2">
           <Card className="p-5">
             <h3 className="font-semibold">Hidden tests</h3>

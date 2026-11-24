@@ -28,6 +28,7 @@ interface Data {
   assignment: {
     id: string;
     title: string;
+    type?: string;
     status: "draft" | "published" | "closed";
     dueAt: string | null;
     marks: number;
@@ -88,7 +89,9 @@ export function TeacherAssignment() {
               <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">{data.data.assignment.title}</h1>
               <p className="mt-1 text-ink-3">
                 {data.data.assignment.status === "draft" ? "Draft: not visible to students" : formatDue(data.data.assignment.dueAt, data.data.assignment.status === "published")}
-                {data.data.assignment.rules && ` · Viva ${data.data.assignment.rules.vivaQuestions} questions, ${data.data.assignment.rules.vivaWeight}% of marks`}
+                {data.data.assignment.type === "quiz"
+                  ? " · Timed quiz, marked automatically"
+                  : data.data.assignment.rules && ` · Viva ${data.data.assignment.rules.vivaQuestions} questions, ${data.data.assignment.rules.vivaWeight}% of marks`}
                 {data.data.assignment.rules?.pasteBlocked && " · Paste off"}
                 {data.data.assignment.rules?.variantsOn && " · Variants on"}
               </p>
@@ -108,7 +111,7 @@ export function TeacherAssignment() {
                     <th className="w-12 px-4 py-3 font-medium"><span className="sr-only">Compare</span></th>
                     <th className="px-2 py-3 font-medium">Student</th>
                     <th className="px-2 py-3 font-medium">Status</th>
-                    <th className="px-2 py-3 font-medium">Hidden tests</th>
+                    <th className="px-2 py-3 font-medium">{data.data.assignment.type === "quiz" ? "Right answers" : "Hidden tests"}</th>
                     <th className="px-2 py-3 font-medium">Viva</th>
                     <th className="px-2 py-3 font-medium">Flags</th>
                     <th className="px-4 py-3 text-right font-medium">Mark</th>

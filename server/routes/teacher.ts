@@ -14,6 +14,7 @@ import { expectedFor, type HiddenTest, type MarkedTest } from "../integrity/grad
 import type { VariantSpec } from "../lib/variants.js";
 import type { VivaQuestion } from "../viva.js";
 import type { ProcessEvent } from "../../shared/events.js";
+import { markQuiz, parseQuizState, type QuizQuestionRow } from "../../shared/quiz.js";
 
 export const teacherRouter = Router();
 
@@ -101,6 +102,7 @@ teacherRouter.get("/teacher/assignments/:id", requireSession("teacher"), async (
       assignment: {
         id: a.id,
         title: a.title,
+        type: a.type,
         status: a.status,
         dueAt: a.due_at,
         marks: a.marks,
@@ -138,6 +140,7 @@ async function teacherSubmission(sid: string, pid: string, id: string) {
     assignment: {
       id: string;
       title: string;
+      type: string;
       marks: number;
       starter_code: string;
       instructions_md: string;
@@ -146,7 +149,7 @@ async function teacherSubmission(sid: string, pid: string, id: string) {
       secrets: { hidden_tests: HiddenTest[]; variant_spec: VariantSpec } | null;
     };
   }>(
-    `submissions?select=id,status,content,last_output,test_results,tests_passed,tests_total,viva_score,suggested_grade,final_grade,teacher_comment,teacher_decision,started_at,submitted_at,event_source_id,student:profiles(id,full_name,initials),variant:variants(params,rendered_instructions),assignment:assignments!inner(id,title,marks,starter_code,instructions_md,course:courses!inner(id,code,teacher_id),rules:integrity_rules(viva_weight,paste_blocked),secrets:assignment_secrets(hidden_tests,variant_spec))&id=${eq(id)}&sandbox_id=${eq(sid)}&assignment.course.teacher_id=${eq(pid)}`,
+    `submissions?select=id,status,content,last_output,test_results,tests_passed,tests_total,viva_score,suggested_grade,final_grade,teacher_comment,teacher_decision,started_at,submitted_at,event_source_id,student:profiles(id,full_name,initials),variant:variants(params,rendered_instructions),assignment:assignments!inner(id,title,type,marks,starter_code,instructions_md,course:courses!inner(id,code,teacher_id),rules:integrity_rules(viva_weight,paste_blocked),secrets:assignment_secrets(hidden_tests,variant_spec))&id=${eq(id)}&sandbox_id=${eq(sid)}&assignment.course.teacher_id=${eq(pid)}`,
   );
   if (!s) throw notFound("That submission");
   return s;
@@ -176,6 +179,38 @@ teacherRouter.get("/teacher/submissions/:id", requireSession("teacher"), async (
       return { name: t.name, call: t.call, expected: expectedFor(t, option), actual: marked?.actual ?? null, passed: marked?.passed ?? null };
     });
     const viva = vivas[0];
+    // Timed quiz: each answer, right or wrong, the correct answer (teachers may see keys) and time spent.
+    let quiz: unknown = null;
+    if (s.assignment.type === "quiz") {
+      const state = parseQuizState(s.content);
+      const pool = await select<QuizQuestionRow>(`quiz_questions?select=id,position,kind,prompt_md,options,answer_key,marks&assignment_id=${eq(s.assignment.id)}&sandbox_id=${eq(sid)}`);
+      if (state) {
+        const mark = markQuiz(state, pool);
+        let prev = 0;
+        quiz = {
+          startedAt: state.startedAt,
+          finishedAt: state.finishedAt,
+          correct: mark.correct,
+          total: mark.total,
+          questions: state.order.map((qid, i) => {
+            const q = pool.find((x) => x.id === qid);
+            const a = state.answers[qid];
+            const seconds = a ? Math.round((a.atMs - prev) / 1000) : null;
+            if (a) prev = a.atMs;
+            const show = (v: number | string | null | undefined) => (v == null || v === "" ? null : q?.kind === "mcq" && typeof v === "number" ? (q.options?.[v] ?? null) : String(v));
+            return {
+              index: i,
+              kind: q?.kind ?? "mcq",
+              prompt: q?.prompt_md ?? "(question removed)",
+              answer: show(a?.value),
+              correctAnswer: q ? ("correct" in q.answer_key ? (q.options?.[q.answer_key.correct] ?? null) : q.answer_key.accepted[0] ?? null) : null,
+              correct: mark.perQuestion[i]?.correct ?? false,
+              seconds,
+            };
+          }),
+        };
+      }
+    }
     res.set("Cache-Control", "no-store").json({
       submission: {
         id: s.id,
@@ -192,7 +227,8 @@ teacherRouter.get("/teacher/submissions/:id", requireSession("teacher"), async (
         comment: s.teacher_comment,
       },
       student: { id: s.student.id, name: s.student.full_name, initials: s.student.initials },
-      assignment: { id: s.assignment.id, title: s.assignment.title, marks: s.assignment.marks, starterCode: s.assignment.starter_code, courseCode: s.assignment.course.code, vivaWeight: s.assignment.rules?.viva_weight ?? 50, variant: option },
+      quiz,
+      assignment: { id: s.assignment.id, title: s.assignment.title, type: s.assignment.type, marks: s.assignment.marks, starterCode: s.assignment.starter_code, courseCode: s.assignment.course.code, vivaWeight: s.assignment.rules?.viva_weight ?? 50, variant: option },
       // Times: client time drives the replay; server time is the tamper-proof record.
       events: events.map((e) => ({ seq: e.seq, t: Date.parse(e.client_time), serverTime: e.server_time, type: e.type, payload: e.payload })),
       flags: flags.map((f) => ({ id: f.id, rule: f.rule, severity: f.severity, message: f.message, fromSeq: f.evidence.from_seq, toSeq: f.evidence.to_seq, status: f.teacher_status })),

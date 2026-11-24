@@ -7,6 +7,7 @@ import { workspaceRouter } from "./routes/workspace.js";
 import { vivaRouter } from "./routes/viva.js";
 import { teacherRouter } from "./routes/teacher.js";
 import { accountsRouter } from "./routes/accounts.js";
+import { quizRouter } from "./routes/quiz.js";
 
 /**
  * The Express app. It is exported, never started with app.listen():
@@ -26,6 +27,7 @@ app.use("/api", workspaceRouter);
 app.use("/api", vivaRouter);
 app.use("/api", teacherRouter);
 app.use("/api", accountsRouter);
+app.use("/api", quizRouter);
 
 // Unknown API routes get a JSON 404, never the SPA's index.html.
 app.use("/api", (_req: Request, res: Response) => {
