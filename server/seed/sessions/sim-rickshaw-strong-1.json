@@ -1,0 +1,1127 @@
+{
+  "label": "sim-rickshaw-strong-1",
+  "student": "zainab",
+  "alsoAs": [
+    {
+      "student": "omar",
+      "daysAgo": 1
+    },
+    {
+      "student": "areeba",
+      "daysAgo": 1
+    }
+  ],
+  "assignment": "Rickshaw Fare Estimator",
+  "submittedDaysAgo": 1,
+  "recordedAt": "2026-11-24 15:44:52.126+00",
+  "source": "simulated demo student (persona: strong) run through the real platform",
+  "simulated": true,
+  "persona": "strong",
+  "note": "",
+  "variant": null,
+  "content": "import math\n\n\ndef fare(km):\n    # Rs 100 covers the first 2 km; Rs 40 for each km after that\n    if km <= 2:\n        return 100\n    else:\n        # part of a km counts as a full km\n        extra_km = math.ceil(km - 2)\n        return 100 + 40 * extra_km\n\n\nprint(fare(3))\n",
+  "lastOutput": null,
+  "testResults": [
+    {
+      "actual": "100",
+      "name": "Short ride",
+      "passed": true
+    },
+    {
+      "actual": "100",
+      "name": "Exactly 2 km",
+      "passed": true
+    },
+    {
+      "actual": "140",
+      "name": "Example from the brief",
+      "passed": true
+    },
+    {
+      "actual": "260",
+      "name": "Part of a km",
+      "passed": true
+    }
+  ],
+  "testsPassed": 4,
+  "testsTotal": 4,
+  "submittedAtMs": 320310,
+  "events": [
+    {
+      "seq": 1,
+      "ms": 0,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 100,
+            "insert": "",
+            "to": 101
+          },
+          {
+            "from": 99,
+            "insert": "",
+            "to": 100
+          },
+          {
+            "from": 98,
+            "insert": "",
+            "to": 99
+          },
+          {
+            "from": 97,
+            "insert": "",
+            "to": 98
+          },
+          {
+            "from": 97,
+            "insert": "i",
+            "to": 97
+          },
+          {
+            "from": 98,
+            "insert": "r",
+            "to": 98
+          },
+          {
+            "from": 98,
+            "insert": "",
+            "to": 99
+          },
+          {
+            "from": 98,
+            "insert": "f",
+            "to": 98
+          },
+          {
+            "from": 99,
+            "insert": " ",
+            "to": 99
+          },
+          {
+            "from": 100,
+            "insert": "k",
+            "to": 100
+          },
+          {
+            "from": 101,
+            "insert": "m",
+            "to": 101
+          },
+          {
+            "from": 102,
+            "insert": " ",
+            "to": 102
+          },
+          {
+            "from": 103,
+            "insert": "<",
+            "to": 103
+          },
+          {
+            "from": 104,
+            "insert": "=",
+            "to": 104
+          },
+          {
+            "from": 105,
+            "insert": " ",
+            "to": 105
+          },
+          {
+            "from": 106,
+            "insert": "2",
+            "to": 106
+          },
+          {
+            "from": 107,
+            "insert": "\n",
+            "to": 107
+          }
+        ],
+        "chars": 12
+      }
+    },
+    {
+      "seq": 2,
+      "ms": 9757,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 108,
+            "insert": " ",
+            "to": 108
+          },
+          {
+            "from": 109,
+            "insert": " ",
+            "to": 109
+          },
+          {
+            "from": 110,
+            "insert": " ",
+            "to": 110
+          },
+          {
+            "from": 111,
+            "insert": " ",
+            "to": 111
+          },
+          {
+            "from": 112,
+            "insert": " ",
+            "to": 112
+          },
+          {
+            "from": 113,
+            "insert": " ",
+            "to": 113
+          },
+          {
+            "from": 114,
+            "insert": " ",
+            "to": 114
+          },
+          {
+            "from": 115,
+            "insert": " ",
+            "to": 115
+          },
+          {
+            "from": 116,
+            "insert": "r",
+            "to": 116
+          },
+          {
+            "from": 117,
+            "insert": "e",
+            "to": 117
+          },
+          {
+            "from": 118,
+            "insert": "t",
+            "to": 118
+          },
+          {
+            "from": 119,
+            "insert": "s",
+            "to": 119
+          },
+          {
+            "from": 119,
+            "insert": "",
+            "to": 120
+          },
+          {
+            "from": 119,
+            "insert": "u",
+            "to": 119
+          },
+          {
+            "from": 120,
+            "insert": "r",
+            "to": 120
+          },
+          {
+            "from": 121,
+            "insert": "n",
+            "to": 121
+          },
+          {
+            "from": 122,
+            "insert": " ",
+            "to": 122
+          },
+          {
+            "from": 123,
+            "insert": "1",
+            "to": 123
+          },
+          {
+            "from": 124,
+            "insert": "0",
+            "to": 124
+          },
+          {
+            "from": 125,
+            "insert": "0",
+            "to": 125
+          },
+          {
+            "from": 126,
+            "insert": "\n",
+            "to": 126
+          }
+        ],
+        "chars": 20
+      }
+    },
+    {
+      "seq": 3,
+      "ms": 16394,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 127,
+            "insert": " ",
+            "to": 127
+          },
+          {
+            "from": 128,
+            "insert": " ",
+            "to": 128
+          },
+          {
+            "from": 129,
+            "insert": " ",
+            "to": 129
+          },
+          {
+            "from": 130,
+            "insert": " ",
+            "to": 130
+          },
+          {
+            "from": 131,
+            "insert": "e",
+            "to": 131
+          },
+          {
+            "from": 132,
+            "insert": "l",
+            "to": 132
+          },
+          {
+            "from": 133,
+            "insert": "t",
+            "to": 133
+          },
+          {
+            "from": 133,
+            "insert": "",
+            "to": 134
+          },
+          {
+            "from": 133,
+            "insert": "s",
+            "to": 133
+          },
+          {
+            "from": 134,
+            "insert": "e",
+            "to": 134
+          },
+          {
+            "from": 135,
+            "insert": ":",
+            "to": 135
+          },
+          {
+            "from": 136,
+            "insert": "\n",
+            "to": 136
+          }
+        ],
+        "chars": 11
+      }
+    },
+    {
+      "seq": 4,
+      "ms": 35436,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 137,
+            "insert": " ",
+            "to": 137
+          },
+          {
+            "from": 138,
+            "insert": " ",
+            "to": 138
+          },
+          {
+            "from": 139,
+            "insert": " ",
+            "to": 139
+          },
+          {
+            "from": 140,
+            "insert": " ",
+            "to": 140
+          },
+          {
+            "from": 141,
+            "insert": " ",
+            "to": 141
+          },
+          {
+            "from": 142,
+            "insert": " ",
+            "to": 142
+          },
+          {
+            "from": 143,
+            "insert": " ",
+            "to": 143
+          },
+          {
+            "from": 144,
+            "insert": " ",
+            "to": 144
+          },
+          {
+            "from": 145,
+            "insert": "#",
+            "to": 145
+          },
+          {
+            "from": 146,
+            "insert": " ",
+            "to": 146
+          },
+          {
+            "from": 147,
+            "insert": "p",
+            "to": 147
+          },
+          {
+            "from": 148,
+            "insert": "a",
+            "to": 148
+          },
+          {
+            "from": 149,
+            "insert": "r",
+            "to": 149
+          },
+          {
+            "from": 150,
+            "insert": "t",
+            "to": 150
+          },
+          {
+            "from": 151,
+            "insert": " ",
+            "to": 151
+          },
+          {
+            "from": 152,
+            "insert": "o",
+            "to": 152
+          },
+          {
+            "from": 153,
+            "insert": "f",
+            "to": 153
+          },
+          {
+            "from": 154,
+            "insert": " ",
+            "to": 154
+          },
+          {
+            "from": 155,
+            "insert": "a",
+            "to": 155
+          },
+          {
+            "from": 156,
+            "insert": " ",
+            "to": 156
+          },
+          {
+            "from": 157,
+            "insert": "k",
+            "to": 157
+          },
+          {
+            "from": 158,
+            "insert": "m",
+            "to": 158
+          },
+          {
+            "from": 159,
+            "insert": " ",
+            "to": 159
+          },
+          {
+            "from": 160,
+            "insert": "c",
+            "to": 160
+          },
+          {
+            "from": 161,
+            "insert": "o",
+            "to": 161
+          },
+          {
+            "from": 162,
+            "insert": "u",
+            "to": 162
+          },
+          {
+            "from": 163,
+            "insert": "n",
+            "to": 163
+          },
+          {
+            "from": 164,
+            "insert": "t",
+            "to": 164
+          },
+          {
+            "from": 165,
+            "insert": "s",
+            "to": 165
+          },
+          {
+            "from": 166,
+            "insert": " ",
+            "to": 166
+          },
+          {
+            "from": 167,
+            "insert": "a",
+            "to": 167
+          },
+          {
+            "from": 168,
+            "insert": "s",
+            "to": 168
+          },
+          {
+            "from": 169,
+            "insert": " ",
+            "to": 169
+          },
+          {
+            "from": 170,
+            "insert": "a",
+            "to": 170
+          },
+          {
+            "from": 171,
+            "insert": " ",
+            "to": 171
+          },
+          {
+            "from": 172,
+            "insert": "f",
+            "to": 172
+          },
+          {
+            "from": 173,
+            "insert": "u",
+            "to": 173
+          },
+          {
+            "from": 174,
+            "insert": "l",
+            "to": 174
+          },
+          {
+            "from": 175,
+            "insert": "l",
+            "to": 175
+          },
+          {
+            "from": 176,
+            "insert": " ",
+            "to": 176
+          },
+          {
+            "from": 177,
+            "insert": "k",
+            "to": 177
+          },
+          {
+            "from": 178,
+            "insert": "m",
+            "to": 178
+          },
+          {
+            "from": 179,
+            "insert": "\n",
+            "to": 179
+          }
+        ],
+        "chars": 43
+      }
+    },
+    {
+      "seq": 5,
+      "ms": 56838,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 180,
+            "insert": " ",
+            "to": 180
+          },
+          {
+            "from": 181,
+            "insert": " ",
+            "to": 181
+          },
+          {
+            "from": 182,
+            "insert": " ",
+            "to": 182
+          },
+          {
+            "from": 183,
+            "insert": " ",
+            "to": 183
+          },
+          {
+            "from": 184,
+            "insert": " ",
+            "to": 184
+          },
+          {
+            "from": 185,
+            "insert": " ",
+            "to": 185
+          },
+          {
+            "from": 186,
+            "insert": " ",
+            "to": 186
+          },
+          {
+            "from": 187,
+            "insert": " ",
+            "to": 187
+          },
+          {
+            "from": 188,
+            "insert": "e",
+            "to": 188
+          },
+          {
+            "from": 189,
+            "insert": "x",
+            "to": 189
+          },
+          {
+            "from": 190,
+            "insert": "t",
+            "to": 190
+          },
+          {
+            "from": 191,
+            "insert": "r",
+            "to": 191
+          },
+          {
+            "from": 192,
+            "insert": "a",
+            "to": 192
+          },
+          {
+            "from": 193,
+            "insert": "_",
+            "to": 193
+          },
+          {
+            "from": 194,
+            "insert": "k",
+            "to": 194
+          },
+          {
+            "from": 195,
+            "insert": "m",
+            "to": 195
+          },
+          {
+            "from": 196,
+            "insert": " ",
+            "to": 196
+          },
+          {
+            "from": 197,
+            "insert": "=",
+            "to": 197
+          },
+          {
+            "from": 198,
+            "insert": " ",
+            "to": 198
+          },
+          {
+            "from": 199,
+            "insert": "m",
+            "to": 199
+          },
+          {
+            "from": 200,
+            "insert": "a",
+            "to": 200
+          },
+          {
+            "from": 201,
+            "insert": "t",
+            "to": 201
+          },
+          {
+            "from": 202,
+            "insert": "a",
+            "to": 202
+          },
+          {
+            "from": 202,
+            "insert": "",
+            "to": 203
+          },
+          {
+            "from": 202,
+            "insert": "h",
+            "to": 202
+          },
+          {
+            "from": 203,
+            "insert": ".",
+            "to": 203
+          },
+          {
+            "from": 204,
+            "insert": "c",
+            "to": 204
+          },
+          {
+            "from": 205,
+            "insert": "e",
+            "to": 205
+          },
+          {
+            "from": 206,
+            "insert": "i",
+            "to": 206
+          },
+          {
+            "from": 207,
+            "insert": "l",
+            "to": 207
+          },
+          {
+            "from": 208,
+            "insert": "(",
+            "to": 208
+          },
+          {
+            "from": 209,
+            "insert": "k",
+            "to": 209
+          },
+          {
+            "from": 210,
+            "insert": "m",
+            "to": 210
+          },
+          {
+            "from": 211,
+            "insert": " ",
+            "to": 211
+          },
+          {
+            "from": 212,
+            "insert": "-",
+            "to": 212
+          },
+          {
+            "from": 213,
+            "insert": " ",
+            "to": 213
+          },
+          {
+            "from": 214,
+            "insert": "2",
+            "to": 214
+          },
+          {
+            "from": 215,
+            "insert": ")",
+            "to": 215
+          },
+          {
+            "from": 216,
+            "insert": "\n",
+            "to": 216
+          }
+        ],
+        "chars": 38
+      }
+    },
+    {
+      "seq": 6,
+      "ms": 99687,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 217,
+            "insert": " ",
+            "to": 217
+          },
+          {
+            "from": 218,
+            "insert": " ",
+            "to": 218
+          },
+          {
+            "from": 219,
+            "insert": " ",
+            "to": 219
+          },
+          {
+            "from": 220,
+            "insert": " ",
+            "to": 220
+          },
+          {
+            "from": 221,
+            "insert": " ",
+            "to": 221
+          },
+          {
+            "from": 222,
+            "insert": " ",
+            "to": 222
+          },
+          {
+            "from": 223,
+            "insert": " ",
+            "to": 223
+          },
+          {
+            "from": 224,
+            "insert": " ",
+            "to": 224
+          },
+          {
+            "from": 225,
+            "insert": "t",
+            "to": 225
+          },
+          {
+            "from": 225,
+            "insert": "",
+            "to": 226
+          },
+          {
+            "from": 225,
+            "insert": "r",
+            "to": 225
+          },
+          {
+            "from": 226,
+            "insert": "e",
+            "to": 226
+          },
+          {
+            "from": 227,
+            "insert": "a",
+            "to": 227
+          },
+          {
+            "from": 227,
+            "insert": "",
+            "to": 228
+          },
+          {
+            "from": 227,
+            "insert": "t",
+            "to": 227
+          },
+          {
+            "from": 228,
+            "insert": "u",
+            "to": 228
+          },
+          {
+            "from": 229,
+            "insert": "r",
+            "to": 229
+          },
+          {
+            "from": 230,
+            "insert": "n",
+            "to": 230
+          },
+          {
+            "from": 231,
+            "insert": " ",
+            "to": 231
+          },
+          {
+            "from": 232,
+            "insert": "1",
+            "to": 232
+          },
+          {
+            "from": 233,
+            "insert": "0",
+            "to": 233
+          },
+          {
+            "from": 234,
+            "insert": "0",
+            "to": 234
+          },
+          {
+            "from": 235,
+            "insert": " ",
+            "to": 235
+          },
+          {
+            "from": 236,
+            "insert": "+",
+            "to": 236
+          },
+          {
+            "from": 237,
+            "insert": " ",
+            "to": 237
+          },
+          {
+            "from": 238,
+            "insert": "4",
+            "to": 238
+          },
+          {
+            "from": 239,
+            "insert": "0",
+            "to": 239
+          },
+          {
+            "from": 240,
+            "insert": " ",
+            "to": 240
+          },
+          {
+            "from": 241,
+            "insert": "*",
+            "to": 241
+          },
+          {
+            "from": 242,
+            "insert": " ",
+            "to": 242
+          },
+          {
+            "from": 243,
+            "insert": "e",
+            "to": 243
+          },
+          {
+            "from": 244,
+            "insert": "x",
+            "to": 244
+          },
+          {
+            "from": 245,
+            "insert": "t",
+            "to": 245
+          },
+          {
+            "from": 246,
+            "insert": "r",
+            "to": 246
+          },
+          {
+            "from": 247,
+            "insert": "a",
+            "to": 247
+          },
+          {
+            "from": 248,
+            "insert": "_",
+            "to": 248
+          },
+          {
+            "from": 249,
+            "insert": "k",
+            "to": 249
+          },
+          {
+            "from": 250,
+            "insert": "m",
+            "to": 250
+          }
+        ],
+        "chars": 36
+      }
+    },
+    {
+      "seq": 7,
+      "ms": 107902,
+      "type": "run",
+      "payload": {
+        "docLength": 269,
+        "durationMs": 20,
+        "ok": false
+      }
+    },
+    {
+      "seq": 8,
+      "ms": 107902,
+      "type": "error",
+      "payload": {
+        "message": "SyntaxError: invalid syntax (missing ':' after if)"
+      }
+    },
+    {
+      "seq": 9,
+      "ms": 107902,
+      "type": "snapshot",
+      "payload": {
+        "doc": "import math\n\n\ndef fare(km):\n    # Rs 100 covers the first 2 km; Rs 40 for each km after that\n    if km <= 2\n        return 100\n    else:\n        # part of a km counts as a full km\n        extra_km = math.ceil(km - 2)\n        return 100 + 40 * extra_km\n\n\nprint(fare(3))\n"
+      }
+    },
+    {
+      "seq": 10,
+      "ms": 237972,
+      "type": "keys",
+      "payload": {
+        "changes": [
+          {
+            "from": 107,
+            "insert": ":",
+            "to": 107
+          }
+        ],
+        "chars": 1
+      }
+    },
+    {
+      "seq": 11,
+      "ms": 243230,
+      "type": "run",
+      "payload": {
+        "docLength": 270,
+        "durationMs": 12,
+        "ok": true
+      }
+    },
+    {
+      "seq": 12,
+      "ms": 243230,
+      "type": "snapshot",
+      "payload": {
+        "doc": "import math\n\n\ndef fare(km):\n    # Rs 100 covers the first 2 km; Rs 40 for each km after that\n    if km <= 2:\n        return 100\n    else:\n        # part of a km counts as a full km\n        extra_km = math.ceil(km - 2)\n        return 100 + 40 * extra_km\n\n\nprint(fare(3))\n"
+      }
+    },
+    {
+      "seq": 13,
+      "ms": 302387,
+      "type": "run",
+      "payload": {
+        "docLength": 270,
+        "durationMs": 19,
+        "ok": true
+      }
+    },
+    {
+      "seq": 14,
+      "ms": 302387,
+      "type": "snapshot",
+      "payload": {
+        "doc": "import math\n\n\ndef fare(km):\n    # Rs 100 covers the first 2 km; Rs 40 for each km after that\n    if km <= 2:\n        return 100\n    else:\n        # part of a km counts as a full km\n        extra_km = math.ceil(km - 2)\n        return 100 + 40 * extra_km\n\n\nprint(fare(3))\n"
+      }
+    },
+    {
+      "seq": 15,
+      "ms": 320310,
+      "type": "snapshot",
+      "payload": {
+        "doc": "import math\n\n\ndef fare(km):\n    # Rs 100 covers the first 2 km; Rs 40 for each km after that\n    if km <= 2:\n        return 100\n    else:\n        # part of a km counts as a full km\n        extra_km = math.ceil(km - 2)\n        return 100 + 40 * extra_km\n\n\nprint(fare(3))\n"
+      }
+    },
+    {
+      "seq": 16,
+      "ms": 320310,
+      "type": "submit",
+      "payload": {
+        "docLength": 270
+      }
+    }
+  ],
+  "viva": {
+    "understanding": 92,
+    "summary": "The student understands the purpose of the fare estimator, can explain the rounding logic, predicts outputs accurately, and knows how to adjust the base fare. Minor hesitation in the prediction but overall solid comprehension.",
+    "rubric": {
+      "goal": 22,
+      "logic": 23,
+      "modification": 23,
+      "output_prediction": 24,
+      "revise_next": "Next, try extending the function to handle discounts or maximum caps to deepen your grasp of conditional logic."
+    },
+    "startedAtMs": 340310,
+    "completedAtMs": 475310,
+    "questions": [
+      {
+        "answer": "Extra_km math.ceil(km - 2) ka matlab hai ke agar distance 2 se zyada ho to uss excess part ko next full kilometer ki tarah count karna. Ye zaroori hai kyunki fare mein har extra kilometer ka charge 40 rupay hai, lekin agar half km ho to bhi full charge lena hai.",
+        "away_ms": 0,
+        "feedback": "You correctly explained that `math.ceil` rounds any fractional extra distance up to the next whole kilometre for charging.",
+        "input_call": null,
+        "kind": "explain_line",
+        "late": false,
+        "prompt": "What does the line `extra_km = math.ceil(km - 2)` accomplish in your fare calculation, and why is it necessary?",
+        "score": 9,
+        "seconds_allowed": 90,
+        "askedAtMs": 340310,
+        "answeredAtMs": 377310
+      },
+      {
+        "answer": "Program 100 print karega. Kyunke 2.1 km ke liye 2 km se zyada hai, lekin ceil(2.1-2) 1 hoga, 100+40*1=140 actually. Wait, mistake. 2.1 km: ceil(0.1)=1, 100+40=140. So output 140.",
+        "auto_check": {
+          "actual": "140",
+          "call": "fare(2.1)",
+          "predicted_match": true
+        },
+        "away_ms": 0,
+        "feedback": "After a brief hesitation you gave the right output (140) for `fare(2.1)`, matching the actual program result.",
+        "input_call": "fare(2.1)",
+        "kind": "predict_output",
+        "late": false,
+        "prompt": "What value does your program print when called with fare(2.1)?",
+        "score": 9,
+        "seconds_allowed": 90,
+        "askedAtMs": 381310,
+        "answeredAtMs": 419310
+      },
+      {
+        "answer": "Aap function mein 100 ko 120 se replace kar dein. Jaise if km <= 2: return 120. Baaki part same rahega.",
+        "away_ms": 0,
+        "feedback": "You identified the needed change (replace 100 with 120) and kept the rest of the logic unchanged.",
+        "input_call": null,
+        "kind": "modify",
+        "late": false,
+        "prompt": "If the fare for the first 2 km should be Rs 120 instead of Rs 100, how would you modify your function to reflect this change?",
+        "score": 9,
+        "seconds_allowed": 90,
+        "askedAtMs": 423310,
+        "answeredAtMs": 475310
+      }
+    ]
+  },
+  "messages": [
+    {
+      "role": "student",
+      "body": "Ustaad, mujhe lagta hai loop sahi hai lekin answer galat aa raha hai. Hint dein?",
+      "hint": null,
+      "ms": 208841
+    },
+    {
+      "role": "ustaad",
+      "body": "Aapka `if` line syntax error de raha hai, isliye code run nahi ho raha. Colon lagane ke baad, kya aapko lagta hai condition aur calculation theek hain?",
+      "hint": "Remember that an `if` statement needs a colon (`:`) at the end, and the condition should compare the numeric value correctly.",
+      "ms": 213516
+    }
+  ]
+}
