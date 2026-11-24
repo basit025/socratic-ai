@@ -124,10 +124,14 @@ export async function buildSeedSql(opts: { recording?: boolean; sessions?: Sessi
     if (!f.events.length) throw new Error(`Session ${f.label} has no events.`);
     let sourceSid: string | null = null;
     const owners = [{ student: f.student, daysAgo: f.submittedDaysAgo }, ...(f.alsoAs ?? [])];
+    const classmates = courses.find((c) => c.key === a.course)!.students.filter((k) => !students.find((x) => x.key === k)?.email);
     for (const [ownerNo, owner] of owners.entries()) {
-      const student = students.find((x) => x.key === owner.student);
-      if (!student || student.email) throw new Error(`Session ${f.label}: "${owner.student}" must be a seeded classmate (not the demo identity).`);
-      if (taken.has(`${a.key}:${student.key}`)) throw new Error(`Session ${f.label}: ${student.key} already has a session for ${a.title}.`);
+      if (!students.find((x) => x.key === owner.student && !x.email)) throw new Error(`Session ${f.label}: "${owner.student}" must be a seeded classmate (not the demo identity).`);
+      // One submission per student per assignment: if this classmate already has one (sessions made in
+      // different runs can overlap), the copy goes to the next classmate in the course who doesn't.
+      const key = taken.has(`${a.key}:${owner.student}`) ? classmates.find((k) => !taken.has(`${a.key}:${k}`)) : owner.student;
+      if (!key) continue; // everyone in the course already has a submission
+      const student = students.find((x) => x.key === key)!;
       taken.add(`${a.key}:${student.key}`);
 
       const sid = randomUUID();
