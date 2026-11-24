@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fallbackQuestion, predictionMatches, validInputCall } from "./viva.js";
+import { fallbackQuestion, predictionMatches, reconcileScore, validInputCall, type VivaScore } from "./viva.js";
 
 const code = "def over_summary(balls):\n    total = 0\n    for r in balls:\n        total += r\n    return (total, 0)\n";
 
@@ -27,5 +27,31 @@ describe("viva helpers", () => {
   it("falls back to a question about a real line of the student's code", () => {
     expect(fallbackQuestion("explain_line", code).prompt).toContain("`total += r`");
     expect(fallbackQuestion("modify", code).prompt).toMatch(/change your code/);
+  });
+
+  it("keeps the overall score traceable to the answers", () => {
+    const score = (goal: number, logic: number, out: number, mod: number, per: number[]): VivaScore => ({
+      rubric: { goal, logic, output_prediction: out, modification: mod },
+      per_question: per.map((p) => ({ score: p, feedback: "" })),
+      teacher_summary: "",
+      revise_next: "",
+    });
+    const q = (answer: string, match?: boolean) => ({
+      kind: "explain_line" as const, prompt: "?", input_call: null, seconds_allowed: 90, asked_at: "", answer,
+      ...(match === undefined ? {} : { auto_check: { call: "f()", actual: "1", predicted_match: match } }),
+    });
+    // The copier case: answers scored 0, 0, 7 but the model's rubric said 60.
+    const copier = reconcileScore(score(20, 10, 15, 15, [0, 0, 7]), [q(""), q("(0, 1)", false), q("add a counter")]);
+    expect(copier.understanding).toBe(Math.round((7 / 3) * 10 + 15));
+    const r = copier.score.rubric;
+    expect(r.goal + r.logic + r.output_prediction + r.modification).toBe(copier.understanding);
+    // An honest student the model under-scored is lifted to within the same gap.
+    const honest = reconcileScore(score(10, 10, 10, 10, [9, 10, 9]), [q("a"), q("1", true), q("b")]);
+    expect(honest.understanding).toBe(Math.round((28 / 3) * 10 - 15));
+    // Ground truth beats the model for that question too.
+    const wrong = reconcileScore(score(20, 20, 20, 20, [9, 9, 9]), [q("a"), q("2", false), q("b")]);
+    expect(wrong.score.per_question[1]!.score).toBe(3);
+    // A consistent score is left alone.
+    expect(reconcileScore(score(23, 22, 25, 20, [9, 10, 9]), [q("a"), q("1", true), q("b")]).understanding).toBe(90);
   });
 });

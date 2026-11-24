@@ -3,10 +3,12 @@
  *
  * Fallback chain: LLM_PROVIDER first (default gemini), then the others in the order
  * gemini → groq → openrouter, skipping providers with no key.
- * - 429 / 5xx: retry once on the same provider, then move on. After a 429 the provider is
- *   skipped for 60 s (per function instance).
- * - Timeout (default 12 s, per request): move on immediately; a hung provider usually hangs again,
- *   and a student is waiting.
+ * - 429 / 5xx: retry once on the same provider, then move on. After a 429 or a repeated 5xx
+ *   (e.g. Gemini's "503 overloaded") the provider is skipped for 60 s (per function instance),
+ *   so students go straight to the next provider during an outage.
+ * - Timeout (default 12 s, per request): move on immediately and skip that provider for 60 s;
+ *   a hung provider usually hangs again, and a student is waiting.
+ * - If every configured provider is cooling down, all of them are tried anyway.
  * - 400 / 401 / 403 / 404: a configuration problem; move on immediately.
  * - Output that isn't valid JSON or doesn't match the schema: retry once, then move on.
  * - Every attempt is logged to ai_usage (tokens, latency) for the cost slide. Never logs keys or prompts.
@@ -230,7 +232,9 @@ async function defaultLogUsage(attempt: Attempt, purpose: LlmPurpose, sandboxId:
 export function providerOrder(env: Env, now: number): Provider[] {
   const primary = (env.LLM_PROVIDER?.trim() as Provider) || "gemini";
   const order = DEFAULT_ORDER.includes(primary) ? [primary, ...DEFAULT_ORDER.filter((p) => p !== primary)] : [...DEFAULT_ORDER];
-  return order.filter((p) => keyFor(p, env) && (cooldownUntil.get(p) ?? 0) <= now);
+  const keyed = order.filter((p) => keyFor(p, env));
+  const ready = keyed.filter((p) => (cooldownUntil.get(p) ?? 0) <= now);
+  return ready.length ? ready : keyed; // never refuse a request just because everything cooled down
 }
 
 export async function generateJson<T>(req: LlmRequest<T>, deps: LlmDeps = {}): Promise<LlmResult<T>> {
@@ -261,9 +265,13 @@ export async function generateJson<T>(req: LlmRequest<T>, deps: LlmDeps = {}): P
         const attempt: Attempt = { provider, model, ok: false, errorCode: failure.code, latencyMs: now() - started };
         attempts.push(attempt);
         void logUsage(attempt, req.purpose, req.sandboxId ?? null).catch(() => {});
-        if (failure.kind === "client" || failure.kind === "timeout") break; // config problem or hung: next provider
+        if (failure.kind === "client") break; // configuration problem: next provider
+        if (failure.kind === "timeout") {
+          cooldownUntil.set(provider, now() + COOLDOWN_MS); // hung: skip it for a while
+          break;
+        }
         if (attemptNo === 2) {
-          if (failure.kind === "rate_limited") cooldownUntil.set(provider, now() + COOLDOWN_MS);
+          if (failure.kind === "rate_limited" || failure.kind === "server") cooldownUntil.set(provider, now() + COOLDOWN_MS);
           break;
         }
         await sleep(failure.kind === "rate_limited" ? 800 : 300);
