@@ -56,6 +56,19 @@ const shuffle = <T,>(xs: T[]) => xs.map((x) => [rand(), x] as const).sort((a, b)
 class Client {
   cookie = "";
   async call<T>(path: string, body?: unknown): Promise<T> {
+    // Network blips (not HTTP errors) are retried once, except where a repeat would double an action.
+    const once = /\/viva\/answer$|\/ustaad$/.test(path);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.send<T>(path, body);
+      } catch (err) {
+        const network = err instanceof TypeError;
+        if (!network || once || attempt === 2) throw network ? new Error(`${path}: ${(err as Error).message} (${String((err as { cause?: { code?: string } }).cause?.code ?? "")})`) : err;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+  }
+  private async send<T>(path: string, body?: unknown): Promise<T> {
     const res = await fetch(`${BASE}/api${path}`, {
       method: body === undefined ? "GET" : "POST",
       headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...(this.cookie ? { Cookie: this.cookie } : {}) },
@@ -77,6 +90,12 @@ const CodeWork = z.object({
 });
 const TextWork = z.object({ final_text: z.string(), first_draft: z.string().nullable() });
 const Answer = z.object({ answer: z.string() });
+
+/**
+ * The simulated STUDENTS' side (their code, drafts and viva answers) runs on a different Groq model,
+ * so it never eats the quota the platform itself needs for questions, hints and scoring.
+ */
+const STUDENT_AI = { env: { ...process.env, LLM_PROVIDER: "groq", GROQ_MODEL: process.env.STUDENT_GROQ_MODEL ?? "openai/gpt-oss-20b", GEMINI_API_KEY: "", OPENROUTER_API_KEY: "" } };
 
 const PERSONA_CODE: Record<Persona, string> = {
   strong:
@@ -104,7 +123,7 @@ const PERSONA_VIVA: Record<Persona, string> = {
 
 async function studentWork(kind: "code" | "written", persona: Persona, language: string | null, instructions: string, starter: string) {
   if (kind === "written") {
-    const r = await generateJson({ purpose: "other", system: PERSONA_TEXT[persona], messages: [{ role: "user", content: `The task:\n${instructions}` }], schema: TextWork, schemaName: "student_text", maxOutputTokens: 900, temperature: 0.9, timeoutMs: 30_000 });
+    const r = await generateJson({ purpose: "other", system: PERSONA_TEXT[persona], messages: [{ role: "user", content: `The task:\n${instructions}` }], schema: TextWork, schemaName: "student_text", maxOutputTokens: 900, temperature: 0.9, timeoutMs: 30_000 }, STUDENT_AI);
     return { final: r.data.final_text.trim(), first: r.data.first_draft?.trim() || null, error: null };
   }
   const r = await generateJson({
@@ -116,7 +135,7 @@ async function studentWork(kind: "code" | "written", persona: Persona, language:
     maxOutputTokens: 900,
     temperature: 0.9,
     timeoutMs: 30_000,
-  });
+  }, STUDENT_AI);
   return { final: r.data.final_code.replace(/^```\w*\n?|```$/g, "").trim() + "\n", first: r.data.first_try ? r.data.first_try.replace(/^```\w*\n?|```$/g, "").trim() + "\n" : null, error: r.data.first_error };
 }
 
@@ -150,7 +169,7 @@ async function vivaAnswer(persona: Persona, quality: Quality, work: string, task
     maxOutputTokens: 200,
     temperature: 0.9,
     timeoutMs: 20_000,
-  });
+  }, STUDENT_AI);
   return r.data.answer.trim();
 }
 

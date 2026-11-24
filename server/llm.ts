@@ -26,7 +26,7 @@ const DEFAULT_TIMEOUT_MS = 12_000;
 
 export function modelFor(provider: Provider, env: Env): string {
   if (provider === "gemini") return "gemini-3.1-flash-lite";
-  if (provider === "groq") return "openai/gpt-oss-120b";
+  if (provider === "groq") return env.GROQ_MODEL?.trim() || "openai/gpt-oss-120b"; // override only for local tools
   return env.OPENROUTER_MODEL?.trim() || "google/gemini-3.1-flash-lite";
 }
 
