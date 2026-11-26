@@ -2,7 +2,7 @@
 
 **Live demo: https://socratic-ai-pk.vercel.app** · no sign-up · [health check](https://socratic-ai-pk.vercel.app/api/health)
 
-A learning platform where students do their work in one workspace and the AI mentor **Ustaad** runs a short viva on each student's own work, so marks reflect what they understand.
+One organized learning platform for students and teachers: courses, weekly material, assignments, coding labs, quizzes and marks in one place, with the AI mentor **Ustaad** making sure every mark reflects real understanding.
 
 > *We can't stop a student from asking AI. We make sure they can't get marks for work they don't understand.*
 
