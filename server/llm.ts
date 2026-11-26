@@ -8,7 +8,7 @@
  *   so students go straight to the next provider during an outage.
  * - Timeout (default 12 s, per request): move on immediately and skip that provider for 60 s;
  *   a hung provider usually hangs again, and a student is waiting.
- * - If every configured provider is cooling down, all of them are tried anyway.
+ * - A cooldown only moves a provider to the back of the queue; it is still tried as a last resort.
  * - 400 / 401 / 403 / 404: a configuration problem; move on immediately.
  * - Output that isn't valid JSON or doesn't match the schema: retry once, then move on.
  * - Every attempt is logged to ai_usage (tokens, latency) for the cost slide. Never logs keys or prompts.
@@ -245,12 +245,14 @@ async function defaultLogUsage(attempt: Attempt, purpose: LlmPurpose, sandboxId:
   });
 }
 
-export function providerOrder(env: Env, now: number): Provider[] {
+export function providerOrder(env: Env, now: number, opts: { images?: boolean } = {}): Provider[] {
   const primary = (env.LLM_PROVIDER?.trim() as Provider) || "gemini";
   const order = DEFAULT_ORDER.includes(primary) ? [primary, ...DEFAULT_ORDER.filter((p) => p !== primary)] : [...DEFAULT_ORDER];
-  const keyed = order.filter((p) => keyFor(p, env));
+  // Groq's model is text-only, so image requests never go there.
+  const keyed = order.filter((p) => keyFor(p, env) && !(opts.images && p === "groq"));
   const ready = keyed.filter((p) => (cooldownUntil.get(p) ?? 0) <= now);
-  return ready.length ? ready : keyed; // never refuse a request just because everything cooled down
+  // A cooldown only moves a provider to the back of the queue: it is still tried as a last resort.
+  return [...ready, ...keyed.filter((p) => !ready.includes(p))];
 }
 
 export async function generateJson<T>(req: LlmRequest<T>, deps: LlmDeps = {}): Promise<LlmResult<T>> {
@@ -261,7 +263,7 @@ export async function generateJson<T>(req: LlmRequest<T>, deps: LlmDeps = {}): P
   const logUsage = deps.logUsage ?? defaultLogUsage;
   const attempts: Attempt[] = [];
 
-  for (const provider of providerOrder(env, now()).filter((p) => !(req.images && p === "groq"))) {
+  for (const provider of providerOrder(env, now(), { images: Boolean(req.images?.length) })) {
     const key = keyFor(provider, env)!;
     const model = modelFor(provider, env);
     for (let attemptNo = 1; attemptNo <= 2; attemptNo++) {
