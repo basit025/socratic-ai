@@ -22,7 +22,7 @@ const ONLY = (() => {
   return i > 0 ? new Set(process.argv[i + 1]!.split(",")) : null;
 })();
 
-const CONCURRENCY = 2;
+const CONCURRENCY = Number(process.env.GEN_CONCURRENCY ?? 1); // Groq free tier allows ~8k tokens a minute
 
 type Persona = "strong" | "struggling" | "copier" | "copier_paste";
 
@@ -43,6 +43,15 @@ const PLAN: Record<string, { persona: Persona; reuse: number }[]> = {
   email: [{ persona: "strong", reuse: 7 }, { persona: "struggling", reuse: 6 }, { persona: "copier", reuse: 4 }],
   summary: [{ persona: "strong", reuse: 7 }, { persona: "struggling", reuse: 6 }, { persona: "copier", reuse: 4 }],
   phones: [{ persona: "strong", reuse: 3 }, { persona: "struggling", reuse: 3 }, { persona: "copier", reuse: 2 }],
+  // Courses built from the team's lecture material: closed work gets three personas, open work two.
+  ...Object.fromEntries(
+    ["dm-five", "dm-star", "dm-basket", "ir-index", "ir-vb", "nlp-tokens", "nlp-edit", "nlp-bigram", "cc-lexer", "cc-dfa", "cc-ambiguity", "oop-account", "oop-shapes", "oop-hostel", "hci-chunking", "hci-gulfs", "dsa-linked", "dsa-bigo"].map(
+      (k) => [k, [{ persona: "strong" as Persona, reuse: 8 }, { persona: "struggling" as Persona, reuse: 7 }, { persona: "copier" as Persona, reuse: 4 }]],
+    ),
+  ),
+  ...Object.fromEntries(
+    ["dm-kmeans", "ir-cosine", "nlp-nb", "cc-rd", "oop-fraction", "hci-review", "dsa-bst"].map((k) => [k, [{ persona: "strong" as Persona, reuse: 5 }, { persona: "copier" as Persona, reuse: 3 }]]),
+  ),
 };
 
 // ---------------------------------------------------------------- tiny deterministic randomness
@@ -95,7 +104,7 @@ const Answer = z.object({ answer: z.string() });
  * The simulated STUDENTS' side (their code, drafts and viva answers) runs on a different Groq model,
  * so it never eats the quota the platform itself needs for questions, hints and scoring.
  */
-const STUDENT_AI = { env: { ...process.env, LLM_PROVIDER: "groq", GROQ_MODEL: process.env.STUDENT_GROQ_MODEL ?? "openai/gpt-oss-20b", GEMINI_API_KEY: "", OPENROUTER_API_KEY: "" } };
+const STUDENT_AI = { env: { ...process.env, LLM_PROVIDER: process.env.STUDENT_PROVIDER ?? "gemini", GROQ_MODEL: process.env.STUDENT_GROQ_MODEL ?? "openai/gpt-oss-20b", OPENROUTER_API_KEY: "" } };
 
 const PERSONA_CODE: Record<Persona, string> = {
   strong:

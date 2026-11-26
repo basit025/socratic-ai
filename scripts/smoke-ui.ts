@@ -24,6 +24,12 @@ function watch(page: Page, label: string) {
   page.on("pageerror", (e) => problems.push(`[${label}] page error: ${(e as Error).message}`));
 }
 
+/** The student home lists the next 8 tasks; expand it so any open task can be clicked. */
+const showAllTasks = async (page: Page) => {
+  const more = await page.$("::-p-text(open tasks)");
+  if (more) await more.click();
+};
+
 const shot = async (page: Page, name: string) => {
   await page.evaluate(() => document.fonts.ready).catch(() => {}); // screenshots with the real fonts
   await page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: true });
@@ -43,7 +49,7 @@ async function main() {
     ok(`landing rendered in ${Date.now() - t0} ms`);
     await shot(s, "1-landing-1440");
     const h1 = await s.$eval("h1", (e) => e.textContent ?? "");
-    h1.includes("understand") ? ok(`landing headline: "${h1}"`) : fail(`unexpected headline: ${h1}`);
+    h1.includes("one place") ? ok(`landing headline: "${h1}"`) : fail(`unexpected headline: ${h1}`);
 
     const t1 = Date.now();
     await s.locator("button ::-p-text(Try as student)").click();
@@ -89,11 +95,12 @@ async function main() {
 
     // ------------------------------------------------ workspace: a real student session
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForFunction(() => document.body.innerText.includes("Open assignment") || document.body.innerText.includes("Continue assignment"), { timeout: 15000 });
-    const courseCount = await s.$$eval("main section h2", (hs) => hs.length);
+    await s.waitForFunction(() => /Open (assignment|quiz)|Continue (assignment|quiz)/.test(document.body.innerText), { timeout: 15000 });
+    const courseCount = await s.$$eval("[data-course-card]", (cs) => cs.length);
     courseCount >= 3 ? ok(`student home lists ${courseCount} courses (lived-in institution)`) : fail(`only ${courseCount} course(s) on student home`);
 
     // A JavaScript lab: runs in its own worker
+    await showAllTasks(s);
     await s.locator("a ::-p-text(Attendance Shortage List)").click();
     await s.waitForSelector(".cm-content", { timeout: 20000 });
     await s.click(".cm-content");
@@ -108,6 +115,7 @@ async function main() {
     // A written task: plain-text editor, paste blocked, live word count
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
     await s.waitForFunction(() => document.body.innerText.includes("Should Phones Be Allowed in Class?"), { timeout: 15000 });
+    await showAllTasks(s);
     await s.locator("a ::-p-text(Should Phones Be Allowed in Class?)").click();
     await s.waitForSelector("textarea[aria-label^='Your answer']", { timeout: 20000 });
     await s.type("textarea[aria-label^='Your answer']", "Phones should be allowed in class because they help us look things up quickly.");
@@ -124,6 +132,7 @@ async function main() {
     // The Python lab used for the full journey below
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 15000 });
+    await showAllTasks(s);
     await s.locator("a ::-p-text(Cricket Over Tracker)").click();
     await s.waitForSelector(".cm-content", { timeout: 20000 });
     ok("workspace opened with the code editor");
@@ -164,6 +173,7 @@ async function main() {
     ok('student home now shows "In progress"');
 
     // ------------------------------------------------ submit → hidden tests → viva → results
+    await showAllTasks(s);
     await s.locator("a ::-p-text(Cricket Over Tracker)").click();
     await s.waitForSelector(".cm-content", { timeout: 20000 });
     await s.locator("button ::-p-text(Submit (you can't edit after this))").click();
@@ -229,7 +239,7 @@ async function main() {
     ok("switched back to the student view");
 
     // Course page and the student's view of the teacher's mark
-    await s.locator("a ::-p-text(Weekly notes and announcements)").click();
+    await s.locator("[data-course-card] a ::-p-text(Programming Fundamentals)").click();
     await s.waitForFunction(() => document.body.innerText.includes("this week") && document.body.innerText.includes("Announcements"), { timeout: 15000 });
     ok("student course page: weeks (current week open) and announcements");
     await shot(s, "17-course-page");
@@ -238,6 +248,7 @@ async function main() {
     ok('student home shows the confirmed mark "Marked: 7/10"');
 
     // ------------------------------------------------ timed quiz: one question at a time → result
+    await showAllTasks(s);
     await s.locator("a[href^='/student/assignments/'] ::-p-text(Quiz 1: Python Basics)").click();
     await s.waitForSelector("::-p-text(What happens when you press Start)", { timeout: 15000 });
     await shot(s, "19-quiz-intro");

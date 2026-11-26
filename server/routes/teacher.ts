@@ -451,3 +451,23 @@ teacherRouter.post("/teacher/submissions/:id/grade", requireSession("teacher"), 
     next(err);
   }
 });
+
+// ---------------------------------------------------------------- announcements (news for the whole class, in one place)
+const AnnouncementBody = z.object({ title: z.string().trim().min(3).max(120), body: z.string().trim().min(3).max(2000) });
+
+teacherRouter.post("/teacher/courses/:id/announcements", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const id = String(req.params.id);
+    if (!uuid(id)) throw notFound("That course");
+    const body = AnnouncementBody.safeParse(req.body);
+    if (!body.success) throw new PublicError(400, "Give the announcement a title (3+ characters) and a message.", "bad_announcement");
+    const [course] = await select<{ id: string }>(`courses?select=id&id=${eq(id)}&teacher_id=${eq(pid)}&sandbox_id=${eq(sid)}`);
+    if (!course) throw notFound("That course");
+    const postedAt = new Date().toISOString();
+    await insert("announcements", { sandbox_id: sid, course_id: course.id, title: body.data.title, body: body.data.body, posted_at: postedAt });
+    res.status(201).json({ title: body.data.title, body: body.data.body, postedAt });
+  } catch (err) {
+    next(err);
+  }
+});

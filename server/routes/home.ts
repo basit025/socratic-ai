@@ -52,12 +52,24 @@ homeRouter.get("/student/home", requireSession("student"), async (req, res, next
               open: a.status === "published",
               dueAt: a.due_at,
               marks: a.marks,
-              submission: s ? { status: s.status, vivaScore: s.viva_score, grade: s.final_grade ?? s.suggested_grade } : null,
+              submission: s ? { status: s.status, vivaScore: s.viva_score, grade: s.final_grade ?? s.suggested_grade, confirmed: s.final_grade != null } : null,
             };
           }),
       }))
       .sort((a, b) => a.code.localeCompare(b.code));
-    res.set("Cache-Control", "no-store").json({ name, courses });
+    // The latest news from every course, in one place (no WhatsApp groups to scroll through).
+    const ids = courses.map((c) => c.id);
+    const news = ids.length
+      ? await select<{ id: string; course_id: string; title: string; body: string; posted_at: string }>(
+          `announcements?select=id,course_id,title,body,posted_at&course_id=in.(${ids.map(encodeURIComponent).join(",")})&sandbox_id=${eq(sid)}&order=posted_at.desc&limit=6`,
+        )
+      : [];
+    const code = new Map(courses.map((c) => [c.id, c.code]));
+    res.set("Cache-Control", "no-store").json({
+      name,
+      courses,
+      announcements: news.map((n) => ({ id: n.id, courseId: n.course_id, courseCode: code.get(n.course_id) ?? "", title: n.title, body: n.body, postedAt: n.posted_at })),
+    });
   } catch (err) {
     next(err);
   }
