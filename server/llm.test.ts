@@ -87,6 +87,24 @@ describe("generateJson", () => {
     expect(t.calls).toEqual(["gemini", "groq", "groq"]);
   });
 
+  it("sends images only to providers that can see them", async () => {
+    let geminiBody = "";
+    const calls: string[] = [];
+    const fn = (async (url: string, init: { body: string }) => {
+      const p = url.includes("googleapis") ? "gemini" : url.includes("groq") ? "groq" : "openrouter";
+      calls.push(p);
+      if (p === "gemini") {
+        geminiBody = init.body;
+        return status(503);
+      }
+      return openAiOk(JSON.stringify(good));
+    }) as unknown as typeof fetch;
+    const r = await generateJson({ ...req, images: [{ mimeType: "image/jpeg", base64: "AAAA" }] }, deps(fn));
+    expect(geminiBody).toContain("inline_data");
+    expect(calls).toEqual(["gemini", "gemini", "openrouter"]); // Groq's text model is skipped
+    expect(r.provider).toBe("openrouter");
+  });
+
   it("retries once when the output doesn't match the schema", async () => {
     const { fn, calls } = fakeFetch({ gemini: [() => geminiOk({ wrong: true }), () => geminiOk(good)] });
     const r = await generateJson(req, deps(fn));

@@ -44,7 +44,7 @@ function statusChip(item: Item, role: "teacher" | "student", students: number): 
   return item.status === "published" ? { tone: "action", label: "To do" } : { tone: "locked", label: "Closed" };
 }
 
-const kindLabel = (t: string) => (t === "written" ? "Written" : t === "quiz" ? "Quiz" : "Lab");
+const kindLabel = (t: string) => (t === "written" ? "Written" : t === "quiz" ? "Quiz" : t === "handwritten" ? "Handwritten" : "Lab");
 
 /** Teachers post news to the whole class here; students see it on the course page and their home. */
 function PostAnnouncement({ courseId, students, onPosted }: { courseId: string; students: number; onPosted: (n: { title: string; body: string; postedAt: string }) => void }) {

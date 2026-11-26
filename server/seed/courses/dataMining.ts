@@ -1,5 +1,5 @@
 /** CS-341 Data Mining: notes, labs and quiz written by the team from their own lecture slides. */
-import { closed, draft, lab, open, quiz, weeks, written, type CoursePack } from "./kit.js";
+import { closed, draft, handwritten, lab, open, quiz, weeks, written, type CoursePack } from "./kit.js";
 
 const C = "cs341";
 
@@ -203,6 +203,10 @@ Text, spatial-temporal data, graphs and networks each need their own methods. **
           { kind: "short", prompt: "What does the O in OLAP stand for? (One word.)", accepted: ["online", "on-line", "on line"] },
         ],
       },
+    }),
+    handwritten({
+      key: "dm-apriori", course: C, week: 5, title: "Apriori by Hand", ...open(6, 1), marks: 10,
+      instructions: "Work this out **on paper**, then photograph the page in Socratic AI.\n\nA pharmacy recorded five baskets:\n\n| TID | Items |\n| --- | --- |\n| 1 | panadol, ORS, vitamin C |\n| 2 | panadol, ORS |\n| 3 | ORS, vitamin C, mask |\n| 4 | panadol, ORS, mask |\n| 5 | panadol, vitamin C |\n\nWith **min_sup = 2 transactions**:\n1. List every frequent 1-itemset and 2-itemset with its count (show the candidates you pruned).\n2. Is there a frequent 3-itemset? Explain using the Apriori principle.\n3. For the rule **panadol → ORS**, compute support, confidence and lift.\n\nWrite your one-time code word at the top of the page.",
     }),
     lab({
       key: "dm-kmeans", course: C, week: 6, language: "python", title: "K-Means: One Step for Rickshaw Stands", ...open(5), marks: 10,

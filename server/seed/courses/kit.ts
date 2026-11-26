@@ -40,3 +40,8 @@ export const quiz = (a: Omit<SeedAssignment, "type" | "language" | "starterCode"
   ...a, type: "quiz", language: null, starterCode: "", referenceSolution: "", tests: [],
   rules: { pasteBlocked: true, workflow: "run_first", vivaQuestions: 0, vivaSecondsPerQ: 90, vivaWeight: 0, variantsOn: false },
 });
+
+/** Handwritten work: solved on paper with a one-time code word, photographed in the app, then a viva. */
+export const handwritten = (a: Omit<SeedAssignment, "type" | "language" | "referenceSolution" | "tests" | "rules" | "starterCode">): SeedAssignment => ({
+  ...a, type: "handwritten", language: null, starterCode: "", referenceSolution: "", tests: [], rules: labRules({ pasteBlocked: false }),
+});

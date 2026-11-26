@@ -205,11 +205,13 @@ class Timeline {
   }
   flush() {
     if (!this.burst.length) return;
-    const onlyDeletes = this.burst.every((c) => c.insert === "");
-    const chars = this.burst.reduce((n, c) => n + (onlyDeletes ? c.to - c.from : c.insert.length), 0);
-    this.push(onlyDeletes ? "delete" : "keys", { changes: this.burst, chars });
+    // Take the burst BEFORE pushing: push may trigger a snapshot, which flushes again.
+    const burst = this.burst;
     this.burst = [];
     this.burstChars = 0;
+    const onlyDeletes = burst.every((c) => c.insert === "");
+    const chars = burst.reduce((n, c) => n + (onlyDeletes ? c.to - c.from : c.insert.length), 0);
+    this.push(onlyDeletes ? "delete" : "keys", { changes: burst, chars });
   }
   snapshot() {
     this.flush();
@@ -454,6 +456,7 @@ async function main() {
           break;
         } catch (err) {
           console.log(`  ✗ ${j.label} attempt ${attempt}: ${(err as Error).message}`);
+          if (err instanceof RangeError) console.log((err.stack ?? "").split("\n").slice(0, 8).join("\n"));
         }
       }
     }

@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { ArrowRight, BookOpen, CalendarClock, Code2, GraduationCap, ListChecks, Megaphone, PenLine, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarClock, Camera, Code2, GraduationCap, ListChecks, Megaphone, PenLine, Sparkles, Trophy } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { JoinCourseCard } from "../components/CourseActions";
 import { Card, Chip, EmptyState, ErrorState, PageHeader, Skeleton, cx, type ChipTone } from "../components/ui";
@@ -54,7 +54,8 @@ export function studentStatus(a: StudentAssignment): { tone: ChipTone; label: st
 }
 
 const needsWork = (a: StudentAssignment) => a.open && (!a.submission || a.submission.status === "in_progress" || a.submission.status === "viva_in_progress");
-const kind = (t: string) => (t === "quiz" ? { icon: ListChecks, label: "Quiz" } : t === "written" ? { icon: PenLine, label: "Written" } : { icon: Code2, label: "Lab" });
+const kind = (t: string) =>
+  t === "quiz" ? { icon: ListChecks, label: "Quiz" } : t === "written" ? { icon: PenLine, label: "Written" } : t === "handwritten" ? { icon: Camera, label: "Handwritten" } : { icon: Code2, label: "Lab" };
 const resultsLink = (a: StudentAssignment) => (a.type === "quiz" ? `/student/assignments/${a.id}` : `/student/assignments/${a.id}/viva`);
 const pct = (xs: StudentAssignment[]) => {
   const marked = xs.filter((a) => a.submission?.grade != null && a.marks > 0);

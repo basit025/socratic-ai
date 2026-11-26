@@ -21,6 +21,7 @@ import { EventRecorder, type SaveState } from "../workspace/recorder";
 import { UstaadPanel, type ChatMessage } from "../workspace/UstaadPanel";
 import { WrittenEditor } from "../workspace/WrittenEditor";
 import { QuizPlayer } from "./Quiz";
+import { HandwrittenPage } from "./Handwritten";
 import { Markdown } from "../components/Markdown";
 import type { Change } from "../../../shared/events";
 
@@ -92,6 +93,9 @@ export function Workspace() {
   if (data.status === "ready" && data.data.assignment.type === "quiz") {
     const { assignment: a, submission: s } = data.data;
     return <QuizPlayer assignment={a} submissionId={s?.id ?? null} nextSeq={s?.nextSeq ?? 1} />;
+  }
+  if (data.status === "ready" && data.data.assignment.type === "handwritten") {
+    return <HandwrittenPage assignment={data.data.assignment} submissionId={data.data.submission?.id ?? null} />;
   }
   return <CodeWorkspace data={data} />;
 }

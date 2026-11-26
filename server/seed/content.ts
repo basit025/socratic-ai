@@ -164,7 +164,7 @@ export interface SeedAssignment {
   key: string;
   course: string;
   week: number;
-  type: "code" | "written" | "quiz";
+  type: "code" | "written" | "quiz" | "handwritten";
   language: "python" | "javascript" | null;
   title: string;
   status: "draft" | "published" | "closed";

@@ -15,6 +15,8 @@ import type { VariantSpec } from "../lib/variants.js";
 import type { VivaQuestion } from "../viva.js";
 import type { ProcessEvent } from "../../shared/events.js";
 import { markQuiz, parseQuizState, type QuizQuestionRow } from "../../shared/quiz.js";
+import { parseMeta } from "./handwritten.js";
+import { getImage } from "../lib/storage.js";
 
 export const teacherRouter = Router();
 
@@ -124,6 +126,7 @@ async function teacherSubmission(sid: string, pid: string, id: string) {
     status: SubStatus;
     content: string;
     last_output: string | null;
+    image_path: string | null;
     test_results: MarkedTest[] | null;
     tests_passed: number | null;
     tests_total: number | null;
@@ -149,7 +152,7 @@ async function teacherSubmission(sid: string, pid: string, id: string) {
       secrets: { hidden_tests: HiddenTest[]; variant_spec: VariantSpec } | null;
     };
   }>(
-    `submissions?select=id,status,content,last_output,test_results,tests_passed,tests_total,viva_score,suggested_grade,final_grade,teacher_comment,teacher_decision,started_at,submitted_at,event_source_id,student:profiles(id,full_name,initials),variant:variants(params,rendered_instructions),assignment:assignments!inner(id,title,type,marks,starter_code,instructions_md,course:courses!inner(id,code,teacher_id),rules:integrity_rules(viva_weight,paste_blocked),secrets:assignment_secrets(hidden_tests,variant_spec))&id=${eq(id)}&sandbox_id=${eq(sid)}&assignment.course.teacher_id=${eq(pid)}`,
+    `submissions?select=id,status,content,last_output,image_path,test_results,tests_passed,tests_total,viva_score,suggested_grade,final_grade,teacher_comment,teacher_decision,started_at,submitted_at,event_source_id,student:profiles(id,full_name,initials),variant:variants(params,rendered_instructions),assignment:assignments!inner(id,title,type,marks,starter_code,instructions_md,course:courses!inner(id,code,teacher_id),rules:integrity_rules(viva_weight,paste_blocked),secrets:assignment_secrets(hidden_tests,variant_spec))&id=${eq(id)}&sandbox_id=${eq(sid)}&assignment.course.teacher_id=${eq(pid)}`,
   );
   if (!s) throw notFound("That submission");
   return s;
@@ -228,6 +231,7 @@ teacherRouter.get("/teacher/submissions/:id", requireSession("teacher"), async (
       },
       student: { id: s.student.id, name: s.student.full_name, initials: s.student.initials },
       quiz,
+      handwritten: s.assignment.type === "handwritten" ? { ...(parseMeta(s.last_output) ?? { codeWord: null, codeWordFound: null, legibility: null }), hasPhoto: Boolean(s.image_path) } : null,
       assignment: { id: s.assignment.id, title: s.assignment.title, type: s.assignment.type, marks: s.assignment.marks, starterCode: s.assignment.starter_code, courseCode: s.assignment.course.code, vivaWeight: s.assignment.rules?.viva_weight ?? 50, variant: option },
       // Times: client time drives the replay; server time is the tamper-proof record.
       events: events.map((e) => ({ seq: e.seq, t: Date.parse(e.client_time), serverTime: e.server_time, type: e.type, payload: e.payload })),
@@ -467,6 +471,19 @@ teacherRouter.post("/teacher/courses/:id/announcements", requireSession("teacher
     const postedAt = new Date().toISOString();
     await insert("announcements", { sandbox_id: sid, course_id: course.id, title: body.data.title, body: body.data.body, posted_at: postedAt });
     res.status(201).json({ title: body.data.title, body: body.data.body, postedAt });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- a handwritten page's photo (through the API, never a public URL)
+teacherRouter.get("/teacher/submissions/:id/photo", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const s = await teacherSubmission(sid, pid, String(req.params.id));
+    const img = s.image_path ? await getImage(s.image_path) : null;
+    if (!img) throw notFound("That photo");
+    res.set("Content-Type", img.contentType).set("Cache-Control", "private, max-age=300").send(Buffer.from(img.bytes));
   } catch (err) {
     next(err);
   }

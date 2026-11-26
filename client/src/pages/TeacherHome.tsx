@@ -78,7 +78,7 @@ export function TeacherHome() {
     <AppShell>
       <PageHeader
         title={`${greeting()}, ${firstName(me.name)}`}
-        subtitle="Your courses, what needs your attention, and every assignment's integrity report."
+        subtitle="Your courses, what needs your attention, and every class's work, marks and reports in one place."
         action={
           <div className="flex flex-wrap items-center gap-2">
           <NewCourseButton onCreated={home.reload} />

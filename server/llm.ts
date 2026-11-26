@@ -50,6 +50,9 @@ export interface LlmRequest<T> {
   maxOutputTokens?: number;
   sandboxId?: string | null;
   timeoutMs?: number;            // per provider call; interactive hints use ~6 s
+  /** Images attached to the LAST user message (e.g. a photographed handwritten page). Only providers
+   *  that can see images are tried: Gemini, and OpenRouter's (Gemini) model; Groq's text model is skipped. */
+  images?: { mimeType: string; base64: string }[];
 }
 
 export interface Attempt {
@@ -144,7 +147,13 @@ async function postJson(fetchFn: typeof fetch, url: string, headers: Record<stri
 async function callGemini<T>(req: LlmRequest<T>, model: string, key: string, fetchFn: typeof fetch): Promise<RawOutput> {
   const body = {
     systemInstruction: { parts: [{ text: req.system }] },
-    contents: req.messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+    contents: req.messages.map((m, i) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [
+        ...(i === req.messages.length - 1 && req.images ? req.images.map((im) => ({ inline_data: { mime_type: im.mimeType, data: im.base64 } })) : []),
+        { text: m.content },
+      ],
+    })),
     generationConfig: {
       responseMimeType: "application/json",
       responseJsonSchema: jsonSchemaFor(req.schema),
@@ -177,7 +186,14 @@ async function callOpenAiCompatible<T>(
     provider === "groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
   const body: Record<string, unknown> = {
     model,
-    messages: [{ role: "system", content: req.system }, ...req.messages],
+    messages: [
+      { role: "system", content: req.system },
+      ...req.messages.map((m, i) =>
+        i === req.messages.length - 1 && req.images
+          ? { role: m.role, content: [{ type: "text", text: m.content }, ...req.images.map((im) => ({ type: "image_url", image_url: { url: `data:${im.mimeType};base64,${im.base64}` } }))] }
+          : m,
+      ),
+    ],
     temperature: req.temperature ?? 0.4,
     response_format: { type: "json_schema", json_schema: { name: req.schemaName, schema: jsonSchemaFor(req.schema), strict: false } },
   };
@@ -245,7 +261,7 @@ export async function generateJson<T>(req: LlmRequest<T>, deps: LlmDeps = {}): P
   const logUsage = deps.logUsage ?? defaultLogUsage;
   const attempts: Attempt[] = [];
 
-  for (const provider of providerOrder(env, now())) {
+  for (const provider of providerOrder(env, now()).filter((p) => !(req.images && p === "groq"))) {
     const key = keyFor(provider, env)!;
     const model = modelFor(provider, env);
     for (let attemptNo = 1; attemptNo <= 2; attemptNo++) {

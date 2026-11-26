@@ -210,18 +210,36 @@ async function main() {
     return;
   }
   const target = args.includes("--production") ? "production" : "preview";
-  const dir = mkdtempSync(path.join(tmpdir(), "socratic-seed-"));
-  const file = path.join(dir, "seed.sql");
-  writeFileSync(file, sql);
-  const started = Date.now();
-  const r = spawnSync("npx", ["supabase", "db", "query", `--remote=${REFS[target]}`, "--yes", "-f", file], { encoding: "utf8" });
-  rmSync(dir, { recursive: true, force: true });
-  const output = `${r.stdout}\n${r.stderr}`;
-  if (r.status !== 0 || /"_tag":\s*"Error"|ERROR:/.test(output)) {
-    console.error(`Seeding ${target} failed:\n${output.slice(-1500)}`);
-    process.exit(1);
+  // The Supabase query endpoint rejects very large bodies, so send the seed in chunks of whole
+  // statements, each in its own transaction (clearing the old seed is part of the first chunk).
+  const statements = sql.split("\n").filter((l) => l && l !== "begin;" && l !== "commit;");
+  const chunks: string[][] = [[]];
+  let size = 0;
+  for (const st of statements) {
+    if (size + st.length > 2_000_000 && chunks.at(-1)!.length) {
+      chunks.push([]);
+      size = 0;
+    }
+    chunks.at(-1)!.push(st);
+    size += st.length + 1;
   }
-  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${sql.split("\n").length - 1} statements, ${sessions.filter((x) => !x.simulated).length} real + ${sessions.filter((x) => x.simulated).length} simulated sessions, ${sessions.reduce((n, x) => n + 1 + (x.alsoAs?.length ?? 0), 0)} past submissions${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
+  const dir = mkdtempSync(path.join(tmpdir(), "socratic-seed-"));
+  const started = Date.now();
+  try {
+    for (const [i, chunk] of chunks.entries()) {
+      const file = path.join(dir, `seed-${i}.sql`);
+      writeFileSync(file, ["begin;", ...chunk, "commit;"].join("\n") + "\n");
+      const r = spawnSync("npx", ["supabase", "db", "query", `--remote=${REFS[target]}`, "--yes", "-f", file], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      const output = `${r.stdout}\n${r.stderr}`;
+      if (r.status !== 0 || /"_tag":\s*"Error"|ERROR:/.test(output)) {
+        console.error(`Seeding ${target} failed in part ${i + 1} of ${chunks.length}:\n${output.slice(-1500)}`);
+        process.exit(1);
+      }
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${statements.length} statements in ${chunks.length} parts, ${sessions.filter((x) => !x.simulated).length} real + ${sessions.filter((x) => x.simulated).length} simulated sessions, ${sessions.reduce((n, x) => n + 1 + (x.alsoAs?.length ?? 0), 0)} past submissions${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join("seed", "seed.ts"))) {
