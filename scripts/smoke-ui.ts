@@ -114,8 +114,9 @@ async function main() {
 
     // A written task: plain-text editor, paste blocked, live word count
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForFunction(() => document.body.innerText.includes("Should Phones Be Allowed in Class?"), { timeout: 15000 });
+    await s.waitForSelector("[data-course-card]", { timeout: 15000 });
     await showAllTasks(s);
+    await s.waitForFunction(() => document.body.innerText.includes("Should Phones Be Allowed in Class?"), { timeout: 15000 });
     await s.locator("a ::-p-text(Should Phones Be Allowed in Class?)").click();
     await s.waitForSelector("textarea[aria-label^='Your answer']", { timeout: 20000 });
     await s.type("textarea[aria-label^='Your answer']", "Phones should be allowed in class because they help us look things up quickly.");
@@ -131,8 +132,9 @@ async function main() {
 
     // The Python lab used for the full journey below
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 15000 });
+    await s.waitForSelector("[data-course-card]", { timeout: 15000 });
     await showAllTasks(s);
+    await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 15000 });
     await s.locator("a ::-p-text(Cricket Over Tracker)").click();
     await s.waitForSelector(".cm-content", { timeout: 20000 });
     ok("workspace opened with the code editor");
@@ -169,6 +171,8 @@ async function main() {
     await s.setViewport({ width: 1920, height: 1080 });
     await shot(s, "7-workspace-ustaad-1920");
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.waitForSelector("[data-course-card]", { timeout: 15000 });
+    await showAllTasks(s);
     await s.waitForFunction(() => document.body.innerText.includes("In progress"), { timeout: 10000 });
     ok('student home now shows "In progress"');
 
