@@ -181,9 +181,9 @@ export function StudentHome() {
             </Card>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-3">
             {/* 1 + 2: work and feedback */}
-            <div className="space-y-6 lg:col-span-2">
+            <div className="min-w-0 space-y-6 lg:col-span-2">
               <Card>
                 <h2 className="flex items-center gap-2 border-b border-line px-5 py-4 font-semibold"><CalendarClock className="size-5 text-ink-3" aria-hidden /> Due next, across all courses</h2>
                 {groups.length === 0 ? (
@@ -229,7 +229,7 @@ export function StudentHome() {
             </div>
 
             {/* 3: courses, news, join */}
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               <section aria-label="My courses">
                 <h2 className="mb-3 flex items-center gap-2 font-semibold"><BookOpen className="size-5 text-ink-3" aria-hidden /> My courses</h2>
                 <ul className="space-y-2.5">
