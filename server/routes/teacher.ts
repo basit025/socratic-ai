@@ -308,7 +308,24 @@ teacherRouter.get("/teacher/builder", requireSession("teacher"), async (req, res
 const Expected = z.union([z.string().max(2000), z.record(z.string(), z.string().max(2000))]);
 const CreateBody = z.object({
   courseId: z.string().regex(/^[0-9a-f-]{36}$/i),
-  type: z.enum(["code", "written"]).default("code"),
+  type: z.enum(["code", "written", "handwritten", "quiz"]).default("code"),
+  quiz: z
+    .object({
+      draw: z.number().int().min(1).max(50),
+      timeLimitMinutes: z.number().int().min(1).max(120),
+      fullscreen: z.boolean(),
+      questions: z
+        .array(
+          z.discriminatedUnion("kind", [
+            z.object({ kind: z.literal("mcq"), prompt: z.string().trim().min(3).max(500), options: z.array(z.string().trim().min(1).max(200)).min(2).max(6), correct: z.number().int().min(0).max(5) }),
+            z.object({ kind: z.literal("short"), prompt: z.string().trim().min(3).max(500), accepted: z.array(z.string().trim().min(1).max(100)).min(1).max(10) }),
+          ]),
+        )
+        .min(2)
+        .max(50),
+    })
+    .nullable()
+    .optional(),
   language: z.enum(["python", "javascript"]).nullable().default("python"),
   title: z.string().trim().min(2).max(120),
   instructions: z.string().trim().min(10).max(10_000),
@@ -344,6 +361,8 @@ teacherRouter.post("/teacher/assignments", requireSession("teacher"), async (req
     if (!course) throw notFound("That course");
     if (b.rules.variantsOn && !b.variants) throw new PublicError(400, "Variants are on, but no versions are set up.", "bad_variants");
     if (b.type === "code" && (b.tests.length === 0 || !b.language)) throw new PublicError(400, "A coding lab needs a language and at least one hidden test.", "bad_tests");
+    if (b.type === "quiz" && !b.quiz) throw new PublicError(400, "A quiz needs at least two questions.", "bad_quiz");
+    if (b.quiz?.questions.some((q) => q.kind === "mcq" && q.correct >= q.options.length)) throw new PublicError(400, "Every multiple-choice question needs its correct option marked.", "bad_quiz");
     if (Date.parse(b.dueAt) < Date.now() && b.status === "published") throw new PublicError(400, "The due date is in the past.", "bad_due");
     const id = randomUUID();
     await insert("assignments", {
@@ -365,18 +384,35 @@ teacherRouter.post("/teacher/assignments", requireSession("teacher"), async (req
       sandbox_id: sid,
       paste_blocked: b.rules.pasteBlocked,
       workflow: b.rules.workflow,
-      viva_questions: b.rules.vivaQuestions,
+      viva_questions: b.type === "quiz" ? 0 : b.rules.vivaQuestions,
       viva_seconds_per_q: b.rules.vivaSecondsPerQ,
-      viva_weight: b.rules.vivaWeight,
-      variants_on: b.rules.variantsOn,
+      viva_weight: b.type === "quiz" ? 0 : b.rules.vivaWeight,
+      variants_on: b.type === "code" && b.rules.variantsOn,
+      time_limit_minutes: b.type === "quiz" ? b.quiz!.timeLimitMinutes : null,
+      fullscreen_required: b.type === "quiz" ? b.quiz!.fullscreen : false,
     });
     await insert("assignment_secrets", {
       assignment_id: id,
       sandbox_id: sid,
       reference_solution: b.referenceSolution,
       hidden_tests: b.type === "code" ? b.tests : [],
-      variant_spec: b.rules.variantsOn && b.variants ? b.variants : {},
+      variant_spec: b.type === "quiz" ? { draw: Math.min(b.quiz!.draw, b.quiz!.questions.length) } : b.rules.variantsOn && b.variants ? b.variants : {},
     });
+    if (b.type === "quiz") {
+      await insert(
+        "quiz_questions",
+        b.quiz!.questions.map((q, i) => ({
+          sandbox_id: sid,
+          assignment_id: id,
+          position: i + 1,
+          kind: q.kind,
+          prompt_md: q.prompt,
+          options: q.kind === "mcq" ? q.options : null,
+          answer_key: q.kind === "mcq" ? { correct: q.correct } : { accepted: q.accepted },
+          marks: 1,
+        })),
+      );
+    }
     res.status(201).json({ id, status: b.status });
   } catch (err) {
     next(err);

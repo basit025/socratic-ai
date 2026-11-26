@@ -138,7 +138,7 @@ async function studentWork(kind: "code" | "written", persona: Persona, language:
   const r = await generateJson({
     purpose: "other",
     system: PERSONA_CODE[persona],
-    messages: [{ role: "user", content: `Language: ${language}\n\nThe task:\n${instructions}\n\nStarter code:\n${starter}\n\nKeep the function name and signature exactly as in the starter code. Keep the final print/console.log line.` }],
+    messages: [{ role: "user", content: `Language: ${language}\n\nThe task:\n${instructions}\n\nStarter code:\n${starter}\n\nReturn the COMPLETE program. Keep every part of the starter code that isn't a placeholder EXACTLY as given: imports, helper classes and functions (like Node, from_list, to_list), and data (lists, dicts, constants such as T or HEADLINES). Keep the function and class names and signatures exactly as in the starter code. Keep the final print/console.log line.` }],
     schema: CodeWork,
     schemaName: "student_code",
     maxOutputTokens: 900,
