@@ -215,8 +215,8 @@ Text, spatial-temporal data, graphs and networks each need their own methods. **
       referenceSolution: "def kmeans_step(points, centroids):\n    groups = [[] for _ in centroids]\n    for (x, y) in points:\n        best = min(range(len(centroids)), key=lambda i: ((x - centroids[i][0]) ** 2 + (y - centroids[i][1]) ** 2, i))\n        groups[best].append((x, y))\n    new = []\n    for c, g in zip(centroids, groups):\n        if g:\n            new.append((round(sum(p[0] for p in g) / len(g), 2), round(sum(p[1] for p in g) / len(g), 2)))\n        else:\n            new.append((round(float(c[0]), 2), round(float(c[1]), 2)))\n    return new\n\n\ndef kmeans(points, centroids):\n    current = [tuple(c) for c in centroids]\n    for _ in range(20):\n        nxt = kmeans_step(points, current)\n        if nxt == current:\n            break\n        current = nxt\n    return current\n",
       tests: [
         { name: "Example from the brief", call: "kmeans_step([(1, 1), (2, 1), (8, 8), (9, 8)], [(1, 1), (9, 8)])" },
-        { name: "A tie goes to the first centroid", call: "kmeans_step([(5, 0)], [(0, 0), (10, 0)])" },
-        { name: "An empty cluster stays put", call: "kmeans_step([(1, 1), (2, 2)], [(0, 0), (50, 50)])" },
+        { name: "A tie goes to the first centroid", call: "kmeans_step([(5.0, 0.0)], [(0.0, 0.0), (10.0, 0.0)])" },
+        { name: "An empty cluster stays put", call: "kmeans_step([(1.0, 1.0), (2.0, 2.0)], [(0.0, 0.0), (50.0, 50.0)])" },
         { name: "Three stands", call: "kmeans_step([(0, 0), (1, 0), (10, 10), (11, 10), (0, 10), (1, 11)], [(0, 1), (10, 9), (2, 12)])" },
         { name: "Runs until stable", call: "kmeans([(1, 1), (1, 2), (2, 1), (8, 8), (9, 9), (8, 9)], [(1, 1), (2, 1)])" },
       ],
