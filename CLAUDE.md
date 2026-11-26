@@ -1,6 +1,6 @@
 # CLAUDE.md: Socratic AI
 
-Socratic AI: **Strong Fundamentals in the Age of AI.** A web-based learning platform for Pakistani universities and colleges where students do assignments, coding labs and quizzes in one workspace. The workspace records how the work was made, and the AI mentor **Ustaad** runs a short, timed viva on the student's own work. Teachers get an integrity report (work, process replay, flags, viva score).
+Socratic AI: **Strong Fundamentals in the Age of AI.** An organized, end-to-end learning platform for Pakistani universities and colleges: course material, assignments, coding labs, quizzes, announcements and marks in one place, so students and teachers don't juggle WhatsApp groups, LMS uploads and email. The workspace records how the work was made, and the AI mentor **Ustaad** runs a short, timed viva on the student's own work. Teachers get an integrity report (work, process replay, flags, viva score).
 
 Built for the **Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education.** The full spec is in `docs/proposal.md`; it is the source of truth. If code and the proposal disagree, ask before choosing.
 
@@ -8,7 +8,7 @@ Built for the **Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education.**
 
 - **Originality:** all core logic is written between **Nov 16 and Nov 28, 2026**. No pasting in pre-built projects or cloned products. Commit small and often; the history is our evidence.
 - **Disclosure:** every external API, model, library and UI kit goes in `README.md` (section "Third-party APIs and libraries"). Update it in the same commit that adds a dependency.
-- **Freeze:** our feature freeze is **Thursday Nov 26, end of day**. Official freeze is the deadline (Nov 28, 11:59 PM PKT); after that only minor environment/config fixes are allowed. Fri–Sat are for video, deck and submission only.
+- **Freeze (revised Nov 27):** building continues through **Saturday Nov 28 early morning**; then video, deck and submission, **submitted Saturday night** (official deadline Nov 28, 11:59 PM PKT). After submission only minor environment/config fixes are allowed.
 - **Never fabricate:** no invented metrics, quotes or "users". Seeded content shows a visible **"Demo data"** badge.
 - **Secrets:** API keys live only in Vercel (type Secret) and in each developer's git-ignored `.env.local`; operator-only values in git-ignored `.env.ops`. Never commit `.env*` files (except `.env.example`), never print a key in logs or tool output, never pass one in a URL query string.
   - Two automatic guards: the **pre-commit hook** (`scripts/check-secrets.sh`, installed by `npm install` via `core.hooksPath=.githooks`) blocks env files and key-shaped strings; **GitHub push protection** is on for the repo. Never bypass with `--no-verify` except for a proven false positive.
@@ -17,7 +17,7 @@ Built for the **Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education.**
 
 ## Judging criteria (25% each): build so each is visible
 
-1. **Innovation:** verify learning (process + viva), don't detect AI.
+1. **Innovation:** one organized platform for the whole course, where marks verify learning (process + viva) instead of trying to detect AI.
 2. **Technical execution:** the live link works end to end, is stable, and integrates AI properly.
 3. **Impact and viability:** real teachers' problem; HEC-aligned; cheap to run.
 4. **Presentation and UI/UX:** understandable at first look; a demo that tells a story.
@@ -37,13 +37,14 @@ Before any merge that touches these flows, run through the path manually on the 
 1. **Demo path first:** accounts and roles; courses and join codes; assignment builder with integrity rules and per-student variants; code workspace (Python via Pyodide, JS and HTML in a sandboxed iframe); paste/copy/drag blocking; process event logging; Ustaad hints; automated viva with rubric scoring; hidden tests; integrity report with replay and rule-based flags; gradebook; student results; seed script with demo data; one-click demo logins.
 2. **Then:** written answers (FR-10); timed quizzes with fullscreen tracking (FR-13, FR-16); handwritten capture with code word + AI reading (FR-11, FR-12).
 
-**Rules for priority 2:** work starts only after the demo path runs end to end on the live link. Each feature stays behind a feature flag (off in production) until it works end to end, so a half-built feature never shows a judge a dead end. **Tripwire (from the proposal):** if the viva isn't working by Wednesday night, priority-2 features stay off for the demo; Friday is never used for feature work.
+**Rules for priority 2:** a feature merges to `main` only when it works end to end on its preview link, so a half-built feature never shows a judge a dead end.
 **Canonical facts (use exactly these everywhere: README, GitHub About, page metadata, video, deck):**
 - Name and tagline: **Socratic AI: Strong Fundamentals in the Age of AI**
-- One-line description: "A learning platform where students do their work in one workspace and the AI mentor Ustaad runs a short viva on each student's own work, so marks reflect what they understand."
+- One-line description: "One organized learning platform for students and teachers: courses, weekly material, assignments, coding labs, quizzes and marks in one place, with the AI mentor Ustaad making sure every mark reflects real understanding."
 - Live URL: **https://socratic-ai-pk.vercel.app** · Repo: **https://github.com/basit025/socratic-ai**
 - Event: Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education
-- Pitch line: "We can't stop a student from asking AI. We make sure they can't get marks for work they don't understand."
+- Pitch line: "Everything a course needs in one place, and marks that mean the student really understood."
+- **Positioning (decision, Nov 27):** Socratic AI is an end-to-end learning platform, **not an anti-cheating tool**. Lead with the organized course experience (material, assignments, labs, quizzes, marks, announcements, Ustaad); the process record and viva are how marks stay meaningful, shown as one strength, never the whole product.
 If any of these change, update all of the places above in the same commit (GitHub About via `gh api -X PATCH repos/basit025/socratic-ai`).
 
 **Naming:** in the UI, README, video and deck, call it a **"learning platform"** (or "web platform"). Never call it a "portal", and never call it an "app" unless the installable PWA ships.
@@ -139,7 +140,7 @@ Only variables prefixed `VITE_` reach the browser bundle. Never give the service
 ## Key domain rules
 
 - **Process events** (`keys`, `delete`, `paste_attempt`, `run`, `error`, `focus_lost`, `focus_back`, `fullscreen_exit`, `snapshot`, `submit`) follow the **frozen format** in `docs/event-format.md` / `shared/events.ts` (zod; shared by browser and server) and are rebuilt by `shared/replay.ts`. They are batched from the client every 10 s, **timestamped by the server**, idempotent on `(submission_id, seq)`, and stored append-only: a database trigger refuses every update, and refuses deletes except inside `reset_demo()`.
-- **Flags** (rule-based, each stores the event range as evidence): large instant insertion; typing much faster than the student's own baseline; long focus loss followed by a burst; correct submission with no prior runs; perfect tests with viva score < 50.
+- **Flags** (rule-based, each stores the event range as evidence): large instant insertion; typing much faster than the student's own baseline; long focus loss followed by a burst; correct submission with no prior runs; perfect tests with viva score < 50; leaving a timed quiz (fullscreen exits and tab switches); a handwritten page without its one-time code word.
 - **Viva:** 3–5 questions generated from the student's own code, output or text: explain a line, predict output for a changed input, describe a modification. About 90 s per question, paste blocked, each question may build on the previous answer. Score 0–100 against a rubric (goal, logic, output prediction, modification) plus a 1–2 sentence teacher summary.
 - **Ustaad never writes solution code.** Replies are short and end with one question; Roman Urdu + English, matching the student. Keep the prototype's prompt and its seven-stage mapping.
 - **Hidden tests run in the browser (team decision, Nov 23), but answer keys never reach it:** test *inputs* are sent only after the student clicks Submit and the code is locked and stored on the server; the browser runs them in the Pyodide worker and sends back the raw outputs; the **server** compares them with the expected outputs, which never leave the server. Judges' Q&A answer: "Tests run on the student's machine, so the server stays cheap; the expected answers never leave our server, the submitted code is locked first, and the teacher can re-run it."
@@ -203,11 +204,8 @@ npm run e2e:viva -- http://localhost:3000   # API + real AI: simulated honest vs
 4. README updated if a dependency was added.
 5. Committed with a clear message; demo path re-checked if touched.
 
-## Schedule
+## Schedule (revised Nov 27 after illness)
 
-- **Mon Nov 23:** **live deploy first (hello world + `/api/health` on the production URL) before anything else**; then repo, schema, auth, design system, new layouts.
-- **Tue Nov 24:** assignment builder, workspace + stepper, paste blocking, event logging.
-- **Wed Nov 25:** viva, hidden tests, variants, seed script; written answers if the demo path is done.
-- **Thu Nov 26:** teacher report + replay + flags; quizzes and handwritten only if the demo path is solid (behind flags); real test with 10 students and 1–2 teachers; **feature freeze at night**.
-- **Fri Nov 27:** video (script, record, edit), demo data check, backup recording.
-- **Sat Nov 28:** deck, README, rehearsal; **submit by 8 PM** (repo, live link, ≤ 2-min video, deck); tag `v1.0-submission`.
+- **Mon Nov 23 – Tue Nov 24:** deploy, schema, accounts, workspace, viva, hidden tests, reports, gradebook, written answers, timed quizzes, simulated demo class (done).
+- **Fri Nov 27 – Sat Nov 28 early morning:** full courses from the team's lecture material (Data Mining, ISR, OOP, DSA, NLP, Compiler Construction, HCI) with weekly notes, assignments and quizzes; end-to-end platform polish; handwritten work if it fits.
+- **Sat Nov 28:** video (≤ 2 min), deck, README, final smoke test; tag `v1.0-submission`; **submit Saturday night**.

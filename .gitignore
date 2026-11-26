@@ -23,3 +23,6 @@ supabase/.temp/
 
 # Browser smoke-test screenshots
 smoke-screens/
+
+# University lecture slides: source material only (large, and the teachers own them). Never commit.
+lecture-material/

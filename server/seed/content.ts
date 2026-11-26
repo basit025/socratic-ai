@@ -7,6 +7,7 @@
  * Dates are offsets in days from the moment of seeding; demo sandboxes shift them to "now".
  */
 import { quizAssignments } from "./quizzes.js";
+import { coursePacks } from "./courses/index.js";
 
 export const INSTITUTION = "Pothohar Institute of Computing (Demo)";
 
@@ -28,6 +29,9 @@ export const teachers: SeedPerson[] = [
   person("sana", "Sana Rauf", "demo-teacher@pothohar.demo"),
   person("imran", "Imran Qureshi"),
   person("hina", "Hina Baig"),
+  person("farhan", "Dr. Farhan Malik"),
+  person("saima", "Dr. Saima Javed"),
+  person("adeel", "Adeel Raza"),
 ];
 
 // The first ten keys are the classmates real recorded sessions are mapped to (docs/recording-guide.md).
@@ -82,6 +86,16 @@ export const students: SeedPerson[] = [
 const keys = students.map((s) => s.key);
 const firstYears = keys.slice(0, 34);
 const secondYears = keys.slice(15, 45);
+/** Who takes which of the lecture-material courses. Ayesha (the demo student) has a full semester. */
+const ROSTERS: Record<string, string[]> = {
+  cs201: ["ayesha", ...secondYears],
+  cs211: ["ayesha", ...keys.slice(5, 33)],
+  cs341: ["ayesha", ...keys.slice(12, 41)],
+  cs352: ["ayesha", ...keys.slice(14, 42)],
+  cs381: ["ayesha", ...keys.slice(8, 37)],
+  cs461: keys.slice(16, 45),
+  cs372: keys.slice(13, 42),
+};
 
 export interface SeedCourse {
   key: string;
@@ -99,8 +113,9 @@ export const courses: SeedCourse[] = [
   // A new, empty section: shows the creation flow and the teaching empty states.
   { key: "cs101b", teacher: "sana", code: "CS-101", name: "Programming Fundamentals", section: "Section B (new)", term: "Fall 2026", joinCode: "PKC7HB", students: [] },
   { key: "web102", teacher: "imran", code: "WEB-102", name: "Web Development", section: "Section A", term: "Fall 2026", joinCode: "WEB4KQ", students: ["ayesha", ...firstYears.slice(5, 34)] },
-  { key: "cs201", teacher: "imran", code: "CS-201", name: "Data Structures", section: "Section A", term: "Fall 2026", joinCode: "DSA8MZ", students: secondYears },
   { key: "eng101", teacher: "hina", code: "ENG-101", name: "Communication Skills", section: "Section C", term: "Fall 2026", joinCode: "ENG3RT", students: ["ayesha", ...firstYears.slice(3, 32)] },
+  // Courses built from the team's own lecture material (server/seed/courses/). Rosters are set here.
+  ...coursePacks.map((p) => ({ ...p.course, students: ROSTERS[p.course.key] ?? [] })),
 ];
 
 export interface SeedModule {
@@ -129,14 +144,6 @@ export const modules: SeedModule[] = [
     ["Functions and arrow functions", "`function total(xs) { ... }` and `const total = (xs) => ...` both define functions. Return values; don't just print them."],
     ["Debugging in the browser", "Use `console.log` to see values as your code runs. Read the error name first: TypeError, ReferenceError, SyntaxError."],
   ]),
-  ...weeks("cs201", [
-    ["Lists and how long things take", "Some operations take the same time for any list size; others grow with the list. Counting steps helps you choose the right approach."],
-    ["Stacks", "A stack is last-in, first-out, like a pile of plates. Push to add, pop to remove. Perfect for matching brackets."],
-    ["Queues", "A queue is first-in, first-out, like a bank line. Each person waits for everyone in front of them."],
-    ["Dictionaries", "A dictionary maps keys to values. Counting words is the classic use: `counts[word] = counts.get(word, 0) + 1`."],
-    ["Merging sorted lists", "Two sorted lists can be merged in one pass by always taking the smaller front item."],
-    ["Recursion", "A function that calls itself on a smaller problem, with a base case that stops it."],
-  ]),
   ...weeks("eng101", [
     ["Clear sentences", "One idea per sentence. Put the important words first. Cut words that add nothing."],
     ["Formal emails", "A clear subject, a polite greeting, the point in the first two lines, one specific request, and a proper closing."],
@@ -145,6 +152,7 @@ export const modules: SeedModule[] = [
     ["Summarising", "Keep the main idea and the key evidence; drop examples and repetition. Use your own words."],
     ["Reflective writing", "Describe what happened, what you thought, what you learned, and what you'll do differently."],
   ]),
+  ...coursePacks.flatMap((p) => p.modules),
 ];
 
 export interface SeedTestInput {
@@ -156,7 +164,7 @@ export interface SeedAssignment {
   key: string;
   course: string;
   week: number;
-  type: "code" | "written" | "quiz";
+  type: "code" | "written" | "quiz" | "handwritten";
   language: "python" | "javascript" | null;
   title: string;
   status: "draft" | "published" | "closed";
@@ -330,7 +338,7 @@ export const assignments: SeedAssignment[] = [
     rules: labRules(),
   },
   {
-    key: "brackets", course: "cs201", week: 2, type: "code", language: "python", title: "Balanced Brackets", status: "closed", opensInDays: -8, dueInDays: -3, marks: 10,
+    key: "brackets", course: "cs201", week: 3, type: "code", language: "python", title: "Balanced Brackets", status: "closed", opensInDays: -8, dueInDays: -3, marks: 10,
     instructions: "Write `balanced(text)` that returns `True` if every bracket `()`, `[]` and `{}` in the text is closed in the right order, and `False` otherwise. Other characters are ignored.\n\nExample: `balanced(\"([]{})\")` returns `True`, `balanced(\"(]\")` returns `False`.",
     starterCode: "def balanced(text):\n    # Hint: a stack\n    pass\n\n\nprint(balanced(\"([]{})\"))\n",
     referenceSolution: "def balanced(text):\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in text:\n        if ch in '([{':\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n",
@@ -357,7 +365,7 @@ export const assignments: SeedAssignment[] = [
     rules: labRules(),
   },
   {
-    key: "words", course: "cs201", week: 4, type: "code", language: "python", title: "Word Frequency Counter", status: "draft", opensInDays: 5, dueInDays: 12, marks: 10,
+    key: "words", course: "cs201", week: 9, type: "code", language: "python", title: "Word Frequency Counter", status: "draft", opensInDays: 5, dueInDays: 12, marks: 10,
     instructions: "Write `word_counts(text)` that returns a dictionary mapping each **lower-case word** to how many times it appears, in the order words first appear.\n\nExample: `word_counts(\"Chai and more chai\")` returns `{'chai': 2, 'and': 1, 'more': 1}`.",
     starterCode: "def word_counts(text):\n    pass\n\n\nprint(word_counts(\"Chai and more chai\"))\n",
     referenceSolution: "def word_counts(text):\n    counts = {}\n    for word in text.lower().split():\n        counts[word] = counts.get(word, 0) + 1\n    return counts\n",
@@ -407,6 +415,7 @@ export const assignments: SeedAssignment[] = [
     starterCode: "", referenceSolution: "", tests: [], rules: labRules(),
   },
   ...quizAssignments,
+  ...coursePacks.flatMap((p) => p.assignments),
 ];
 
 export interface SeedAnnouncement {
@@ -426,4 +435,5 @@ export const announcements: SeedAnnouncement[] = [
   { course: "cs201", title: "Bank Queue lab is open", body: "Think about what each customer has to wait for. Trace it on paper first.", postedDaysAgo: 2 },
   { course: "eng101", title: "Writing in your own words", body: "Paste is off in writing tasks. Ustaad will ask you about your own sentences after you submit, so write what you mean.", postedDaysAgo: 13 },
   { course: "eng101", title: "Argument task is open", body: "Pick a side and defend it with one real example from your own life.", postedDaysAgo: 1 },
+  ...coursePacks.flatMap((p) => p.announcements),
 ];

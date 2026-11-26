@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { ArrowRight, Check, ClipboardX, EyeOff, Flag, GraduationCap, Presentation, ShieldCheck } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ClipboardX, Code2, EyeOff, Flag, GraduationCap, ListChecks, Megaphone, MessageCircleQuestion, PenLine, Presentation, ShieldCheck, Table2 } from "lucide-react";
 import { api, ApiError, prewarmApi } from "../lib/api";
 import { preloadRunnerWhenIdle } from "../runner/runner";
 import { Logo } from "../components/Logo";
@@ -15,7 +15,7 @@ interface StartResponse {
 
 function EditorSketch() {
   return (
-    <div aria-hidden className="rounded-lg border border-line bg-surface p-3 font-mono text-[12.5px] leading-6 shadow-sm">
+    <div aria-hidden className="rounded-lg border border-line bg-surface p-3 font-mono text-[12.5px] leading-6 shadow-sm [font-variant-ligatures:none]">
       <div className="mb-2 flex items-center justify-between text-[11px] font-sans">
         <span className="font-semibold text-ink-2">solution.py</span>
         <span className="flex items-center gap-1 rounded-full bg-locked-soft px-2 py-0.5 text-locked"><ClipboardX className="size-3" /> Paste is off</span>
@@ -102,6 +102,17 @@ const STEPS = [
   { title: "Teachers see process and understanding", body: "A replay of how the work was made, flags in plain words, and a viva score. The teacher decides.", visual: <ReportSketch /> },
 ];
 
+const FEATURES = [
+  { icon: BookOpen, title: "Weekly material", body: "Notes, worked examples and announcements, week by week." },
+  { icon: Code2, title: "Coding labs", body: "Python and JavaScript run right in the browser. Nothing to install." },
+  { icon: PenLine, title: "Written work", body: "Essays and short answers with a live word count." },
+  { icon: ListChecks, title: "Timed quizzes", body: "One question at a time, a different paper for every student." },
+  { icon: MessageCircleQuestion, title: "Ustaad, the AI mentor", body: "Hints in English or Roman Urdu. It never writes the answer." },
+  { icon: Table2, title: "Marks and gradebook", body: "Suggested marks, the teacher confirms, students see them." },
+  { icon: Megaphone, title: "Announcements", body: "News from every course on the student's home page." },
+  { icon: ShieldCheck, title: "Fair, private, cheap", body: "No webcam, no AI detector. Runs on free tiers." },
+];
+
 export function Landing() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -144,17 +155,17 @@ export function Landing() {
 
         <section className="mx-auto max-w-3xl pt-6 text-center sm:pt-10">
           <p className="text-sm font-semibold tracking-wide text-action uppercase">Strong fundamentals in the age of AI</p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight text-balance sm:text-[52px] sm:leading-[1.1]">Marks for what students understand, not what AI wrote.</h1>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-balance sm:text-[52px] sm:leading-[1.1]">Everything a course needs, in one place.</h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-ink-2 text-pretty">
-            Socratic AI is a learning platform where students do their work in one workspace and the AI mentor Ustaad runs a short viva on each student's own work.
+            Socratic AI is one organized learning platform for students and teachers: weekly material, coding labs, assignments, timed quizzes, marks and announcements, with the AI mentor Ustaad making sure every mark reflects real understanding.
           </p>
         </section>
 
         <section aria-label="Try the demo" className="mx-auto mt-9 grid max-w-3xl gap-4 sm:grid-cols-2">
           {(
             [
-              { role: "teacher", icon: Presentation, label: "Try as teacher", ur: "بطور استاد آزمائیں", hint: "See a class, set an assignment, read integrity reports" },
-              { role: "student", icon: GraduationCap, label: "Try as student", ur: "بطور طالب علم آزمائیں", hint: "Do a coding lab, then face Ustaad's viva" },
+              { role: "teacher", icon: Presentation, label: "Try as teacher", ur: "بطور استاد آزمائیں", hint: "Your courses, gradebook, assignments and class reports" },
+              { role: "student", icon: GraduationCap, label: "Try as student", ur: "بطور طالب علم آزمائیں", hint: "A full semester: what's due, labs, quizzes and marks" },
             ] as const
           ).map((b) => (
             <button
@@ -190,8 +201,22 @@ export function Landing() {
           </p>
         )}
 
-        <section aria-label="How it works" className="mx-auto mt-16 max-w-5xl">
-          <h2 className="text-center text-sm font-semibold tracking-wide text-ink-3 uppercase">How it works</h2>
+        <section aria-label="One place for the whole course" className="mx-auto mt-16 max-w-5xl">
+          <h2 className="text-center text-sm font-semibold tracking-wide text-ink-3 uppercase">One place instead of five</h2>
+          <p className="mx-auto mt-2 max-w-2xl text-center text-ink-2">No more WhatsApp groups, emailed PDFs, separate quiz tools and spreadsheets of marks.</p>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((f) => (
+              <li key={f.title} className="rounded-2xl border border-line bg-surface/80 p-4 shadow-sm">
+                <f.icon className="size-6 text-action" aria-hidden />
+                <p className="mt-2 font-semibold text-ink">{f.title}</p>
+                <p className="mt-0.5 text-sm text-ink-2">{f.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-label="How marks stay meaningful" className="mx-auto mt-16 max-w-5xl">
+          <h2 className="text-center text-sm font-semibold tracking-wide text-ink-3 uppercase">How marks stay meaningful</h2>
           <ol className="mt-6 grid gap-5 md:grid-cols-3">
             {STEPS.map((s, i) => (
               <li key={s.title} className="flex flex-col rounded-2xl border border-line bg-surface/80 p-5 shadow-sm backdrop-blur">

@@ -22,7 +22,7 @@ const ONLY = (() => {
   return i > 0 ? new Set(process.argv[i + 1]!.split(",")) : null;
 })();
 
-const CONCURRENCY = 2;
+const CONCURRENCY = Number(process.env.GEN_CONCURRENCY ?? 1); // Groq free tier allows ~8k tokens a minute
 
 type Persona = "strong" | "struggling" | "copier" | "copier_paste";
 
@@ -43,6 +43,15 @@ const PLAN: Record<string, { persona: Persona; reuse: number }[]> = {
   email: [{ persona: "strong", reuse: 7 }, { persona: "struggling", reuse: 6 }, { persona: "copier", reuse: 4 }],
   summary: [{ persona: "strong", reuse: 7 }, { persona: "struggling", reuse: 6 }, { persona: "copier", reuse: 4 }],
   phones: [{ persona: "strong", reuse: 3 }, { persona: "struggling", reuse: 3 }, { persona: "copier", reuse: 2 }],
+  // Courses built from the team's lecture material: closed work gets three personas, open work two.
+  ...Object.fromEntries(
+    ["dm-five", "dm-star", "dm-basket", "ir-index", "ir-vb", "nlp-tokens", "nlp-edit", "nlp-bigram", "cc-lexer", "cc-dfa", "cc-ambiguity", "oop-account", "oop-shapes", "oop-hostel", "hci-chunking", "hci-gulfs", "dsa-linked", "dsa-bigo"].map(
+      (k) => [k, [{ persona: "strong" as Persona, reuse: 8 }, { persona: "struggling" as Persona, reuse: 7 }, { persona: "copier" as Persona, reuse: 4 }]],
+    ),
+  ),
+  ...Object.fromEntries(
+    ["dm-kmeans", "ir-cosine", "nlp-nb", "cc-rd", "oop-fraction", "hci-review", "dsa-bst"].map((k) => [k, [{ persona: "strong" as Persona, reuse: 5 }, { persona: "copier" as Persona, reuse: 3 }]]),
+  ),
 };
 
 // ---------------------------------------------------------------- tiny deterministic randomness
@@ -95,7 +104,7 @@ const Answer = z.object({ answer: z.string() });
  * The simulated STUDENTS' side (their code, drafts and viva answers) runs on a different Groq model,
  * so it never eats the quota the platform itself needs for questions, hints and scoring.
  */
-const STUDENT_AI = { env: { ...process.env, LLM_PROVIDER: "groq", GROQ_MODEL: process.env.STUDENT_GROQ_MODEL ?? "openai/gpt-oss-20b", GEMINI_API_KEY: "", OPENROUTER_API_KEY: "" } };
+const STUDENT_AI = { env: { ...process.env, LLM_PROVIDER: process.env.STUDENT_PROVIDER ?? "gemini", GROQ_MODEL: process.env.STUDENT_GROQ_MODEL ?? "openai/gpt-oss-20b", OPENROUTER_API_KEY: "" } };
 
 const PERSONA_CODE: Record<Persona, string> = {
   strong:
@@ -129,7 +138,7 @@ async function studentWork(kind: "code" | "written", persona: Persona, language:
   const r = await generateJson({
     purpose: "other",
     system: PERSONA_CODE[persona],
-    messages: [{ role: "user", content: `Language: ${language}\n\nThe task:\n${instructions}\n\nStarter code:\n${starter}\n\nKeep the function name and signature exactly as in the starter code. Keep the final print/console.log line.` }],
+    messages: [{ role: "user", content: `Language: ${language}\n\nThe task:\n${instructions}\n\nStarter code:\n${starter}\n\nReturn the COMPLETE program. Keep every part of the starter code that isn't a placeholder EXACTLY as given: imports, helper classes and functions (like Node, from_list, to_list), and data (lists, dicts, constants such as T or HEADLINES). Keep the function and class names and signatures exactly as in the starter code. Keep the final print/console.log line.` }],
     schema: CodeWork,
     schemaName: "student_code",
     maxOutputTokens: 900,
@@ -196,11 +205,13 @@ class Timeline {
   }
   flush() {
     if (!this.burst.length) return;
-    const onlyDeletes = this.burst.every((c) => c.insert === "");
-    const chars = this.burst.reduce((n, c) => n + (onlyDeletes ? c.to - c.from : c.insert.length), 0);
-    this.push(onlyDeletes ? "delete" : "keys", { changes: this.burst, chars });
+    // Take the burst BEFORE pushing: push may trigger a snapshot, which flushes again.
+    const burst = this.burst;
     this.burst = [];
     this.burstChars = 0;
+    const onlyDeletes = burst.every((c) => c.insert === "");
+    const chars = burst.reduce((n, c) => n + (onlyDeletes ? c.to - c.from : c.insert.length), 0);
+    this.push(onlyDeletes ? "delete" : "keys", { changes: burst, chars });
   }
   snapshot() {
     this.flush();
@@ -445,6 +456,7 @@ async function main() {
           break;
         } catch (err) {
           console.log(`  ✗ ${j.label} attempt ${attempt}: ${(err as Error).message}`);
+          if (err instanceof RangeError) console.log((err.stack ?? "").split("\n").slice(0, 8).join("\n"));
         }
       }
     }

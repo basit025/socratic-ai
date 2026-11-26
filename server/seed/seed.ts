@@ -118,20 +118,31 @@ export async function buildSeedSql(opts: { recording?: boolean; sessions?: Sessi
   // Recorded sessions → past submissions of fictional classmates. A session can be reused under
   // several classmates (alsoAs): each copy is its own submission that replays the first one's log.
   const taken = new Set<string>();
+  const demoCopied = new Set<string>();
   for (const f of sessions) {
     const a = assignments.find((x) => x.title === f.assignment);
     if (!a) throw new Error(`Session ${f.label}: no seeded assignment titled "${f.assignment}".`);
     if (!f.events.length) throw new Error(`Session ${f.label} has no events.`);
     let sourceSid: string | null = null;
     const owners = [{ student: f.student, daysAgo: f.submittedDaysAgo }, ...(f.alsoAs ?? [])];
+    // The demo student's own past work: on each closed assignment she takes, she gets a copy of the
+    // first strong session, already marked, so her course pages and marks aren't empty.
+    const demo = students.find((x) => x.email && x.key !== "")!;
+    if (a.status === "closed" && f.persona === "strong" && !demoCopied.has(a.key) && courses.find((c) => c.key === a.course)!.students.includes(demo.key)) {
+      demoCopied.add(a.key);
+      owners.push({ student: demo.key, daysAgo: f.submittedDaysAgo });
+    }
     const classmates = courses.find((c) => c.key === a.course)!.students.filter((k) => !students.find((x) => x.key === k)?.email);
     for (const [ownerNo, owner] of owners.entries()) {
-      if (!students.find((x) => x.key === owner.student && !x.email)) throw new Error(`Session ${f.label}: "${owner.student}" must be a seeded classmate (not the demo identity).`);
+      const demoOwner = students.find((x) => x.key === owner.student)?.email != null;
+      // The demo student may own past work only on CLOSED assignments (her open work is the live demo).
+      if (!students.find((x) => x.key === owner.student) || (demoOwner && a.status !== "closed")) throw new Error(`Session ${f.label}: "${owner.student}" must be a seeded classmate (the demo student only on closed assignments).`);
       // One submission per student per assignment: if this classmate already has one (sessions made in
       // different runs can overlap), the copy goes to the next classmate in the course who doesn't.
       const key = taken.has(`${a.key}:${owner.student}`) ? classmates.find((k) => !taken.has(`${a.key}:${k}`)) : owner.student;
       if (!key) continue; // everyone in the course already has a submission
       const student = students.find((x) => x.key === key)!;
+      const graded = student.email != null; // the demo student's past work is already marked
       taken.add(`${a.key}:${student.key}`);
 
       const sid = randomUUID();
@@ -153,7 +164,8 @@ export async function buildSeedSql(opts: { recording?: boolean; sessions?: Sessi
       const vivaScore = f.viva?.understanding ?? null;
       const grade = suggestedGrade({ marks: a.marks, testsPassed: f.testsPassed, testsTotal: f.testsTotal, vivaScore, vivaWeight: a.rules.vivaWeight });
       out.push(
-        `insert into public.submissions (id, sandbox_id, assignment_id, student_id, variant_id, status, content, last_output, test_results, tests_passed, tests_total, viva_score, suggested_grade, started_at, submitted_at, event_source_id) values (${lit(sid)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${lit(variantId)}, 'submitted', ${lit(f.content)}, ${lit(f.lastOutput)}, ${f.testResults == null ? "null" : json(f.testResults)}, ${f.testsPassed ?? "null"}, ${f.testsTotal ?? "null"}, ${vivaScore ?? "null"}, ${grade}, ${at(0)}, ${at(f.submittedAtMs ?? end)}, ${lit(sourceSid)});`,
+        // The demo student's past work has been marked by her teacher, so her course pages show real marks.
+        `insert into public.submissions (id, sandbox_id, assignment_id, student_id, variant_id, status, content, last_output, test_results, tests_passed, tests_total, viva_score, suggested_grade, final_grade, graded_at, started_at, submitted_at, event_source_id) values (${lit(sid)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${lit(variantId)}, ${graded ? "'graded'" : "'submitted'"}, ${lit(f.content)}, ${lit(f.lastOutput)}, ${f.testResults == null ? "null" : json(f.testResults)}, ${f.testsPassed ?? "null"}, ${f.testsTotal ?? "null"}, ${vivaScore ?? "null"}, ${grade}, ${graded ? grade : "null"}, ${graded ? `(${submitted} + interval '2 days')` : "null"}, ${at(0)}, ${at(f.submittedAtMs ?? end)}, ${lit(sourceSid)});`,
       );
       if (sourceSid === null) for (let i = 0; i < f.events.length; i += 200) {
         const rows = f.events.slice(i, i + 200).map((e) => `(${SEED}, ${lit(sid)}, ${e.seq}, ${lit(e.type)}, ${json(e.payload)}, ${at(e.ms)})`);
@@ -198,18 +210,36 @@ async function main() {
     return;
   }
   const target = args.includes("--production") ? "production" : "preview";
-  const dir = mkdtempSync(path.join(tmpdir(), "socratic-seed-"));
-  const file = path.join(dir, "seed.sql");
-  writeFileSync(file, sql);
-  const started = Date.now();
-  const r = spawnSync("npx", ["supabase", "db", "query", `--remote=${REFS[target]}`, "--yes", "-f", file], { encoding: "utf8" });
-  rmSync(dir, { recursive: true, force: true });
-  const output = `${r.stdout}\n${r.stderr}`;
-  if (r.status !== 0 || /"_tag":\s*"Error"|ERROR:/.test(output)) {
-    console.error(`Seeding ${target} failed:\n${output.slice(-1500)}`);
-    process.exit(1);
+  // The Supabase query endpoint rejects very large bodies, so send the seed in chunks of whole
+  // statements, each in its own transaction (clearing the old seed is part of the first chunk).
+  const statements = sql.split("\n").filter((l) => l && l !== "begin;" && l !== "commit;");
+  const chunks: string[][] = [[]];
+  let size = 0;
+  for (const st of statements) {
+    if (size + st.length > 2_000_000 && chunks.at(-1)!.length) {
+      chunks.push([]);
+      size = 0;
+    }
+    chunks.at(-1)!.push(st);
+    size += st.length + 1;
   }
-  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${sql.split("\n").length - 1} statements, ${sessions.filter((x) => !x.simulated).length} real + ${sessions.filter((x) => x.simulated).length} simulated sessions, ${sessions.reduce((n, x) => n + 1 + (x.alsoAs?.length ?? 0), 0)} past submissions${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
+  const dir = mkdtempSync(path.join(tmpdir(), "socratic-seed-"));
+  const started = Date.now();
+  try {
+    for (const [i, chunk] of chunks.entries()) {
+      const file = path.join(dir, `seed-${i}.sql`);
+      writeFileSync(file, ["begin;", ...chunk, "commit;"].join("\n") + "\n");
+      const r = spawnSync("npx", ["supabase", "db", "query", `--remote=${REFS[target]}`, "--yes", "-f", file], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      const output = `${r.stdout}\n${r.stderr}`;
+      if (r.status !== 0 || /"_tag":\s*"Error"|ERROR:/.test(output)) {
+        console.error(`Seeding ${target} failed in part ${i + 1} of ${chunks.length}:\n${output.slice(-1500)}`);
+        process.exit(1);
+      }
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${statements.length} statements in ${chunks.length} parts, ${sessions.filter((x) => !x.simulated).length} real + ${sessions.filter((x) => x.simulated).length} simulated sessions, ${sessions.reduce((n, x) => n + 1 + (x.alsoAs?.length ?? 0), 0)} past submissions${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join("seed", "seed.ts"))) {

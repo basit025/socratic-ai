@@ -15,6 +15,8 @@ import type { VariantSpec } from "../lib/variants.js";
 import type { VivaQuestion } from "../viva.js";
 import type { ProcessEvent } from "../../shared/events.js";
 import { markQuiz, parseQuizState, type QuizQuestionRow } from "../../shared/quiz.js";
+import { parseMeta } from "./handwritten.js";
+import { getImage } from "../lib/storage.js";
 
 export const teacherRouter = Router();
 
@@ -124,6 +126,7 @@ async function teacherSubmission(sid: string, pid: string, id: string) {
     status: SubStatus;
     content: string;
     last_output: string | null;
+    image_path: string | null;
     test_results: MarkedTest[] | null;
     tests_passed: number | null;
     tests_total: number | null;
@@ -149,7 +152,7 @@ async function teacherSubmission(sid: string, pid: string, id: string) {
       secrets: { hidden_tests: HiddenTest[]; variant_spec: VariantSpec } | null;
     };
   }>(
-    `submissions?select=id,status,content,last_output,test_results,tests_passed,tests_total,viva_score,suggested_grade,final_grade,teacher_comment,teacher_decision,started_at,submitted_at,event_source_id,student:profiles(id,full_name,initials),variant:variants(params,rendered_instructions),assignment:assignments!inner(id,title,type,marks,starter_code,instructions_md,course:courses!inner(id,code,teacher_id),rules:integrity_rules(viva_weight,paste_blocked),secrets:assignment_secrets(hidden_tests,variant_spec))&id=${eq(id)}&sandbox_id=${eq(sid)}&assignment.course.teacher_id=${eq(pid)}`,
+    `submissions?select=id,status,content,last_output,image_path,test_results,tests_passed,tests_total,viva_score,suggested_grade,final_grade,teacher_comment,teacher_decision,started_at,submitted_at,event_source_id,student:profiles(id,full_name,initials),variant:variants(params,rendered_instructions),assignment:assignments!inner(id,title,type,marks,starter_code,instructions_md,course:courses!inner(id,code,teacher_id),rules:integrity_rules(viva_weight,paste_blocked),secrets:assignment_secrets(hidden_tests,variant_spec))&id=${eq(id)}&sandbox_id=${eq(sid)}&assignment.course.teacher_id=${eq(pid)}`,
   );
   if (!s) throw notFound("That submission");
   return s;
@@ -228,6 +231,7 @@ teacherRouter.get("/teacher/submissions/:id", requireSession("teacher"), async (
       },
       student: { id: s.student.id, name: s.student.full_name, initials: s.student.initials },
       quiz,
+      handwritten: s.assignment.type === "handwritten" ? { ...(parseMeta(s.last_output) ?? { codeWord: null, codeWordFound: null, legibility: null }), hasPhoto: Boolean(s.image_path) } : null,
       assignment: { id: s.assignment.id, title: s.assignment.title, type: s.assignment.type, marks: s.assignment.marks, starterCode: s.assignment.starter_code, courseCode: s.assignment.course.code, vivaWeight: s.assignment.rules?.viva_weight ?? 50, variant: option },
       // Times: client time drives the replay; server time is the tamper-proof record.
       events: events.map((e) => ({ seq: e.seq, t: Date.parse(e.client_time), serverTime: e.server_time, type: e.type, payload: e.payload })),
@@ -304,7 +308,24 @@ teacherRouter.get("/teacher/builder", requireSession("teacher"), async (req, res
 const Expected = z.union([z.string().max(2000), z.record(z.string(), z.string().max(2000))]);
 const CreateBody = z.object({
   courseId: z.string().regex(/^[0-9a-f-]{36}$/i),
-  type: z.enum(["code", "written"]).default("code"),
+  type: z.enum(["code", "written", "handwritten", "quiz"]).default("code"),
+  quiz: z
+    .object({
+      draw: z.number().int().min(1).max(50),
+      timeLimitMinutes: z.number().int().min(1).max(120),
+      fullscreen: z.boolean(),
+      questions: z
+        .array(
+          z.discriminatedUnion("kind", [
+            z.object({ kind: z.literal("mcq"), prompt: z.string().trim().min(3).max(500), options: z.array(z.string().trim().min(1).max(200)).min(2).max(6), correct: z.number().int().min(0).max(5) }),
+            z.object({ kind: z.literal("short"), prompt: z.string().trim().min(3).max(500), accepted: z.array(z.string().trim().min(1).max(100)).min(1).max(10) }),
+          ]),
+        )
+        .min(2)
+        .max(50),
+    })
+    .nullable()
+    .optional(),
   language: z.enum(["python", "javascript"]).nullable().default("python"),
   title: z.string().trim().min(2).max(120),
   instructions: z.string().trim().min(10).max(10_000),
@@ -340,6 +361,8 @@ teacherRouter.post("/teacher/assignments", requireSession("teacher"), async (req
     if (!course) throw notFound("That course");
     if (b.rules.variantsOn && !b.variants) throw new PublicError(400, "Variants are on, but no versions are set up.", "bad_variants");
     if (b.type === "code" && (b.tests.length === 0 || !b.language)) throw new PublicError(400, "A coding lab needs a language and at least one hidden test.", "bad_tests");
+    if (b.type === "quiz" && !b.quiz) throw new PublicError(400, "A quiz needs at least two questions.", "bad_quiz");
+    if (b.quiz?.questions.some((q) => q.kind === "mcq" && q.correct >= q.options.length)) throw new PublicError(400, "Every multiple-choice question needs its correct option marked.", "bad_quiz");
     if (Date.parse(b.dueAt) < Date.now() && b.status === "published") throw new PublicError(400, "The due date is in the past.", "bad_due");
     const id = randomUUID();
     await insert("assignments", {
@@ -361,18 +384,35 @@ teacherRouter.post("/teacher/assignments", requireSession("teacher"), async (req
       sandbox_id: sid,
       paste_blocked: b.rules.pasteBlocked,
       workflow: b.rules.workflow,
-      viva_questions: b.rules.vivaQuestions,
+      viva_questions: b.type === "quiz" ? 0 : b.rules.vivaQuestions,
       viva_seconds_per_q: b.rules.vivaSecondsPerQ,
-      viva_weight: b.rules.vivaWeight,
-      variants_on: b.rules.variantsOn,
+      viva_weight: b.type === "quiz" ? 0 : b.rules.vivaWeight,
+      variants_on: b.type === "code" && b.rules.variantsOn,
+      time_limit_minutes: b.type === "quiz" ? b.quiz!.timeLimitMinutes : null,
+      fullscreen_required: b.type === "quiz" ? b.quiz!.fullscreen : false,
     });
     await insert("assignment_secrets", {
       assignment_id: id,
       sandbox_id: sid,
       reference_solution: b.referenceSolution,
       hidden_tests: b.type === "code" ? b.tests : [],
-      variant_spec: b.rules.variantsOn && b.variants ? b.variants : {},
+      variant_spec: b.type === "quiz" ? { draw: Math.min(b.quiz!.draw, b.quiz!.questions.length) } : b.rules.variantsOn && b.variants ? b.variants : {},
     });
+    if (b.type === "quiz") {
+      await insert(
+        "quiz_questions",
+        b.quiz!.questions.map((q, i) => ({
+          sandbox_id: sid,
+          assignment_id: id,
+          position: i + 1,
+          kind: q.kind,
+          prompt_md: q.prompt,
+          options: q.kind === "mcq" ? q.options : null,
+          answer_key: q.kind === "mcq" ? { correct: q.correct } : { accepted: q.accepted },
+          marks: 1,
+        })),
+      );
+    }
     res.status(201).json({ id, status: b.status });
   } catch (err) {
     next(err);
@@ -447,6 +487,39 @@ teacherRouter.post("/teacher/submissions/:id/grade", requireSession("teacher"), 
     if (body.data.finalGrade > s.assignment.marks) throw new PublicError(400, `The mark can't be more than ${s.assignment.marks}.`, "bad_grade");
     await update("submissions", `id=${eq(s.id)}`, { final_grade: body.data.finalGrade, teacher_comment: body.data.comment ?? null, status: "graded", graded_at: new Date().toISOString() });
     res.json({ ok: true, finalGrade: body.data.finalGrade });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- announcements (news for the whole class, in one place)
+const AnnouncementBody = z.object({ title: z.string().trim().min(3).max(120), body: z.string().trim().min(3).max(2000) });
+
+teacherRouter.post("/teacher/courses/:id/announcements", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const id = String(req.params.id);
+    if (!uuid(id)) throw notFound("That course");
+    const body = AnnouncementBody.safeParse(req.body);
+    if (!body.success) throw new PublicError(400, "Give the announcement a title (3+ characters) and a message.", "bad_announcement");
+    const [course] = await select<{ id: string }>(`courses?select=id&id=${eq(id)}&teacher_id=${eq(pid)}&sandbox_id=${eq(sid)}`);
+    if (!course) throw notFound("That course");
+    const postedAt = new Date().toISOString();
+    await insert("announcements", { sandbox_id: sid, course_id: course.id, title: body.data.title, body: body.data.body, posted_at: postedAt });
+    res.status(201).json({ title: body.data.title, body: body.data.body, postedAt });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------- a handwritten page's photo (through the API, never a public URL)
+teacherRouter.get("/teacher/submissions/:id/photo", requireSession("teacher"), async (req, res, next) => {
+  try {
+    const { sid, pid } = req.session!;
+    const s = await teacherSubmission(sid, pid, String(req.params.id));
+    const img = s.image_path ? await getImage(s.image_path) : null;
+    if (!img) throw notFound("That photo");
+    res.set("Content-Type", img.contentType).set("Cache-Control", "private, max-age=300").send(Buffer.from(img.bytes));
   } catch (err) {
     next(err);
   }

@@ -5,7 +5,7 @@
  */
 import type { ProcessEvent } from "../../shared/events.js";
 
-export type FlagRule = "large_insertion" | "typing_faster_than_baseline" | "focus_loss_then_burst" | "correct_without_runs" | "perfect_tests_low_viva" | "left_quiz_screen";
+export type FlagRule = "large_insertion" | "typing_faster_than_baseline" | "focus_loss_then_burst" | "correct_without_runs" | "perfect_tests_low_viva" | "left_quiz_screen" | "code_word_missing";
 
 export interface Flag {
   rule: FlagRule;

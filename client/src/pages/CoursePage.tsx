@@ -6,10 +6,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft, BookOpen, ChevronDown, Megaphone, Table2, Users } from "lucide-react";
 import { AppShell } from "../components/AppShell";
-import { Card, Chip, ErrorState, Skeleton, cx, type ChipTone } from "../components/ui";
+import { Button, Card, Chip, ErrorState, Skeleton, cx, type ChipTone } from "../components/ui";
+import { api, ApiError } from "../lib/api";
 import { dayDiff, formatDue } from "../lib/format";
 import { useMe } from "../lib/session";
 import { useApi } from "../lib/useApi";
+import { Markdown } from "../components/Markdown";
 
 interface Item {
   id: string;
@@ -29,18 +31,6 @@ interface CourseData {
   announcements: { title: string; body: string; postedAt: string }[];
 }
 
-function Notes({ text }: { text: string }) {
-  return (
-    <>
-      {text.split(/\n{2,}/).map((p, i) => (
-        <p key={i} className="mb-2 last:mb-0">
-          {p.split(/(`[^`]+`)/g).map((part, j) => (part.startsWith("`") ? <code key={j} className="rounded bg-locked-soft px-1 font-mono text-[0.9em]">{part.slice(1, -1)}</code> : part))}
-        </p>
-      ))}
-    </>
-  );
-}
-
 function statusChip(item: Item, role: "teacher" | "student", students: number): { tone: ChipTone; label: string } {
   if (role === "teacher") {
     if (item.status === "draft") return { tone: "locked", label: "Draft" };
@@ -54,13 +44,51 @@ function statusChip(item: Item, role: "teacher" | "student", students: number): 
   return item.status === "published" ? { tone: "action", label: "To do" } : { tone: "locked", label: "Closed" };
 }
 
-const kindLabel = (t: string) => (t === "written" ? "Written" : t === "quiz" ? "Quiz" : "Lab");
+const kindLabel = (t: string) => (t === "written" ? "Written" : t === "quiz" ? "Quiz" : t === "handwritten" ? "Handwritten" : "Lab");
+
+/** Teachers post news to the whole class here; students see it on the course page and their home. */
+function PostAnnouncement({ courseId, students, onPosted }: { courseId: string; students: number; onPosted: (n: { title: string; body: string; postedAt: string }) => void }) {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [state, setState] = useState<"idle" | "posting" | "posted">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const post = async () => {
+    setState("posting");
+    setError(null);
+    try {
+      onPosted(await api<{ title: string; body: string; postedAt: string }>(`/teacher/courses/${courseId}/announcements`, { body: { title, body } }));
+      setTitle("");
+      setBody("");
+      setState("posted");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't post the announcement.");
+      setState("idle");
+    }
+  };
+  return (
+    <Card className="space-y-2.5 p-4">
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-ink-2">New announcement</span>
+        <input value={title} onChange={(e) => { setTitle(e.target.value); setState("idle"); }} maxLength={120} placeholder="e.g. Lab moved to Thursday" className="min-h-11 w-full rounded-lg border border-line-strong px-3 focus:border-action focus:outline-none" />
+      </label>
+      <textarea value={body} onChange={(e) => { setBody(e.target.value); setState("idle"); }} maxLength={2000} rows={3} aria-label="Announcement message" placeholder="What should your students know?" className="w-full rounded-lg border border-line-strong px-3 py-2 focus:border-action focus:outline-none" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="md" icon={Megaphone} loading={state === "posting"} disabled={title.trim().length < 3 || body.trim().length < 3} onClick={post}>
+          Post to {students} student{students === 1 ? "" : "s"}
+        </Button>
+        {state === "posted" && <span role="status" className="text-sm text-done">Posted. Students see it on their home page.</span>}
+        {error && <span role="alert" className="text-sm text-danger">{error}</span>}
+      </div>
+    </Card>
+  );
+}
 
 export function CoursePage() {
   const { id = "" } = useParams();
   const me = useMe();
   const data = useApi<CourseData>(`/courses/${id}`);
   const [open, setOpen] = useState<Set<number>>(new Set());
+  const [posted, setPosted] = useState<{ title: string; body: string; postedAt: string }[]>([]);
 
   const title = data.status === "ready" ? `${data.data.course.code} · ${data.data.course.name}` : null;
   useEffect(() => {
@@ -127,7 +155,7 @@ export function CoursePage() {
                     </button>
                     {isOpen && (
                       <div className="border-t border-line px-5 py-4">
-                        <div className="text-[15px] leading-relaxed text-ink-2"><Notes text={w.notes} /></div>
+                        <Markdown text={w.notes} />
                         {w.assignments.length > 0 && (
                           <ul className="mt-4 divide-y divide-line rounded-lg border border-line">
                             {w.assignments.map((a) => {
@@ -155,10 +183,11 @@ export function CoursePage() {
 
             <aside className="space-y-3">
               <h2 className="flex items-center gap-2 font-semibold"><Megaphone className="size-5 text-ink-3" aria-hidden /> Announcements</h2>
-              {data.data.announcements.length === 0 ? (
+              {me.role === "teacher" && <PostAnnouncement courseId={data.data.course.id} students={data.data.course.students} onPosted={(n) => setPosted((p) => [n, ...p])} />}
+              {posted.length + data.data.announcements.length === 0 ? (
                 <p className="text-ink-3">No announcements yet.</p>
               ) : (
-                data.data.announcements.map((n, i) => (
+                [...posted, ...data.data.announcements].map((n, i) => (
                   <Card key={i} className="p-4">
                     <p className="font-semibold">{n.title}</p>
                     <p className="mt-1 text-[15px] text-ink-2">{n.body}</p>

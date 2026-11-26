@@ -54,7 +54,7 @@ const variantOption = (ctx: Ctx) => {
 };
 const testCalls = (ctx: Ctx) => (ctx.a.secrets?.hidden_tests ?? []).map((t) => t.call);
 const hasTests = (ctx: Ctx) => testCalls(ctx).length > 0;
-const mode = (ctx: Ctx): "code" | "written" => (ctx.a.type === "written" ? "written" : "code");
+const mode = (ctx: Ctx): "code" | "written" => (ctx.a.type === "written" || ctx.a.type === "handwritten" ? "written" : "code");
 const instructions = (ctx: Ctx) => ctx.variant?.rendered_instructions ?? renderInstructions(ctx.a.instructions_md, ctx.a.secrets?.variant_spec ?? {}, null);
 const testsSummary = (ctx: Ctx) =>
   ctx.sub.tests_total ? `${ctx.sub.tests_passed}/${ctx.sub.tests_total} passed` : "not run";

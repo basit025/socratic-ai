@@ -21,6 +21,8 @@ import { EventRecorder, type SaveState } from "../workspace/recorder";
 import { UstaadPanel, type ChatMessage } from "../workspace/UstaadPanel";
 import { WrittenEditor } from "../workspace/WrittenEditor";
 import { QuizPlayer } from "./Quiz";
+import { HandwrittenPage } from "./Handwritten";
+import { Markdown } from "../components/Markdown";
 import type { Change } from "../../../shared/events";
 
 interface WorkspaceData {
@@ -57,27 +59,8 @@ interface RunView {
   timedOut?: boolean;
 }
 
-/** Very small Markdown subset for the brief: **bold** and `code`. */
 function Brief({ text }: { text: string }) {
-  return (
-    <>
-      {text.split(/\n{2,}/).map((para, i) => (
-        <p key={i} className="mb-2 last:mb-0">
-          {para.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, j) =>
-            part.startsWith("**") ? (
-              <strong key={j}>{part.slice(2, -2)}</strong>
-            ) : part.startsWith("`") ? (
-              <code key={j} className="rounded bg-locked-soft px-1 py-0.5 font-mono text-[0.9em]">
-                {part.slice(1, -1)}
-              </code>
-            ) : (
-              part
-            ),
-          )}
-        </p>
-      ))}
-    </>
-  );
+  return <Markdown text={text} className="text-[16px]" />;
 }
 
 const IDLE: SaveState = { kind: "idle" };
@@ -110,6 +93,9 @@ export function Workspace() {
   if (data.status === "ready" && data.data.assignment.type === "quiz") {
     const { assignment: a, submission: s } = data.data;
     return <QuizPlayer assignment={a} submissionId={s?.id ?? null} nextSeq={s?.nextSeq ?? 1} />;
+  }
+  if (data.status === "ready" && data.data.assignment.type === "handwritten") {
+    return <HandwrittenPage assignment={data.data.assignment} submissionId={data.data.submission?.id ?? null} />;
   }
   return <CodeWorkspace data={data} />;
 }

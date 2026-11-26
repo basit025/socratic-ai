@@ -8,6 +8,7 @@ import { vivaRouter } from "./routes/viva.js";
 import { teacherRouter } from "./routes/teacher.js";
 import { accountsRouter } from "./routes/accounts.js";
 import { quizRouter } from "./routes/quiz.js";
+import { handwrittenRouter } from "./routes/handwritten.js";
 
 /**
  * The Express app. It is exported, never started with app.listen():
@@ -17,7 +18,10 @@ import { quizRouter } from "./routes/quiz.js";
 const app = express();
 
 app.disable("x-powered-by");
-app.use(express.json({ limit: "1mb" }));
+// A photographed handwritten page needs a bigger body; everything else stays small.
+const smallJson = express.json({ limit: "1mb" });
+const photoJson = express.json({ limit: "4mb" });
+app.use((req, res, next) => (req.path.endsWith("/handwritten/photo") ? photoJson : smallJson)(req, res, next));
 
 app.use("/api", healthRouter);
 app.use("/api/cron", cronRouter);
@@ -28,6 +32,7 @@ app.use("/api", vivaRouter);
 app.use("/api", teacherRouter);
 app.use("/api", accountsRouter);
 app.use("/api", quizRouter);
+app.use("/api", handwrittenRouter);
 
 // Unknown API routes get a JSON 404, never the SPA's index.html.
 app.use("/api", (_req: Request, res: Response) => {
