@@ -4,7 +4,7 @@
 
 One organized learning platform for students and teachers: courses, weekly material, assignments, coding labs, quizzes and marks in one place, with the AI mentor **Ustaad** making sure every mark reflects real understanding.
 
-> *We can't stop a student from asking AI. We make sure they can't get marks for work they don't understand.*
+> *Everything a course needs in one place, and marks that mean the student really understood.*
 
 Built for the **Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education**, between Nov 16 and Nov 28, 2026.
 
@@ -14,11 +14,11 @@ Built for the **Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education**,
 
 ## Try it in 60 seconds
 
-1. Open **https://socratic-ai-pk.vercel.app** and click **Try as student**. You get your own private copy of a demo institution in about a second.
-2. Open **Cricket Over Tracker**. Try pasting code (it's blocked, and the platform tells you why), type a solution, click **Run my code**, and ask **Ustaad** for a hint.
-3. Click **Submit**: the hidden tests run, then Ustaad asks **3 timed questions about your own code**.
-4. On the results screen, click **See what your teacher sees**: your own work as an integrity report, with a replay of how you wrote it.
-5. Or start with **Try as teacher**: create an assignment from a template in three steps, open the gradebook, or compare two submissions side by side.
+1. Open **https://socratic-ai-pk.vercel.app** and click **Try as student**. You get your own private copy of a demo institution in about a second, as Ayesha, a computer science student with a full semester.
+2. Her home page brings every course together: what's due next across all courses, recently marked work, course progress and news from every teacher.
+3. Open a course (say **Data Mining**) to read the week's notes, then open a lab. Try pasting code (it's blocked, and the platform tells you why), click **Run my code**, and ask **Ustaad** for a hint.
+4. Click **Submit**: the hidden tests run, then Ustaad asks **3 timed questions about your own work**. Try a **timed quiz** or a **handwritten** task too (solve on paper, photograph it in the app, then the viva).
+5. Or start with **Try as teacher**: courses, gradebook, announcements, an assignment builder, and a report for every submission.
 
 Everything in the demo (the institution, people and their work) is fictional and labelled **Demo data**. Classmates' past submissions come from **simulated students** (strong, struggling and copying personas) who worked through the real platform: the platform's own viva questions, AI scoring and flag rules produced every score and flag you see. They show how the platform behaves; they are not measured results.
 
@@ -26,14 +26,18 @@ Everything in the demo (the institution, people and their work) is fictional and
 
 ## The problem
 
+- **Courses are scattered.** A typical Pakistani university course lives in a WhatsApp group, an LMS that only holds PDFs, emailed assignments, a separate quiz tool and a teacher's spreadsheet of marks. Students miss deadlines and announcements; teachers repeat the same work in five places.
 - **AI writes the homework.** A student can paste any lab into ChatGPT and submit a polished answer in minutes. The teacher sees the same output whether the student learned or not.
 - **AI detectors are unreliable and unfair.** A Stanford study found that seven popular detectors flagged, on average, 61% of essays by non-native English writers as AI-generated ([Stanford HAI](https://hai.stanford.edu/news/ai-detectors-biased-against-non-native-english-writers)). Almost every Pakistani student writes in a second language.
 - **HEC's draft policy** says students must not present AI work as their own, and that no student may be punished on a detection report alone ([HEC framework](https://www.hec.gov.pk//english/policies/Pages/Framework-GenAI.aspx)).
 - **Vivas work but don't scale.** Asking students to explain their work is the fix teachers trust, but a teacher with 180 students can't run 180 vivas a week.
 
-## What's new: verify learning, don't detect AI
+## What's new: one organized platform where marks mean understanding
 
-Socratic AI stacks three layers. Any one can be beaten; beating all three is more work than doing the assignment honestly.
+**Everything in one place.** Weekly notes, coding labs (Python and JavaScript run in the browser), written answers, handwritten work, timed quizzes, marks, a gradebook and announcements, for every course, on one home page per student and per teacher.
+
+**Marks that reflect understanding, without detecting AI.** Socratic AI stacks three layers. Any one can be beaten; beating all three is more work than doing the assignment honestly.
+
 
 | Layer | What it does | What it catches |
 | --- | --- | --- |
@@ -63,20 +67,22 @@ Using the rulebook's own words:
 
 | Criterion | Where to see it |
 | --- | --- |
-| **Innovation & Creativity**: *novelty of the approach and creativity in addressing the track's problem* | Verifies learning instead of detecting AI: process replay plus an automated viva on each student's own work, with ground-truth checks by running the student's code. Per-student question variants. No detector, no webcam |
-| **Technical Execution & Functionality**: *working status of the live prototype, system stability, and effective integration of code/AI/APIs* | The live link runs end to end: Python (Pyodide) and JavaScript run in Web Workers with a 5 s safety stop; an append-only event log enforced by database triggers; Gemini → Groq → OpenRouter fallback with schema-validated JSON; hidden tests whose answers never reach the browser; private demo sandboxes in under a second; 49 unit tests and a 36-step browser test run against production |
-| **Real-World Impact & Viability**: *practical usefulness, scalability, and potential to solve real community, campus, or industry needs* | Automates a practice teachers already trust (the viva); aligned with HEC's rule against detector-only punishment; runs in any browser on lab PCs that universities already have; code runs on the student's machine, so the server stays cheap. Measured results: see below |
+| **Innovation & Creativity**: *novelty of the approach and creativity in addressing the track's problem* | One organized platform for the whole course, where marks verify learning instead of detecting AI: process replay plus an automated viva on each student's own work, with ground-truth checks by running the student's code. Per-student question variants. No detector, no webcam |
+| **Technical Execution & Functionality**: *working status of the live prototype, system stability, and effective integration of code/AI/APIs* | The live link runs end to end: Python (Pyodide) and JavaScript run in Web Workers with a 5 s safety stop; an append-only event log enforced by database triggers; Gemini → Groq → OpenRouter fallback with schema-validated JSON; hidden tests whose answers never reach the browser; photographed handwritten pages read by a vision model and checked for a one-time code word; private demo sandboxes; 64 unit tests and a 40-step browser test run against production |
+| **Real-World Impact & Viability**: *practical usefulness, scalability, and potential to solve real community, campus, or industry needs* | Replaces the WhatsApp-group-plus-PDFs-plus-spreadsheet routine with one platform; ten real courses (Data Mining, Information Retrieval, NLP, Compiler Construction, HCI, OOP, DSA and more) built from the team's own lecture material; automates a practice teachers already trust (the viva); aligned with HEC's rule against detector-only punishment; runs in any browser on lab PCs that universities already have; code runs on the student's machine, so the server stays cheap. Measured results: see below |
 | **Presentation, UI/UX & Pitch Clarity**: *user interface quality, clarity of the live demonstration, and effectiveness of the 5-minute pitch* | Designed with Norman, Nielsen and Shneiderman: a five-step journey stepper, one primary action per screen, buttons that say what will happen, inline explanations when something is blocked, a consistent colour language (always with an icon and words), Urdu labels on key actions, and a landing page that explains itself in five seconds |
 
 ## Measured results
 
-The real test with 10 students and 1–2 teachers (honest versus copied submissions, plus five-second interface tests) runs on **Thursday, Nov 26, 2026**. The results will be reported here exactly as measured. Until then, there are no numbers to report.
+None yet. Results will be reported here only from real students and teachers using the platform, exactly as measured. The demo class's scores come from simulated students and are not results.
 
 ## Features
 
-**Students:** courses with weekly notes and announcements · coding labs in **Python and JavaScript** and **written answers** · a five-step journey (Understand → Write → Run → Explain → Submit + viva) · paste blocking with explanations · autosave ("Saved 3 s ago") · Ustaad's Socratic hints in English or Roman Urdu · hidden tests · a timed viva · results with "what to revise next" and the teacher's confirmed mark.
+**Courses in the demo** (notes, assignments and quizzes written by the team from their own lecture material): Programming Fundamentals, Data Structures and Algorithms, Object-Oriented Programming, Data Mining, Information Storage and Retrieval, Natural Language Processing, Compiler Construction, Human-Computer Interaction, Web Development and Communication Skills.
 
-**Teachers:** an assignment builder (Task → Rules → Preview as student) with a template library, where expected test answers are computed by running your own solution · rules as toggle cards (paste, order of work, viva length and weighting, per-student variants) · submissions with flagged work first · an integrity report (story timeline, replay, flags with **Show me**, viva transcript with ground-truth checks) · side-by-side comparison · **Looks fine / Talk to student** · confirm or change any mark with a comment · a gradebook with average viva per assignment and CSV export.
+**Students:** a home page that brings every course together (due next across all courses, recently marked, course progress and averages, news from every teacher) · weekly notes with worked examples · **timed quizzes** (one question at a time, a different draw and order for every student, fullscreen with a warning when left) · **handwritten work** (a one-time code word, a photo taken in the app, an AI reading of the page and a viva on it) · coding labs in **Python and JavaScript** and **written answers** · a five-step journey (Understand → Write → Run → Explain → Submit + viva) · paste blocking with explanations · autosave ("Saved 3 s ago") · Ustaad's Socratic hints in English or Roman Urdu · hidden tests · a timed viva · results with "what to revise next" and the teacher's confirmed mark.
+
+**Teachers:** an assignment builder (Task → Rules → Preview as student) with a template library, where expected test answers are computed by running your own solution · rules as toggle cards (paste, order of work, viva length and weighting, per-student variants) · submissions with flagged work first · an integrity report (story timeline, replay, flags with **Show me**, viva transcript with ground-truth checks) · side-by-side comparison · **Looks fine / Talk to student** · confirm or change any mark with a comment · a gradebook with average viva per assignment and CSV export · announcements posted from the course page.
 
 **Real classes:** teachers and students create accounts (passwords stored only as scrypt hashes); teachers create courses and share a 6-character join code; students join with it. Real accounts are kept apart from demo data.
 
@@ -139,8 +145,8 @@ Every external service, model and library used in this repository is listed here
 | Name | What we use it for | Licence / terms |
 | --- | --- | --- |
 | [Vercel](https://vercel.com) | Hosting: CDN for the front end, a serverless function for the API, cron | Hobby plan |
-| [Supabase](https://supabase.com) | Postgres database | Free plan |
-| [Google Gemini API](https://ai.google.dev) (`gemini-3.1-flash-lite`) | Primary AI model for Ustaad and the viva | Google AI Studio free tier |
+| [Supabase](https://supabase.com) | Postgres database, and private storage for photographed handwritten pages | Free plan |
+| [Google Gemini API](https://ai.google.dev) (`gemini-3.1-flash-lite`) | Primary AI model for Ustaad, the viva, and reading photographed handwritten pages | Google AI Studio free tier |
 | [Groq API](https://groq.com) (`openai/gpt-oss-120b`) | First automatic fallback AI model | Groq free tier |
 | [OpenRouter](https://openrouter.ai) (`google/gemini-3.1-flash-lite`) | Second automatic fallback AI model | OpenRouter terms |
 | [React](https://react.dev) 19 | User interface | MIT |
