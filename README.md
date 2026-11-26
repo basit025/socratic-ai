@@ -53,6 +53,14 @@ What makes the viva hard to game:
 
 ## Screens
 
+| Student home: every course in one place | A course: weekly notes and announcements |
+| --- | --- |
+| ![Student home with due-next list, recently marked work, course cards and news](docs/screenshots/student-home.png) | ![Course page with weekly notes](docs/screenshots/course-page.png) |
+
+| Timed quiz | |
+| --- | --- |
+| ![Timed quiz question with timer ring](docs/screenshots/quiz.png) | |
+
 | Student workspace | The viva |
 | --- | --- |
 | ![Student workspace with journey stepper, code editor and Ustaad](docs/screenshots/workspace.png) | ![Viva question with timer ring](docs/screenshots/viva.png) |
