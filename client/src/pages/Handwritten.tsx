@@ -158,9 +158,9 @@ export function HandwrittenPage({ assignment: a, submissionId }: { assignment: H
                   <p className="flex items-center gap-2 text-sm font-semibold text-ink-3"><KeyRound className="size-4" aria-hidden /> Your one-time code word</p>
                   <p className="mt-1 font-mono text-[34px] font-bold tracking-wider text-action" aria-live="polite">{state.codeWord ?? "…"}</p>
                   <ol className="mt-4 space-y-2.5 text-[15px] text-ink-2">
-                    <li className="flex gap-2.5"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action text-xs font-bold text-white">1</span> Solve the task on paper, in your own handwriting.</li>
-                    <li className="flex gap-2.5"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action text-xs font-bold text-white">2</span> Write <strong className="font-mono text-ink">{state.codeWord}</strong> at the top of the page. It proves the page was written for this task.</li>
-                    <li className="flex gap-2.5"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action text-xs font-bold text-white">3</span> Photograph the page here. Ustaad reads it, then asks you about it in a short viva.</li>
+                    <li className="flex gap-2.5"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action text-xs font-bold text-white">1</span><span>Solve the task on paper, in your own handwriting.</span></li>
+                    <li className="flex gap-2.5"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action text-xs font-bold text-white">2</span><span>Write <strong className="font-mono whitespace-nowrap text-ink">{state.codeWord}</strong> at the top of the page. It proves the page was written for this task.</span></li>
+                    <li className="flex gap-2.5"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action text-xs font-bold text-white">3</span><span>Photograph the page here. Ustaad reads it, then asks you about it in a short viva.</span></li>
                   </ol>
                   {cameraError && <p role="alert" className="mt-4 flex gap-2 rounded-lg border border-attention-line bg-attention-soft px-3 py-2.5 text-sm text-ink"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-attention" aria-hidden />{cameraError}</p>}
                   <div className="mt-5 flex flex-wrap items-center gap-3">
