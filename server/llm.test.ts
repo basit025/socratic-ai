@@ -103,6 +103,19 @@ describe("generateJson", () => {
     expect(geminiBody).toContain("inline_data");
     expect(calls).toEqual(["gemini", "gemini", "openrouter"]); // Groq's text model is skipped
     expect(r.provider).toBe("openrouter");
+    // Gemini is now cooling down and Groq can't see images: Gemini is still tried, not skipped.
+    expect(providerOrder(allKeys, Date.now(), { images: true })).toEqual(["openrouter", "gemini"]);
+    resetCooldowns();
+    expect(providerOrder({ GEMINI_API_KEY: "g", GROQ_API_KEY: "q" }, Date.now(), { images: true })).toEqual(["gemini"]);
+  });
+
+  it("tries a cooling-down Gemini for images when it's the only provider that can see them", async () => {
+    const fails = fakeFetch({ gemini: [() => status(503), () => status(503)], groq: [() => openAiOk(JSON.stringify(good))] });
+    await generateJson(req, deps(fails.fn, { GEMINI_API_KEY: "g", GROQ_API_KEY: "q" })); // Gemini now cools down
+    const { fn, calls } = fakeFetch({ gemini: [() => geminiOk(good)] });
+    const r = await generateJson({ ...req, images: [{ mimeType: "image/jpeg", base64: "AAAA" }] }, deps(fn, { GEMINI_API_KEY: "g", GROQ_API_KEY: "q" }));
+    expect(r.provider).toBe("gemini");
+    expect(calls).toEqual(["gemini"]);
   });
 
   it("retries once when the output doesn't match the schema", async () => {
