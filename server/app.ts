@@ -8,7 +8,6 @@ import { vivaRouter } from "./routes/viva.js";
 import { teacherRouter } from "./routes/teacher.js";
 import { accountsRouter } from "./routes/accounts.js";
 import { quizRouter } from "./routes/quiz.js";
-import { handwrittenRouter } from "./routes/handwritten.js";
 import { studyRouter } from "./routes/study.js";
 import { pilotRouter } from "./routes/pilot.js";
 
@@ -20,10 +19,7 @@ import { pilotRouter } from "./routes/pilot.js";
 const app = express();
 
 app.disable("x-powered-by");
-// A photographed handwritten page needs a bigger body; everything else stays small.
-const smallJson = express.json({ limit: "1mb" });
-const photoJson = express.json({ limit: "4mb" });
-app.use((req, res, next) => (req.path.endsWith("/handwritten/photo") ? photoJson : smallJson)(req, res, next));
+app.use(express.json({ limit: "1mb" }));
 
 app.use("/api", healthRouter);
 app.use("/api/cron", cronRouter);
@@ -34,7 +30,6 @@ app.use("/api", vivaRouter);
 app.use("/api", teacherRouter);
 app.use("/api", accountsRouter);
 app.use("/api", quizRouter);
-app.use("/api", handwrittenRouter);
 app.use("/api", studyRouter);
 app.use("/api", pilotRouter);
 

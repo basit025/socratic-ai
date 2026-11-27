@@ -13,7 +13,7 @@ type SubmissionStatus = "in_progress" | "submitted" | "viva_in_progress" | "grad
 interface AssignmentRow {
   id: string;
   title: string;
-  type: "code" | "written" | "handwritten" | "quiz";
+  type: "code" | "written" | "quiz";
   status: "draft" | "published" | "closed";
   due_at: string | null;
   marks: number;

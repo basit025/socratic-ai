@@ -17,7 +17,6 @@ interface ReportData {
   submission: { id: string; status: string; code: string; startedAt: string; submittedAt: string | null; testsPassed: number | null; testsTotal: number | null; vivaScore: number | null; suggestedGrade: number | null; finalGrade: number | null; decision: "looks_fine" | "talk_to_student" | null; comment: string | null };
   student: { id: string; name: string; initials: string };
   assignment: { id: string; title: string; type: string; marks: number; starterCode: string; courseCode: string; vivaWeight: number; variant: string | null };
-  handwritten: { codeWord: string | null; codeWordFound: boolean | null; legibility: string | null; hasPhoto: boolean } | null;
   quiz: { startedAt: string; finishedAt: string | null; correct: number; total: number; questions: { index: number; kind: "mcq" | "short"; prompt: string; answer: string | null; correctAnswer: string | null; correct: boolean; seconds: number | null }[] } | null;
   events: ReplayEvent[];
   flags: { id: string; rule: string; severity: "low" | "medium" | "high"; message: string; fromSeq: number; toSeq: number; status: "open" | "dismissed" | "followed_up" }[];
@@ -97,36 +96,6 @@ function QuizAnswers({ d }: { d: ReportData }) {
   );
 }
 
-/** A handwritten page: the photo, the one-time code word check, and what the AI read. */
-function HandwrittenPageCard({ d }: { d: ReportData }) {
-  const h = d.handwritten;
-  return (
-    <Card className="p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold">The handwritten page</h3>
-        {h?.codeWord && (
-          <Chip tone={h.codeWordFound ? "done" : "attention"}>
-            Code word {h.codeWord}: {h.codeWordFound ? "found on the page" : h.codeWordFound === false ? "not found" : "not checked yet"}
-          </Chip>
-        )}
-      </div>
-      {!h?.hasPhoto ? (
-        <p className="mt-2 text-ink-3">The student hasn't photographed their page yet.</p>
-      ) : (
-        <div className="mt-3 grid gap-4 md:grid-cols-2">
-          <a href={`/api/teacher/submissions/${d.submission.id}/photo`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-line bg-canvas">
-            <img src={`/api/teacher/submissions/${d.submission.id}/photo`} alt={`${d.student.name}'s handwritten page`} className="max-h-[480px] w-full object-contain" loading="lazy" />
-          </a>
-          <div>
-            <p className="text-sm font-semibold text-ink-2">What the AI read (check it against the photo)</p>
-            <pre className="mt-1.5 max-h-[440px] overflow-auto rounded-lg border border-line bg-canvas p-3 font-sans text-[14.5px] whitespace-pre-wrap text-ink">{d.submission.code}</pre>
-          </div>
-        </div>
-      )}
-    </Card>
-  );
-}
-
 function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
   const data = useApi<ReportData>(`/teacher/submissions/${id}`);
   const [jump, setJump] = useState<{ seq: number; nonce: number } | null>(null);
@@ -157,7 +126,6 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
   const f = facts(d);
   const grade = d.submission.finalGrade ?? d.submission.suggestedGrade;
   const isQuiz = d.assignment.type === "quiz";
-  const isHandwritten = d.assignment.type === "handwritten";
 
   const confirmMark = async () => {
     const n = Number(mark);
@@ -305,18 +273,17 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
       </Card>
 
       {isQuiz && <QuizAnswers d={d} />}
-      {isHandwritten && <HandwrittenPageCard d={d} />}
 
       {!isQuiz && (<>
       {/* How it was made */}
-      {!isHandwritten && <Card className="p-5">
+      <Card className="p-5">
         <h3 className="mb-3 font-semibold">How the work was made</h3>
         <Replay starterCode={d.assignment.starterCode} events={d.events} jumpToSeq={jump} highlightSeqs={highlight} compact={compact} />
         <p className="mt-2 text-xs text-ink-3">
           {f.pastes ? `${f.pastes} blocked paste attempt${f.pastes === 1 ? "" : "s"} · ` : ""}
           {f.hints} message{f.hints === 1 ? "" : "s"} to Ustaad · Times are measured from the start of the session.
         </p>
-      </Card>}
+      </Card>
 
       {/* The viva */}
       <Card className="p-5">
@@ -363,7 +330,7 @@ function ReportColumn({ id, compact }: { id: string; compact?: boolean }) {
 
       </>)}
 
-      {!compact && !isQuiz && !isHandwritten && (
+      {!compact && !isQuiz && (
         <div className="grid gap-5 lg:grid-cols-2">
           <Card className="p-5">
             <h3 className="font-semibold">Hidden tests</h3>

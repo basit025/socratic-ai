@@ -24,7 +24,6 @@ import { WrittenEditor } from "../workspace/WrittenEditor";
 import { isOwnCode, journeyStates } from "../workspace/journey";
 import { NO_CHECKS, loadChecks, mergeChecks, missingCheck, missingHint, saveChecks, type ExplainChecks } from "../workspace/explainChecks";
 import { QuizPlayer } from "./Quiz";
-import { HandwrittenPage } from "./Handwritten";
 import { Markdown } from "../components/Markdown";
 import type { Change } from "../../../shared/events";
 
@@ -96,9 +95,6 @@ export function Workspace() {
   if (data.status === "ready" && data.data.assignment.type === "quiz") {
     const { assignment: a, submission: s } = data.data;
     return <QuizPlayer assignment={a} submissionId={s?.id ?? null} nextSeq={s?.nextSeq ?? 1} />;
-  }
-  if (data.status === "ready" && data.data.assignment.type === "handwritten") {
-    return <HandwrittenPage assignment={data.data.assignment} submissionId={data.data.submission?.id ?? null} />;
   }
   return <CodeWorkspace data={data} />;
 }
@@ -569,6 +565,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
               {sub && (
                 <div className="lg:sticky lg:top-32">
                   <UstaadPanel
+                    workNoun={isWritten ? "answer" : "code"}
                     studentName={me.name.split(" ")[0] ?? me.name}
                     messages={messages}
                     sending={sending}

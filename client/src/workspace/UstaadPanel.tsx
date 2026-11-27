@@ -23,12 +23,14 @@ interface Props {
   disabledReason?: string;
   pasteBlocked: boolean;
   starters: string[];
+  /** What the student is producing, for Ustaad's greeting: "code" or "answer". */
+  workNoun?: string;
   onSend: (text: string) => void;
   onBlockedPaste: () => void;
   inputRef: (el: HTMLTextAreaElement | null) => void;
 }
 
-export function UstaadPanel({ studentName, messages, sending, error, disabled, disabledReason, pasteBlocked, starters, onSend, onBlockedPaste, inputRef }: Props) {
+export function UstaadPanel({ studentName, messages, sending, error, disabled, disabledReason, pasteBlocked, starters, workNoun = "code", onSend, onBlockedPaste, inputRef }: Props) {
   const [text, setText] = useState("");
   const endRef = useRef<HTMLDivElement | null>(null);
 
@@ -62,7 +64,7 @@ export function UstaadPanel({ studentName, messages, sending, error, disabled, d
         {messages.length === 0 && (
           <div className="space-y-3">
             <div className="rounded-xl border border-line bg-canvas p-3.5 text-[15px] text-ink-2">
-              Assalam-o-Alaikum {studentName}! I'm Ustaad. I'll never write your code for you, but I'll help you think it through. Ask me anything, in
+              Assalam-o-Alaikum {studentName}! I'm Ustaad. I'll never write your {workNoun} for you, but I'll help you think it through. Ask me anything, in
               English or Roman Urdu.
             </div>
             {!disabled && (

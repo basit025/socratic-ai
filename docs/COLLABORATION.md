@@ -23,7 +23,7 @@ Each area has **one owner**. The owner can change anything in their area without
 | Area | Owner | Main files |
 | --- | --- | --- |
 | Instructor side: teacher home, teacher course tabs, assignment builder, gradebook, submissions list, integrity report | **Hammad** | `client/src/pages/TeacherHome.tsx`, `Builder.tsx`, `Gradebook.tsx`, `TeacherAssignment.tsx`, `Report.tsx`, `server/routes/teacher.ts` |
-| Student side: home, course pages, lectures, calendar, marks, workspace, quiz, viva, handwritten | **Basit** | `StudentHome.tsx`, `CoursePage.tsx` (student parts), `LectureView.tsx`, `Workspace.tsx`, `Quiz.tsx`, `Viva.tsx`, `Handwritten.tsx`, `server/routes/home.ts`, `workspace.ts`, `quiz.ts`, `viva.ts`, `handwritten.ts` |
+| Student side: home, course pages, lectures, calendar, marks, workspace, quiz, viva | **Basit** | `StudentHome.tsx`, `CoursePage.tsx` (student parts), `LectureView.tsx`, `Workspace.tsx`, `Quiz.tsx`, `Viva.tsx`, `server/routes/home.ts`, `workspace.ts`, `quiz.ts`, `viva.ts` |
 | AI (Ustaad, viva, study tutor) | **Basit** | `server/llm.ts`, `server/ustaad.ts`, `server/study.ts`, `server/viva.ts`, `server/routes/study.ts` |
 | Landing page, sign-in, seed data and course content | **Basit** | `Landing.tsx`, `SignIn.tsx`, `server/seed/**` |
 

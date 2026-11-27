@@ -15,8 +15,6 @@ import type { VariantSpec } from "../lib/variants.js";
 import type { VivaQuestion } from "../viva.js";
 import type { ProcessEvent } from "../../shared/events.js";
 import { markQuiz, parseQuizState, type QuizQuestionRow } from "../../shared/quiz.js";
-import { parseMeta } from "./handwritten.js";
-import { getImage } from "../lib/storage.js";
 
 export const teacherRouter = Router();
 
@@ -231,7 +229,6 @@ teacherRouter.get("/teacher/submissions/:id", requireSession("teacher"), async (
       },
       student: { id: s.student.id, name: s.student.full_name, initials: s.student.initials },
       quiz,
-      handwritten: s.assignment.type === "handwritten" ? { ...(parseMeta(s.last_output) ?? { codeWord: null, codeWordFound: null, legibility: null }), hasPhoto: Boolean(s.image_path) } : null,
       assignment: { id: s.assignment.id, title: s.assignment.title, type: s.assignment.type, marks: s.assignment.marks, starterCode: s.assignment.starter_code, courseCode: s.assignment.course.code, vivaWeight: s.assignment.rules?.viva_weight ?? 50, variant: option },
       // Times: client time drives the replay; server time is the tamper-proof record.
       events: events.map((e) => ({ seq: e.seq, t: Date.parse(e.client_time), serverTime: e.server_time, type: e.type, payload: e.payload })),
@@ -308,7 +305,7 @@ teacherRouter.get("/teacher/builder", requireSession("teacher"), async (req, res
 const Expected = z.union([z.string().max(2000), z.record(z.string(), z.string().max(2000))]);
 const CreateBody = z.object({
   courseId: z.string().regex(/^[0-9a-f-]{36}$/i),
-  type: z.enum(["code", "written", "handwritten", "quiz"]).default("code"),
+  type: z.enum(["code", "written", "quiz"]).default("code"),
   quiz: z
     .object({
       draw: z.number().int().min(1).max(50),
@@ -507,19 +504,6 @@ teacherRouter.post("/teacher/courses/:id/announcements", requireSession("teacher
     const postedAt = new Date().toISOString();
     await insert("announcements", { sandbox_id: sid, course_id: course.id, title: body.data.title, body: body.data.body, posted_at: postedAt });
     res.status(201).json({ title: body.data.title, body: body.data.body, postedAt });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ---------------------------------------------------------------- a handwritten page's photo (through the API, never a public URL)
-teacherRouter.get("/teacher/submissions/:id/photo", requireSession("teacher"), async (req, res, next) => {
-  try {
-    const { sid, pid } = req.session!;
-    const s = await teacherSubmission(sid, pid, String(req.params.id));
-    const img = s.image_path ? await getImage(s.image_path) : null;
-    if (!img) throw notFound("That photo");
-    res.set("Content-Type", img.contentType).set("Cache-Control", "private, max-age=300").send(Buffer.from(img.bytes));
   } catch (err) {
     next(err);
   }

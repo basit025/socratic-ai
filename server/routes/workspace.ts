@@ -23,7 +23,7 @@ type Workflow = "run_first" | "explain_first";
 interface AssignmentForStudent {
   id: string;
   title: string;
-  type: "code" | "written" | "handwritten" | "quiz";
+  type: "code" | "written" | "quiz";
   language: string | null;
   starter_code: string;
   instructions_md: string;

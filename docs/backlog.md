@@ -230,6 +230,21 @@
 - **Status:** Done, except the visual check of criterion 3, which needs a real camera (Hammad's screen).
 - **Verifier output:** both live requests from the page on localhost returned 422 with the expected code and left the submission `in_progress`. `npm run lint` clean.
 
+### [x] T19 Every task is solved live in the platform (handwritten work removed)
+- **Decision (Hammad, 2026-11-28):** handwritten work is removed. A photo of paper can be prepared anywhere, by anyone, so it can't show the work was done here. Only tasks a student (or a judge) can solve live on the platform stay: coding labs, written answers typed in the editor, timed quizzes. Supersedes T18.
+- **Criteria and checks:**
+  1. No seeded assignment needs an upload, photo, file or screenshot. *Check: a script over `assignments` in `server/seed/content.ts` counts types and searches instructions for upload/attach/photo/screenshot/camera/on paper/pdf/scan/handwrit.*
+  2. Teachers can't create handwritten work. *Check: the builder offers Coding lab, Written answer, Timed quiz only; the API's `type` enum has no "handwritten".*
+  3. No screen mentions handwriting or a camera. *Check: `grep -rni "handwrit" client/src` returns nothing; Chrome, student home.*
+  4. The two handwritten tasks' content stays as typed work. *Check: Chrome, "Apriori, Step by Step" opens the written-answer workspace with paste off and a viva.*
+- **Files touched:** removed `client/src/pages/Handwritten.tsx`, `server/routes/handwritten.ts`, `server/routes/handwritten.test.ts`, `server/lib/storage.ts`; edited `server/seed/courses/{kit,dataMining,dsa}.ts`, `server/seed/content.ts`, `client/src/pages/{Builder,Workspace,Report,CoursePage,Landing}.tsx`, `client/src/lib/student.ts`, `client/src/workspace/UstaadPanel.tsx` (greeting says "answer" on written tasks), `server/app.ts` (photo route and 4 MB body limit gone), `server/routes/{teacher,viva,home,workspace}.ts`, `README.md` (also: unit-test count corrected from 64 to 113), `CLAUDE.md`, `docs/COLLABORATION.md`. The database column `image_path`, the `handwritten` storage bucket and the applied migration stay (unused; applied migrations are never edited).
+- **Status:** Done on preview. Production needs `npm run seed -- --production` after the push.
+- **Verifier output:**
+  - Criterion 1: 64 assignments = 38 coding labs, 16 written, 10 quizzes; the only search hit was "scan" in the compiler lab (lexical scanning).
+  - Criterion 3: `grep -rni "handwrit" client/src` → nothing. Chrome, fresh sample: student home has no "handwritten"; "Apriori, Step by Step" listed as "Written · CS-341 Data Mining".
+  - Criterion 4: Chrome: the task shows the basket table, an answer box, chips "Paste is off" and "Viva: 3 questions · 90 s each", Ustaad on the side; no camera or code word.
+  - `npm run lint` clean; `npm test` 20 files, 113 tests passed; `npm run seed` (preview): "Seeded preview in 24.8 s (… 93 past submissions)".
+
 ### [x] T11 `npm install` works on Windows
 - **Goal:** A teammate on Windows can run `npm install` without errors.
 - **Criteria and checks:**

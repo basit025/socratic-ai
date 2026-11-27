@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
-import { ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, ChevronDown, ClipboardX, Eye, FlaskConical, Loader2, MessageCircleQuestion, Play, Plus, Shuffle, Sparkles, Timer, Trash2, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, ClipboardX, Eye, FlaskConical, Loader2, MessageCircleQuestion, Play, Plus, Shuffle, Sparkles, Timer, Trash2, XCircle } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { Button, Card, Chip, ErrorState, Segmented, Skeleton, Toggle, cx } from "../components/ui";
 import { api, ApiError } from "../lib/api";
@@ -83,7 +83,7 @@ export function Builder() {
   const navigate = useNavigate();
   const pythonStatus = useRunnerStatus();
   const [step, setStep] = useState<Step>(1);
-  const [type, setType] = useState<"code" | "written" | "handwritten" | "quiz">("code");
+  const [type, setType] = useState<"code" | "written" | "quiz">("code");
   const [quizQs, setQuizQs] = useState<QuizDraftQuestion[]>([blankQuestion(), blankQuestion()]);
   const [quizSettings, setQuizSettings] = useState({ draw: 5, timeLimitMinutes: 6, fullscreen: true });
   const [language, setLanguage] = useState<"python" | "javascript">("python");
@@ -191,7 +191,7 @@ export function Builder() {
           marks,
           dueAt: new Date(due).toISOString(),
           status,
-          rules: type === "quiz" ? { ...rules, workflow: "run_first", vivaQuestions: 0, vivaWeight: 0, variantsOn: false } : type === "handwritten" ? { ...rules, pasteBlocked: false, variantsOn: false } : type === "written" ? { ...rules, variantsOn: false } : rules,
+          rules: type === "quiz" ? { ...rules, workflow: "run_first", vivaQuestions: 0, vivaWeight: 0, variantsOn: false } : type === "written" ? { ...rules, variantsOn: false } : rules,
         },
       });
       navigate(`/teacher/assignments/${r.id}?created=${status}`);
@@ -274,7 +274,7 @@ export function Builder() {
                 {templateKey === "scratch" && (
                   <div className="flex flex-wrap items-center gap-3 lg:col-span-2">
                     <span className="text-sm font-semibold">Kind</span>
-                    <Segmented label="Kind of assignment" value={type} onChange={(v) => { setType(v); setChecked({ status: "idle" }); }} options={[{ value: "code", label: "Coding lab" }, { value: "written", label: "Written answer" }, { value: "handwritten", label: "Handwritten" }, { value: "quiz", label: "Timed quiz" }]} />
+                    <Segmented label="Kind of assignment" value={type} onChange={(v) => { setType(v); setChecked({ status: "idle" }); }} options={[{ value: "code", label: "Coding lab" }, { value: "written", label: "Written answer" }, { value: "quiz", label: "Timed quiz" }]} />
                     {type === "code" && (
                       <Segmented label="Language" value={language} onChange={(v) => { setLanguage(v); setChecked({ status: "idle" }); }} options={[{ value: "python", label: "Python" }, { value: "javascript", label: "JavaScript" }]} />
                     )}
@@ -323,12 +323,6 @@ export function Builder() {
               </Card>
 
               {type === "quiz" && <QuizEditor questions={quizQs} onChange={setQuizQs} />}
-              {type === "handwritten" && (
-                <Card className="flex gap-3 p-5 text-[15px] text-ink-2">
-                  <Camera className="mt-0.5 size-5 shrink-0 text-action" aria-hidden />
-                  <p>Students solve this <strong className="text-ink">on paper</strong>. Each gets a one-time code word to write at the top, photographs the page inside Socratic AI (no gallery uploads), and Ustaad reads it and runs a viva on what they wrote. You see the photo, what was read, and the code-word check.</p>
-                </Card>
-              )}
               {type === "code" && (
               <Card className="p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -399,14 +393,14 @@ export function Builder() {
               </RuleCard>
             </>
           )}
-          {type !== "handwritten" && <RuleCard icon={ClipboardX} title="Block paste" sentence="Students must type their answer. Paste attempts are blocked, explained to the student, and shown in your report.">
+          <RuleCard icon={ClipboardX} title="Block paste" sentence="Students must type their answer. Paste attempts are blocked, explained to the student, and shown in your report.">
             <Toggle checked={rules.pasteBlocked} onChange={(v) => setRules({ ...rules, pasteBlocked: v })} label="Block paste" />
-          </RuleCard>}
+          </RuleCard>
           {type === "code" && <RuleCard icon={Play} title="Order of work" sentence={rules.workflow === "run_first" ? "Run first: students run their code, then explain to Ustaad why it gives that output." : "Explain first: students explain their plan to Ustaad before Run unlocks."}>
             <Segmented label="Order of work" value={rules.workflow} onChange={(v) => setRules({ ...rules, workflow: v })} options={[{ value: "run_first", label: "Run first" }, { value: "explain_first", label: "Explain first" }]} />
           </RuleCard>}
           {type !== "quiz" && (<>
-          <RuleCard icon={MessageCircleQuestion} title={`Viva on their own ${type === "code" ? "code" : type === "handwritten" ? "page" : "answer"}`} sentence={rules.vivaQuestions ? `After submitting, Ustaad asks ${rules.vivaQuestions} timed questions about the student's own ${type === "written" ? "answer" : type === "handwritten" ? "handwritten page" : "code"}, ${rules.vivaSecondsPerQ} seconds each.` : "No viva: marks come from the hidden tests only (not recommended)."}>
+          <RuleCard icon={MessageCircleQuestion} title={`Viva on their own ${type === "code" ? "code" : "answer"}`} sentence={rules.vivaQuestions ? `After submitting, Ustaad asks ${rules.vivaQuestions} timed questions about the student's own ${type === "written" ? "answer" : "code"}, ${rules.vivaSecondsPerQ} seconds each.` : "No viva: marks come from the hidden tests only (not recommended)."}>
             <div className="flex flex-wrap items-center gap-2">
               <Segmented label="Viva questions" value={rules.vivaQuestions} onChange={(v) => setRules({ ...rules, vivaQuestions: v })} options={[{ value: 0, label: "Off" }, { value: 3, label: "3 Qs" }, { value: 4, label: "4 Qs" }, { value: 5, label: "5 Qs" }]} />
               {rules.vivaQuestions > 0 && <Segmented label="Seconds per question" value={rules.vivaSecondsPerQ} onChange={(v) => setRules({ ...rules, vivaSecondsPerQ: v })} options={[{ value: 60, label: "60 s" }, { value: 90, label: "90 s" }, { value: 120, label: "120 s" }]} />}
@@ -456,7 +450,6 @@ export function Builder() {
               {rules.pasteBlocked && <li><Chip tone="locked" icon={ClipboardX}>Paste is off</Chip></li>}
               {type === "quiz" && <li><Chip tone="action" icon={Timer}>{Math.min(quizSettings.draw, quizQs.length)} questions · {quizSettings.timeLimitMinutes} minutes</Chip></li>}
               {type === "quiz" && quizSettings.fullscreen && <li><Chip tone="locked" icon={Eye}>Fullscreen</Chip></li>}
-              {type === "handwritten" && <li><Chip tone="locked" icon={Camera}>Handwritten, photo in the app</Chip></li>}
               {type !== "quiz" && rules.vivaQuestions > 0 && <li><Chip tone="action" icon={Timer}>Viva: {rules.vivaQuestions} questions · {rules.vivaSecondsPerQ} s each</Chip></li>}
               {rules.variantsOn && <li><Chip tone="locked" icon={Shuffle}>Your own version of the question</Chip></li>}
             </ul>
@@ -468,7 +461,7 @@ export function Builder() {
                 </div>
               </div>
               <div>
-                <h3 className="mb-2 font-semibold">{type === "written" ? "Their answer box" : type === "quiz" ? "Question 1, as a student sees it" : type === "handwritten" ? "What they do next" : "Starter code"}</h3>
+                <h3 className="mb-2 font-semibold">{type === "written" ? "Their answer box" : type === "quiz" ? "Question 1, as a student sees it" : "Starter code"}</h3>
                 {type === "quiz" ? (
                   <div className="rounded-lg border border-line bg-canvas p-4">
                     <p className="font-semibold text-ink">{quizQs[0]?.prompt || "Your first question"}</p>
@@ -479,12 +472,6 @@ export function Builder() {
                     )}
                     <p className="mt-3 text-xs text-ink-3">Options are shuffled for each student.</p>
                   </div>
-                ) : type === "handwritten" ? (
-                  <div className="rounded-lg border border-line bg-canvas p-4 text-sm text-ink-2">
-                    <p className="text-xs font-semibold text-ink-3">Their one-time code word, for example</p>
-                    <p className="font-mono text-2xl font-bold text-action">KITE-47</p>
-                    <p className="mt-2">They write it at the top of their page, then press <strong>Open camera to photograph my page</strong>.</p>
-                  </div>
                 ) : type === "written" ? (
                   <div className="min-h-40 rounded-lg border border-line bg-canvas p-3 text-sm text-ink-3">{starterCode || "Students type their answer here (paste is off)."}<span className="mt-2 block text-right">0 words</span></div>
                 ) : (
@@ -492,7 +479,7 @@ export function Builder() {
                 )}
               </div>
             </div>
-            <p className="mt-5 flex items-center gap-2 text-sm text-ink-3"><Sparkles className="size-4" aria-hidden /> {type === "quiz" ? "Students see one question at a time, with a timer, and their result as soon as they hand in." : type === "handwritten" ? "Students solve on paper, photograph the page here, then answer Ustaad's viva on what they wrote." : <>Students follow the journey Understand → Write → {type === "written" ? "Explain" : rules.workflow === "run_first" ? "Run → Explain" : "Explain → Run"} → Submit + viva, with Ustaad's hints on the side.</>}</p>
+            <p className="mt-5 flex items-center gap-2 text-sm text-ink-3"><Sparkles className="size-4" aria-hidden /> {type === "quiz" ? "Students see one question at a time, with a timer, and their result as soon as they hand in." : <>Students follow the journey Understand → Write → {type === "written" ? "Explain" : rules.workflow === "run_first" ? "Run → Explain" : "Explain → Run"} → Submit + viva, with Ustaad's hints on the side.</>}</p>
           </Card>
           {error && <p role="alert" className="text-danger">{error}</p>}
           <div className="flex flex-wrap justify-between gap-3">

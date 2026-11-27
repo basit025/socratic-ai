@@ -1,5 +1,5 @@
 /** Shared student-side types and the classroom words used for every assignment status. */
-import { Camera, Code2, ListChecks, PenLine, type LucideIcon } from "lucide-react";
+import { Code2, ListChecks, PenLine, type LucideIcon } from "lucide-react";
 import type { ChipTone } from "../components/ui";
 
 export type SubmissionStatus = "in_progress" | "submitted" | "viva_in_progress" | "graded";
@@ -72,7 +72,6 @@ export const needsWork = (a: { open: boolean; submission: { status: SubmissionSt
 export function kindOf(type: string): { icon: LucideIcon; label: string; plural: string } {
   if (type === "quiz") return { icon: ListChecks, label: "Quiz", plural: "Quizzes" };
   if (type === "written") return { icon: PenLine, label: "Written", plural: "Written tasks" };
-  if (type === "handwritten") return { icon: Camera, label: "Handwritten", plural: "Handwritten tasks" };
   return { icon: Code2, label: "Lab", plural: "Labs" };
 }
 

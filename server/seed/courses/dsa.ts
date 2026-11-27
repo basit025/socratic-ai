@@ -3,7 +3,7 @@
  * lecture slides. The course's earlier labs (Second Highest Score, Balanced Brackets, Bank Queue
  * Waiting Times, ...) live in content.ts because the demo class's past submissions use them.
  */
-import { closed, draft, handwritten, lab, open, quiz, weeks, written, type CoursePack } from "./kit.js";
+import { closed, draft, lab, open, quiz, weeks, written, type CoursePack } from "./kit.js";
 
 const C = "cs201";
 
@@ -199,9 +199,9 @@ Keep the **load factor** (items / slots) low, and resize when it grows.
         { name: "Duplicates are ignored", call: "build([5, 5, 3, 5]).inorder()" },
       ],
     }),
-    handwritten({
-      key: "dsa-trace", course: C, week: 6, title: "Trace BST Insertions by Hand", ...open(5, 1), marks: 10,
-      instructions: "Work this out **on paper**, in your own handwriting, then photograph the page in Socratic AI.\n\n1. Insert these roll numbers, in order, into an empty binary search tree and **draw the tree after every insertion**: `45, 20, 70, 10, 30, 60, 80, 25`.\n2. Write the **preorder**, **inorder** and **postorder** traversals of the final tree.\n3. What is the tree's **height** (in edges)?\n4. Delete `20` (replace it with its inorder successor) and draw the result.\n\nWrite your one-time code word at the top of the page.",
+    written({
+      key: "dsa-trace", course: C, week: 6, title: "Trace BST Insertions", ...open(5, 1), marks: 10,
+      instructions: "Trace this yourself and **type your working** in the answer box (paste is off).\n\n1. Insert these roll numbers, in order, into an empty binary search tree: `45, 20, 70, 10, 30, 60, 80, 25`. After each insertion, write where the new key went (for example: \"25: left of 45, right of 20, left of 30\").\n2. Write the final tree level by level (root first, then each level left to right).\n3. Write the **preorder**, **inorder** and **postorder** traversals of the final tree.\n4. What is the tree's **height** (in edges)?\n5. Delete `20` (replace it with its inorder successor) and write the new level-by-level tree.\n\nUstaad's viva will give you a new key to insert and ask where it goes.",
     }),
     lab({
       key: "dsa-bfs", course: C, week: 8, language: "python", title: "Fewest Stops on the Metro (BFS)", ...draft(2), marks: 10,

@@ -1,7 +1,7 @@
 /**
  * A course's own space, the same shape for every course:
  *   Overview (announcements, what's coming up, where you are) · Lectures (slides and notes)
- *   Assignments (labs, written and handwritten work) · Quizzes · Marks (students) / Gradebook (teachers)
+ *   Assignments (labs and written work) · Quizzes · Marks (students) / Gradebook (teachers)
  * The tab is part of the URL, so Back and shared links land on the same place.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -67,7 +67,7 @@ function rulesLine(a: Item): string {
   if (a.type === "quiz")
     return [a.questions ? `${a.questions} questions` : null, a.timeLimitMinutes ? `${a.timeLimitMinutes} min` : null, a.fullscreen ? "full screen" : null].filter(Boolean).join(" · ");
   const lang = a.type === "code" ? (a.language === "javascript" ? "JavaScript lab" : a.language === "html" ? "HTML lab" : "Python lab") : kindOf(a.type).label;
-  return [lang, a.type !== "handwritten" ? "Ustaad hints" : null, a.vivaQuestions ? `viva: ${a.vivaQuestions} questions` : null, a.pasteBlocked ? "paste off" : null].filter(Boolean).join(" · ");
+  return [lang, "Ustaad hints", a.vivaQuestions ? `viva: ${a.vivaQuestions} questions` : null, a.pasteBlocked ? "paste off" : null].filter(Boolean).join(" · ");
 }
 
 // ---------------------------------------------------------------- lecture "viewed" marks (this browser only)
@@ -489,7 +489,7 @@ export function CoursePage() {
                     </div>
                   )}
                   {work.length === 0 ? (
-                    <EmptyState icon={ClipboardList} title="No assignments yet" body={isStudent ? "Labs, written and handwritten work appear here when your teacher sets them." : "Create a lab, written or handwritten assignment for this course."} />
+                    <EmptyState icon={ClipboardList} title="No assignments yet" body={isStudent ? "Labs and written work appear here when your teacher sets them." : "Create a lab or written assignment for this course."} />
                   ) : (
                     <div className="space-y-4">
                       {groups.map(([t, xs]) => (

@@ -155,7 +155,7 @@ const OLD_WAY = ["WhatsApp groups", "Emailed PDFs", "Google Forms quizzes", "Exc
 const FEATURES = [
   { icon: Presentation, title: "Lectures as slides", body: "Each week's material as slides and notes, with the work set for it." },
   { icon: Code2, title: "Coding labs", body: "Python, JavaScript and HTML run in the browser. Nothing to install." },
-  { icon: PenLine, title: "Written and handwritten", body: "Typed answers, or a photo of a handwritten page that Ustaad reads." },
+  { icon: PenLine, title: "Written answers", body: "Short answers and essays typed in the platform, with paste off and a live word count." },
   { icon: ListChecks, title: "Timed quizzes", body: "One question at a time, a different paper for every student." },
   { icon: MessageCircleQuestion, title: "Ustaad, the AI tutor", body: "Explains lectures, gives hints in labs, never writes the answer." },
   { icon: Mic, title: "Viva on every submission", body: "Short questions about the student's own work, scored for the teacher." },
@@ -242,7 +242,7 @@ const FAQ = [
   { q: "Does Socratic AI detect AI-written work?", a: "No, on purpose. AI-text detectors are unreliable and punish honest students. Instead, the platform records how the work was made and Ustaad asks the student about it in a short viva. Understanding is what earns the marks." },
   { q: "Will Ustaad just give students the answers?", a: "No. In graded work Ustaad gives hints and asks questions; it never writes the student's code or answer. On lectures it explains concepts freely, because that's studying, not marking. During a timed quiz it's switched off." },
   { q: "Is there a webcam or microphone?", a: "No. Nothing watches the student. The teacher sees the work itself: edits, runs, time away from the page and the viva answers." },
-  { q: "Does it work on phones?", a: "Yes. Students can read lectures, take quizzes, chat with Ustaad and photograph handwritten work on a phone. Coding labs work best on a laptop or lab computer, with nothing to install." },
+  { q: "Does it work on phones?", a: "Yes. Students can read lectures, take quizzes, write answers and chat with Ustaad on a phone. Coding labs work best on a laptop or lab computer, with nothing to install." },
   { q: "Who decides the final mark?", a: "Always the teacher. The platform suggests a mark from hidden tests and the viva, and flags things worth a look in plain words. Flags are evidence, never verdicts." },
   { q: "What does it cost?", a: "A pilot is free for one semester. After that, pricing is per student per semester, set with each department. Tell us about your institution and we'll send a quote." },
   { q: "Can we try it right now?", a: "Yes. \"Try as student\" or \"Try as teacher\" opens a sample institution in a couple of seconds, with no sign-up. Its people and work are fictional; everything else is the real platform." },
