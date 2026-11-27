@@ -140,7 +140,7 @@
 - **Goal:** No Urdu-script labels, no "Demo data" badge, no institution line, no hackathon footer. Every label on screen has a job.
 - **Why:** Hammad, 2026-11-28. The Urdu labels doubled every button without adding meaning; the badge, the fictional institution name and the hackathon line make the product read as an event entry instead of a platform.
 - **Decision recorded:** Roman Urdu stays as a *language Ustaad understands and replies in* (students type it; it costs nothing). Only the Urdu-script UI labels go. The landing page still says the sample is sample ("Opens your own private workspace with sample courses and classmates"), and the README still discloses the simulated students.
-- **Conflicts with CLAUDE.md:** CLAUDE.md's "Never fabricate" rule asks for a visible "Demo data" badge on seeded content. This task removes the badge on the owner's instruction; CLAUDE.md still needs the team to agree and update that line before merge.
+- **Conflicts with CLAUDE.md:** CLAUDE.md's "Never fabricate" rule asks for a visible label on seeded content. Resolved in T13: Basit's interface replaced the loud "Demo data" badge with a quiet grey "Sample workspace" label, which is kept.
 - **Criteria and checks:**
   1. No Urdu script anywhere in the client, and the Nastaliq font is not loaded. *Check: Chrome, `/[؀-ۿ]/` on the page text of landing, student home, workspace, teacher home and a report; no `link[href*=Nastaliq]`.*
   2. No "Demo data" badge in the top bar. *Check: Chrome, student and teacher pages.*
@@ -153,6 +153,30 @@
   - Chrome on localhost, fresh sandbox: landing, student home, Cricket Over Tracker workspace, teacher home and Bilal Ahmed's report all returned `urdu: false`, `demoData: false`, `pothohar: false`; landing `nastaliqLink: false`; footer "Socratic AI · Strong fundamentals in the age of AI". Buttons read "Run my code", "Create assignment", "Looks fine", "Talk to student" with no second label. No console errors.
   - `npm run lint`: clean. `npm test`: 86 passed. `npm run build`: built.
   - Not run: `npm run smoke:ui` (needs a full end-to-end session; run it on the preview link before merge).
+
+### [x] T13 One platform: Basit's interface with Hammad's logic
+- **Goal:** Merge `main` (Basit's new landing page, Study with Ustaad, pilot requests, paced sample semester, "Sample workspace" label) into this branch, keeping this branch's logic (T02, T04, T07, T08, T09) and the T12 content decisions.
+- **Criteria and checks:**
+  1. No conflict markers; Basit's files win on layout and styling. *Check: `git diff --name-only --diff-filter=U` is empty; read the four resolved files.*
+  2. This branch's logic survives the merge. *Check: grep for `missingCheck`/`submitLock` (Workspace), `planPastSubmissions` (seed), `chat_with_ustaad` (viva), "never flattering" (Ustaad), the viva start message; Chrome: Submit locked until Ustaad's checks.*
+  3. No Urdu script, institution line or hackathon text on the new interface. *Check: Chrome, page-text scan on landing, student home, workspace.*
+  4. Lint, tests and build pass. *Check: the commands.*
+- **Files touched (resolution):** `client/src/components/Shell.tsx`, `client/src/components/ui.tsx`, `client/src/pages/Landing.tsx` (Basit's versions, minus the Urdu labels, the `Ur` component, the institution line and the Urdu word in the Ustaad section, now "Ustaad ("teacher" in Urdu)"), `scripts/smoke-ui.ts` (keeps Basit's "Sample workspace" check and adds the Urdu/hackathon check).
+- **Status:** Done.
+- **Verifier output:**
+  - Conflicts in 4 files, all resolved; merge commit `fc543ff`.
+  - All five logic markers present after the merge.
+  - Chrome on localhost: new landing has no Urdu after the fix, no hackathon text, no Nastaliq font; student home shows "Sample workspace", no "Pothohar"; Cricket Over Tracker after a run: stepper "Explain (you are here) | Submit + viva (locked: Ustaad must check your explanation first)". No console errors.
+  - `npm run lint` clean; `npm test` 19 files, 94 tests passed (Basit's new `content.test.ts` and `study.test.ts` included); `npm run build` built.
+  - Not covered: Study with Ustaad's prompt (`server/study.ts`) didn't get T09's no-flattery and language rules; only the workspace mentor did.
+
+### [ ] T14 Landing screenshots match the current interface
+- **Goal:** The six images in `client/public/screens/` show the current platform.
+- **Why:** They were taken before T04 and T12: the hero shows "Pothohar Institute of Computing" under the logo, and `teacher-submissions.webp` shows the cloned classmates.
+- **Depends on:** T04 criterion 2 (re-seed preview first, or the shots capture the clones again).
+- **Criteria and checks:**
+  1. `scripts/marketing-shots.ts` runs on Windows. *Check: it reads the Chrome path from an environment variable instead of `/usr/bin/google-chrome`; run it on localhost.*
+  2. No image shows an institution name, Urdu script or two identical submission rows. *Check: open each image.*
 
 ### [x] T11 `npm install` works on Windows
 - **Goal:** A teammate on Windows can run `npm install` without errors.

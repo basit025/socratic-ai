@@ -544,7 +544,7 @@ export function Landing() {
             <div>
               <Eyebrow className="!text-[#93c5fd]">Meet Ustaad</Eyebrow>
               <h2 className="mt-4 text-3xl font-bold tracking-tight text-balance sm:text-4xl">An AI tutor that teaches, not one that does the homework.</h2>
-              <p className="mt-4 text-lg text-white/75">Ustaad (استاد, "teacher") helps students wherever they study, in the language they think in. In graded work it asks questions instead of giving answers, and afterwards it checks that the student really understood.</p>
+              <p className="mt-4 text-lg text-white/75">Ustaad ("teacher" in Urdu) helps students wherever they study, in the language they think in. In graded work it asks questions instead of giving answers, and afterwards it checks that the student really understood.</p>
               <ul className="mt-8 grid gap-5 sm:grid-cols-2">
                 {USTAAD.map((u) => (
                   <li key={u.title} className="border-l-2 border-white/15 pl-4">
