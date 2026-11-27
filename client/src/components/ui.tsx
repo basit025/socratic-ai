@@ -54,14 +54,15 @@ export function Chip({ tone, icon, children, className }: { tone: ChipTone; icon
   );
 }
 
-/** Always visible on demo content, so demo data is never mistaken for real results. */
+/** Always visible in a sample workspace, so sample data is never mistaken for real results. */
 export function DemoBadge({ className }: { className?: string }) {
   return (
     <span
-      title="Everything here is fictional demo data: the institution and the people. Classmates' past work comes from simulated students who worked through the real platform (its real viva, scoring and flags)."
-      className={cx("inline-flex items-center rounded-md border border-attention-line bg-attention-soft px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-attention", className)}
+      title="This is a sample institution: its people and work are fictional. Classmates' past work comes from simulated students who used the real platform (its real viva, scoring and flags)."
+      className={cx("inline-flex items-center gap-1.5 rounded-full border border-line bg-canvas px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-ink-3", className)}
     >
-      Demo data
+      <span className="size-1.5 rounded-full bg-ink-3/60" aria-hidden />
+      Sample workspace
     </span>
   );
 }

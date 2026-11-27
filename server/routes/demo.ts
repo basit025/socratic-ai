@@ -28,7 +28,7 @@ demoRouter.post("/demo/start", async (req, res, next) => {
     if (!parsed.success) throw new PublicError(400, "Choose teacher or student.", "bad_role");
     const ip = ipHash(req);
     await enforce("demoStartPerIp", ip);
-    const r = await rpc<SandboxResult>("create_demo_sandbox", { p_role: parsed.data.role, p_ip_hash: ip, p_hours: 24 });
+    const r = await rpc<SandboxResult>("create_demo_sandbox", { p_role: parsed.data.role, p_ip_hash: ip, p_hours: 24 }, { timeoutMs: 20_000 });
     const session: Session = { sid: r.sandbox_id, pid: r.profile_id, role: r.role, name: r.full_name, exp: Date.parse(r.expires_at) };
     setSessionCookie(res, session);
     res.status(201).json({ role: session.role, name: session.name, expiresAt: r.expires_at, home: session.role === "teacher" ? "/teacher" : "/student" });

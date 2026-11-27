@@ -59,7 +59,7 @@ async function main() {
     ok(`"Try as student" → student home in ${Date.now() - t1} ms`);
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "2-student-home-1440");
-    (await s.$eval("body", (b) => b.innerText.includes("Demo data"))) ? ok("Demo data badge visible") : fail("Demo data badge missing");
+    (await s.$eval("body", (b) => b.innerText.includes("Sample workspace"))) ? ok("sample-data label visible") : fail("sample-data label missing");
 
     // Python runner (exposed on window in dev builds only)
     const ready = await s.evaluate(async () => {

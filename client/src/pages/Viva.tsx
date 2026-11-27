@@ -302,7 +302,7 @@ export function Viva() {
         )}
         <Card className="mt-6 flex flex-wrap items-center justify-between gap-3 border-action-line bg-action-soft p-5">
           <p className="max-w-md">
-            <span className="block font-semibold">Trying the demo? See what your teacher sees.</span>
+            <span className="block font-semibold">How does this look to your teacher?</span>
             <span className="text-sm text-ink-2">Your own work, as an integrity report: the replay of how you wrote it, any flags, and this viva.</span>
           </p>
           <Button icon={ArrowRight} onClick={seeTeacherView} loading={switching}>
