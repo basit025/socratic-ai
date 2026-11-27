@@ -20,7 +20,8 @@ async function shot(p: Page, name: string) {
 }
 
 (async () => {
-  const b = await puppeteer.launch({ executablePath: "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox"] });
+  // CHROME_PATH lets it run on Windows or macOS, e.g. "C:\Program Files\Google\Chrome\Application\chrome.exe".
+  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox"] });
   try {
     // ---------------- student
     const s = await b.newPage();

@@ -241,8 +241,12 @@ async function main() {
     for (const [i, chunk] of chunks.entries()) {
       const file = path.join(dir, `seed-${i}.sql`);
       writeFileSync(file, ["begin;", ...chunk, "commit;"].join("\n") + "\n");
-      const r = spawnSync("npx", ["supabase", "db", "query", `--remote=${REFS[target]}`, "--yes", "-f", file], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-      const output = `${r.stdout}\n${r.stderr}`;
+      // On Windows npx is npx.cmd, which Node can only start through a shell: pass one command line
+      // built from our own values (a fixed project ref and a temp file path, quoted).
+      const args = ["supabase", "db", "query", `--remote=${REFS[target]}`, "--yes", "-f"];
+      const opts = { encoding: "utf8" as const, maxBuffer: 64 * 1024 * 1024 };
+      const r = process.platform === "win32" ? spawnSync(`npx ${args.join(" ")} "${file}"`, { ...opts, shell: true }) : spawnSync("npx", [...args, file], opts);
+      const output = `${r.stdout ?? ""}\n${r.stderr ?? ""}${r.error ? `\n${r.error.message}` : ""}`;
       if (r.status !== 0 || /"_tag":\s*"Error"|ERROR:/.test(output)) {
         console.error(`Seeding ${target} failed in part ${i + 1} of ${chunks.length}:\n${output.slice(-1500)}`);
         process.exit(1);

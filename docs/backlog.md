@@ -66,7 +66,7 @@
   6. The report shows each transcript with a play button; audio is never public. *Check: manual; and a request for the audio URL without a session returns 401.*
   7. Copy that says "No microphone" changes to "Microphone during the viva only". *Check: `git grep -n "no microphone"` returns nothing outside docs.*
 
-### [~] T04 No cloned classmates in the demo
+### [x] T04 No cloned classmates in the demo
 - **Goal:** No two students in a demo class show the same work, scores and flags.
 - **Why:** Audit 2.1. Identical rows read as fabricated data.
 - **Area:** Basit (`server/seed/**`).
@@ -74,10 +74,14 @@
   1. Each session file appears under one student only (drop `alsoAs`); students with no session show "Not started". *Check: `npm test` seed test on the real session files.*
   2. The Cricket Over Tracker list has no two rows with the same viva, mark and flag count. *Check: manual on localhost after `npm run seed`.*
 - **Files touched:** `server/seed/seed.ts` (new `planPastSubmissions`, one owner per session, `alsoAs` ignored, session files left untouched; `loadSessions` path fixed for Windows), `server/seed/pastSubmissions.test.ts` (new).
-- **Status:** `[~]` Criterion 1 passes. Criterion 2 has **not been run**: the preview database still holds the old seed, and re-seeding needs `npx supabase login` with access to `socratic-ai-preview`, which this session didn't have. Re-seeding preview resets Basit's preview data too, so tell him first.
+- **Status:** Done on preview (2026-11-28). Production is not re-seeded yet: it still shows the cloned rows until `npm run seed -- --production` runs.
+- **Found while seeding:** `npm run seed` could not start the Supabase CLI on Windows (`spawnSync("npx")` needs a shell for `npx.cmd`) and printed only "undefined". It now runs through a shell on Windows with one command line built from our own values, and reports the real error if it fails. Mac/Linux unchanged.
 - **What changes for viewers:** past assignments drop from about 22 submitted rows to 2 to 6 (one per session); the other classmates show "Not started". The demo student (Ayesha) takes the strong session on each closed assignment in her courses instead of getting a second copy of it.
 - **Found on the way:** `loadSessions()` built its folder from `URL.pathname` (`/D:/…` on Windows), so `npm run seed` on Windows would have loaded zero sessions without an error. Now uses `fileURLToPath`.
-- **Verifier output:** `npx vitest run server/seed/pastSubmissions.test.ts`: 4 passed (93 sessions → 93 submissions, no student twice on one assignment, demo student only on strong sessions of closed assignments).
+- **Verifier output:**
+  - Criterion 1: `npx vitest run server/seed/pastSubmissions.test.ts`: 4 passed (93 sessions → 93 submissions, no student twice on one assignment, demo student only on strong sessions of closed assignments).
+  - Seed: `npm run seed` (preview): "Seeded preview in 22.1 s (4774 statements in 3 parts, 0 real + 93 simulated sessions, 93 past submissions)".
+  - Criterion 2: Chrome on localhost, fresh teacher sandbox. Teacher home: "26 submissions to review" (was 198), Cricket Over Tracker "6/30 handed in" (was 21/30). Cricket Over Tracker list: 6 submitted rows, a script comparing tests, viva, flags and mark found 0 identical rows (Usman and Bilal both 65/100, but 3 flags vs none).
 
 ### [ ] T05 Real recorded sessions first — Owner first
 - **Goal:** At least 6 sessions done by real people (team and willing classmates) on Cricket Over Tracker and one other lab, saved with `npm run session:export`, shown before simulated ones.
@@ -170,13 +174,16 @@
   - `npm run lint` clean; `npm test` 19 files, 94 tests passed (Basit's new `content.test.ts` and `study.test.ts` included); `npm run build` built.
   - Not covered: Study with Ustaad's prompt (`server/study.ts`) didn't get T09's no-flattery and language rules; only the workspace mentor did.
 
-### [ ] T14 Landing screenshots match the current interface
+### [x] T14 Landing screenshots match the current interface
 - **Goal:** The six images in `client/public/screens/` show the current platform.
 - **Why:** They were taken before T04 and T12: the hero shows "Pothohar Institute of Computing" under the logo, and `teacher-submissions.webp` shows the cloned classmates.
 - **Depends on:** T04 criterion 2 (re-seed preview first, or the shots capture the clones again).
 - **Criteria and checks:**
   1. `scripts/marketing-shots.ts` runs on Windows. *Check: it reads the Chrome path from an environment variable instead of `/usr/bin/google-chrome`; run it on localhost.*
   2. No image shows an institution name, Urdu script or two identical submission rows. *Check: open each image.*
+- **Files touched:** `scripts/marketing-shots.ts` (`CHROME_PATH`, default unchanged), `client/public/screens/*.webp` (all six retaken).
+- **Status:** Done.
+- **Verifier output:** `CHROME_PATH=…chrome.exe npx tsx scripts/marketing-shots.ts http://localhost:3001` saved all six. Opened each: student home, lecture with Study with Ustaad (a real tutor reply), course assignments, teacher home, Cricket Over Tracker submissions (6 different rows, the rest "Not started"), Usman Javed's report. None shows an institution name or Urdu; each shows the "Sample workspace" label.
 
 ### [x] T11 `npm install` works on Windows
 - **Goal:** A teammate on Windows can run `npm install` without errors.
