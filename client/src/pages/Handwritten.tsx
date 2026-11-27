@@ -9,7 +9,7 @@ import { Link, useNavigate } from "react-router";
 import { AlertTriangle, ArrowRight, Camera, CheckCircle2, ClipboardX, KeyRound, Loader2, PenLine, RotateCcw, Timer } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { BackToCourse } from "../components/BackToCourse";
-import { Button, Card, Chip, ErrorState, Spinner, Ur, cx } from "../components/ui";
+import { Button, Card, Chip, ErrorState, Spinner, cx } from "../components/ui";
 import { Markdown } from "../components/Markdown";
 import { Appear, Pop } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
@@ -164,7 +164,6 @@ export function HandwrittenPage({ assignment: a, submissionId }: { assignment: H
                   {cameraError && <p role="alert" className="mt-4 flex gap-2 rounded-lg border border-attention-line bg-attention-soft px-3 py-2.5 text-sm text-ink"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-attention" aria-hidden />{cameraError}</p>}
                   <div className="mt-5 flex flex-wrap items-center gap-3">
                     <Button size="lg" icon={Camera} onClick={openCamera} disabled={!a.open || !state.codeWord}>Open camera to photograph my page</Button>
-                    <Ur>صفحے کی تصویر لیں</Ur>
                   </div>
                   <p className="mt-3 text-xs text-ink-3">The camera only takes this one photo when you press the button. Nothing is recorded, and photos from your gallery aren't accepted.</p>
                 </Card>

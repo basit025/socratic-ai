@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router";
 import { ArrowRight, CheckCircle2, ClipboardX, Loader2, Lightbulb, Timer, XCircle } from "lucide-react";
-import { Button, Card, Chip, ErrorState, FullPageLoading, Ur, cx } from "../components/ui";
+import { Button, Card, Chip, ErrorState, FullPageLoading, cx } from "../components/ui";
 import { BackToCourse } from "../components/BackToCourse";
 import { Appear } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
@@ -335,8 +335,13 @@ export function Viva() {
           </ul>
           {error && <p role="alert" className="mt-4 text-danger">{error}</p>}
           <Button size="lg" className="mt-6" loading={phase === "thinking"} onClick={start}>
-            Start viva: {state.total} questions, about {Math.ceil((state.total * state.secondsPerQ) / 60)} min <Ur>وائیوا شروع کریں</Ur>
+            Start viva: {state.total} questions, about {Math.ceil((state.total * state.secondsPerQ) / 60)} min
           </Button>
+          {phase === "thinking" && (
+            <p role="status" className="mt-3 text-sm text-ink-3">
+              Ustaad is writing your first question from your own code. This takes about 10 seconds; your timer starts when the question appears.
+            </p>
+          )}
         </Card>
       </VivaFrame>
     );
@@ -393,7 +398,7 @@ export function Viva() {
       <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-sm text-ink-3">{phase === "thinking" ? "Ustaad is reading your answer…" : "Short answers are fine. Explain the idea."}</p>
         <Button size="lg" loading={phase === "thinking"} onClick={() => void sendAnswer(answer)}>
-          {last ? <>Finish viva <Ur>وائیوا ختم کریں</Ur></> : <>Next question <Ur>اگلا سوال</Ur></>}
+          {last ? "Finish viva" : "Next question"}
         </Button>
       </div>
     </VivaFrame>

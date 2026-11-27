@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, Check, ClipboardX, Code2, EyeOff, Flag, Graduatio
 import { api, ApiError, prewarmApi } from "../lib/api";
 import { preloadRunnerWhenIdle } from "../runner/runner";
 import { Logo } from "../components/Logo";
-import { Ur, cx } from "../components/ui";
+import { cx } from "../components/ui";
 
 interface StartResponse {
   home: string;
@@ -110,7 +110,7 @@ const FEATURES = [
   { icon: MessageCircleQuestion, title: "Ustaad, the AI mentor", body: "Hints in English or Roman Urdu. It never writes the answer." },
   { icon: Table2, title: "Marks and gradebook", body: "Suggested marks, the teacher confirms, students see them." },
   { icon: Megaphone, title: "Announcements", body: "News from every course on the student's home page." },
-  { icon: ShieldCheck, title: "Fair, private, cheap", body: "No webcam, no AI detector. Runs on free tiers." },
+  { icon: ShieldCheck, title: "Fair and private", body: "No webcam, no AI detector. Flags are evidence; the teacher decides." },
 ];
 
 export function Landing() {
@@ -164,8 +164,8 @@ export function Landing() {
         <section aria-label="Try the demo" className="mx-auto mt-9 grid max-w-3xl gap-4 sm:grid-cols-2">
           {(
             [
-              { role: "teacher", icon: Presentation, label: "Try as teacher", ur: "بطور استاد آزمائیں", hint: "Your courses, gradebook, assignments and class reports" },
-              { role: "student", icon: GraduationCap, label: "Try as student", ur: "بطور طالب علم آزمائیں", hint: "A full semester: what's due, labs, quizzes and marks" },
+              { role: "teacher", icon: Presentation, label: "Try as teacher", hint: "Your courses, gradebook, assignments and class reports" },
+              { role: "student", icon: GraduationCap, label: "Try as student", hint: "A full semester: what's due, labs, quizzes and marks" },
             ] as const
           ).map((b) => (
             <button
@@ -180,9 +180,8 @@ export function Landing() {
             >
               <b.icon className="size-9 shrink-0" aria-hidden />
               <span className="flex-1">
-                <span className="flex flex-wrap items-baseline gap-x-2 text-lg font-bold">
+                <span className="block text-lg font-bold">
                   {starting === b.role ? "Setting up your private demo…" : b.label}
-                  {starting !== b.role && <Ur>{b.ur}</Ur>}
                 </span>
                 <span className={cx("block text-sm", b.role === "teacher" ? "text-white/85" : "text-ink-2")}>{b.hint}</span>
               </span>
@@ -190,7 +189,7 @@ export function Landing() {
             </button>
           ))}
         </section>
-        <p className="mt-3 text-center text-sm text-ink-3">Opens your own private copy of a demo institution in about a second. No sign-up.</p>
+        <p className="mt-3 text-center text-sm text-ink-3">Opens your own private workspace with sample courses and classmates in about a second. No sign-up.</p>
         <p className="mt-1 text-center text-sm text-ink-3">
           Using Socratic AI with a real class?{" "}
           <a href="/signin" className="font-semibold text-action hover:underline">Sign in or create an account</a>
@@ -239,7 +238,7 @@ export function Landing() {
       </main>
 
       <footer className="border-t border-line py-6 text-center text-sm text-ink-3">
-        Built for the Capital Youth Expo 2026 Hackathon, Track 1: Education. The demo institution, people and work are fictional.
+        Socratic AI · Strong fundamentals in the age of AI
       </footer>
     </div>
   );

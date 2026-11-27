@@ -54,18 +54,6 @@ export function Chip({ tone, icon, children, className }: { tone: ChipTone; icon
   );
 }
 
-/** Always visible on demo content, so demo data is never mistaken for real results. */
-export function DemoBadge({ className }: { className?: string }) {
-  return (
-    <span
-      title="Everything here is fictional demo data: the institution and the people. Classmates' past work comes from simulated students who worked through the real platform (its real viva, scoring and flags)."
-      className={cx("inline-flex items-center rounded-md border border-attention-line bg-attention-soft px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-attention", className)}
-    >
-      Demo data
-    </span>
-  );
-}
-
 // ---------------------------------------------------------------- layout
 export function Card({ children, className, as: As = "section" }: { children: ReactNode; className?: string; as?: "section" | "div" | "article" }) {
   return <As className={cx("rounded-xl border border-line bg-surface", className)}>{children}</As>;
@@ -165,14 +153,5 @@ export function Segmented<T extends string | number>({ value, options, onChange,
         </button>
       ))}
     </div>
-  );
-}
-
-/** A short Urdu label beside an English action (NFR-09). Decorative for screen readers that read the English. */
-export function Ur({ children, className }: { children: string; className?: string }) {
-  return (
-    <span lang="ur" dir="rtl" className={cx("font-urdu text-[0.8em] leading-loose font-medium opacity-90", className)}>
-      {children}
-    </span>
   );
 }

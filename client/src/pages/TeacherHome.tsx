@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { BookOpen, Check, Copy, Flag, Inbox, Plus, Table2, Users } from "lucide-react";
 import { AppShell } from "../components/AppShell";
 import { NewCourseButton } from "../components/CourseActions";
-import { Card, Chip, EmptyState, ErrorState, PageHeader, Skeleton, Ur, type ChipTone } from "../components/ui";
+import { Card, Chip, EmptyState, ErrorState, PageHeader, Skeleton, type ChipTone } from "../components/ui";
 import { firstName, formatDue, greeting } from "../lib/format";
 import { useMe } from "../lib/session";
 import { useApi } from "../lib/useApi";
@@ -84,7 +84,7 @@ export function TeacherHome() {
           <NewCourseButton onCreated={home.reload} />
           <Link to="/teacher/assignments/new" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-action px-4 font-semibold text-white hover:bg-action-hover">
             <Plus className="size-5" aria-hidden />
-            Create assignment <Ur>اسائنمنٹ بنائیں</Ur>
+            Create assignment
           </Link>
           </div>
         }

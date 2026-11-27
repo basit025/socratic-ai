@@ -167,7 +167,7 @@ The site must explain itself in five seconds **without a feature list**. Follow 
 - **Words from the classroom:** Course, Assignment, Marks, Viva, Due. No internal jargon in the UI (no "Norman stage 6" for students).
 - Max three regions per screen; generous spacing; 16 px body, never below 12 px; 44 px tap targets; WCAG AA contrast; keyboard navigation.
 - Every screen has loading, empty (teaching) and error states. No lorem ipsum, "test123" or "Student 1" anywhere.
-- Fonts: Inter; Noto Nastaliq Urdu for Urdu labels. Motion only for feedback (`motion` library), never decoration.
+- Fonts: Inter. No Urdu-script labels (decision Nov 28: they doubled every label without adding meaning); Ustaad still understands and answers Roman Urdu. Motion only for feedback (`motion` library), never decoration.
 - Remove the prototype's "Norman HCI" and "Requirements" tabs from the product UI.
 
 ## Demo-readiness and video-readiness

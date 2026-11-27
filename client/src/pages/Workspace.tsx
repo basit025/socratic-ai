@@ -8,7 +8,7 @@ import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, ClipboardX, Cop
 import { Dialog } from "../components/Dialog";
 import { AppShell } from "../components/AppShell";
 import { BackToCourse } from "../components/BackToCourse";
-import { Button, Card, Chip, ErrorState, Skeleton, Ur, cx } from "../components/ui";
+import { Button, Card, Chip, ErrorState, Skeleton, cx } from "../components/ui";
 import { Appear } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
 import { formatDateTime, formatDue } from "../lib/format";
@@ -21,6 +21,7 @@ import { JourneyStepper, type JourneyStep } from "../workspace/JourneyStepper";
 import { EventRecorder, type SaveState } from "../workspace/recorder";
 import { UstaadPanel, type ChatMessage } from "../workspace/UstaadPanel";
 import { WrittenEditor } from "../workspace/WrittenEditor";
+import { NO_CHECKS, loadChecks, mergeChecks, missingCheck, missingHint, saveChecks, type ExplainChecks } from "../workspace/explainChecks";
 import { QuizPlayer } from "./Quiz";
 import { HandwrittenPage } from "./Handwritten";
 import { Markdown } from "../components/Markdown";
@@ -114,6 +115,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [runUnlocked, setRunUnlocked] = useState(false);
+  const [checks, setChecks] = useState<ExplainChecks>(NO_CHECKS);
   const [notice, setNotice] = useState<string | null>(null);
   const [recorder, setRecorder] = useState<EventRecorder | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -150,6 +152,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
     setStartedWriting(Boolean(d.submission && (d.submission.hasRun || initial !== d.assignment.starterCode)));
     setMessages(d.messages.map((m) => ({ role: m.role, text: m.text, hint: m.hint })));
     setRunUnlocked(d.assignment.rules?.workflow !== "explain_first" || Boolean(d.submission?.hasRun));
+    if (d.submission) setChecks(loadChecks(d.submission.id));
     if (d.submission?.lastOutput) setLastRun({ ok: true, output: d.submission.lastOutput, durationMs: 0 });
   }, [data.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -214,11 +217,16 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
     setMessages((m) => [...m, { role: "student", text }]);
     setSending(true);
     try {
-      const r = await api<{ reply: { text: string; hint: string | null; allowExecution: boolean } }>(`/submissions/${sub.id}/ustaad`, {
+      const r = await api<{ reply: { text: string; hint: string | null; allowExecution: boolean; checks?: Partial<ExplainChecks> } }>(`/submissions/${sub.id}/ustaad`, {
         body: { message: text, code: docRef.current, output: outputRef.current, hasRun },
       });
       setMessages((m) => [...m, { role: "ustaad", text: r.reply.text, hint: r.reply.hint }]);
       if (r.reply.allowExecution) setRunUnlocked(true);
+      setChecks((prev) => {
+        const next = mergeChecks(prev, r.reply.checks);
+        saveChecks(sub.id, next);
+        return next;
+      });
     } catch (err) {
       setChatError(err instanceof ApiError ? err.message : "Couldn't reach Ustaad. Try again.");
     } finally {
@@ -242,7 +250,12 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
 
   // ------------------------------------------------ the journey
   const isWritten = a?.type === "written";
-  const explained = messages.some((m) => m.role === "student") && (isWritten || workflow === "explain_first" || hasRun);
+  const kind = isWritten ? "written" : "code";
+  const talked = messages.some((m) => m.role === "student");
+  const missing = missingCheck(checks, kind, workflow);
+  // Explain is done only when Ustaad's checks say so (T02), never after any one message.
+  const explained = talked && missing === null && (isWritten || workflow === "explain_first" || hasRun);
+  const submitLock = explained ? undefined : "Ustaad must check your explanation first";
   const written = startedWriting && a != null && doc.trim() !== a.starterCode.trim();
   const steps: JourneyStep[] = useMemo(() => {
     const raw = isWritten
@@ -250,7 +263,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
           { key: "understand", label: "Understand", done: startedWriting },
           { key: "write", label: "Write", done: written },
           { key: "explain", label: "Explain", done: explained },
-          { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null },
+          { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null, lockedHint: submitLock },
         ]
       : workflow === "explain_first"
         ? [
@@ -258,14 +271,14 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
             { key: "write", label: "Write", done: written },
             { key: "explain", label: "Explain", done: explained },
             { key: "run", label: "Run", done: hasRun, lockedHint: runUnlocked ? undefined : "Explain your plan first" },
-            { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null },
+            { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null, lockedHint: submitLock },
           ]
         : [
             { key: "understand", label: "Understand", done: startedWriting },
             { key: "write", label: "Write", done: written },
             { key: "run", label: "Run", done: hasRun },
             { key: "explain", label: "Explain", done: explained, lockedHint: hasRun ? undefined : "Run your code first" },
-            { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null },
+            { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null, lockedHint: submitLock },
           ];
     let currentFound = false;
     return raw.map((s) => {
@@ -276,7 +289,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
       }
       return { key: s.key, label: s.label, state: s.lockedHint ? ("locked" as const) : ("upcoming" as const), hint: s.lockedHint };
     });
-  }, [isWritten, workflow, startedWriting, written, explained, hasRun, runUnlocked, sub]);
+  }, [isWritten, workflow, startedWriting, written, explained, hasRun, runUnlocked, sub, submitLock]);
   const current = steps.find((s) => s.state === "current")?.key ?? "submit";
 
   const vivaLine = a?.rules
@@ -290,7 +303,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
         ? { text: "Read the task, then start writing your answer in your own words.", button: { label: "Start writing", icon: Play, onClick: () => { setStartedWriting(true); textRef.current?.focus(); } } }
         : current === "write"
           ? { text: "Write your answer. When your main point is down, talk it through with Ustaad.", button: { label: "Talk it through with Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
-          : { text: "Tell Ustaad your main point and why you believe it, in plain words.", button: { label: "Explain to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
+          : { text: talked && missing ? `Ustaad still needs one thing before you can submit. ${missingHint(missing, kind)}` : "Tell Ustaad your main point and why you believe it, in plain words.", button: { label: "Explain to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
     : current === "understand"
       ? { text: "Read the task, then start writing your own code.", button: { label: "Start writing", icon: Play, onClick: () => { setStartedWriting(true); editor.current?.focus(); } } }
       : current === "write"
@@ -301,8 +314,8 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
           ? { text: "Run your code and look closely at the output.", button: { label: running ? "Running…" : "Run my code", icon: Play, onClick: run, disabled: runnerStatus !== "ready" || running || !runUnlocked } }
           : current === "explain"
             ? workflow === "explain_first"
-              ? { text: "Tell Ustaad what your code should do and how, in plain words. Running unlocks when your plan is clear.", button: { label: "Explain my plan to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
-              : { text: "Tell Ustaad, in your own words, why your code gives that output.", button: { label: "Explain to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
+              ? { text: talked && missing ? `Ustaad still needs one thing. ${missingHint(missing, kind)}` : "Tell Ustaad what your code should do and how, in plain words. Running unlocks when your plan is clear.", button: { label: "Explain my plan to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
+              : { text: talked && missing ? `Ustaad still needs one thing before you can submit. ${missingHint(missing, kind)}` : "Tell Ustaad, in your own words, why your code gives that output.", button: { label: "Explain to Ustaad", icon: MessageCircleQuestion, onClick: () => chatInput.current?.focus() } }
             : { text: `Ready to hand in? ${vivaLine}`, button: { label: "Submit (you can't edit after this)", icon: Send, onClick: () => setConfirmOpen(true) } };
 
   const starters = isWritten
@@ -391,7 +404,8 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
           )}
 
           {editable && (
-            <Card className="mb-5 p-4 sm:p-5">
+            // Sticky on desktop so the next step (and Submit) stays in view while the student works in the editor (T07).
+            <Card className="mb-5 p-4 sm:p-5 lg:sticky lg:top-[4.75rem] lg:z-20 lg:shadow-md">
               <JourneyStepper steps={steps} />
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
                 <p className="max-w-2xl text-[15px] text-ink-2">{nextStep.text}</p>
@@ -460,7 +474,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
                       {editable && <SavedIndicator state={saveState} />}
                       {editable && (
                         <Button variant="secondary" icon={running ? Loader2 : Play} onClick={run} disabled={runnerStatus !== "ready" || running} title="Run my code (Ctrl+Enter)">
-                          {runnerStatus === "ready" ? (running ? "Running…" : <>Run my code <Ur>اپنا کوڈ چلائیں</Ur></>) : runnerStatus === "error" ? "Runner unavailable" : "Preparing the code runner…"}
+                          {runnerStatus === "ready" ? (running ? "Running…" : "Run my code") : runnerStatus === "error" ? "Runner unavailable" : "Preparing the code runner…"}
                         </Button>
                       )}
                     </div>
@@ -551,7 +565,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
             Keep working
           </Button>
           <Button icon={Send} loading={submitting} onClick={submitWork}>
-            Submit and start the viva <Ur>جمع کروائیں</Ur>
+            Submit and start the viva
           </Button>
         </div>
       </Dialog>

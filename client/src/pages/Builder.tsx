@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
 import { ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, ChevronDown, ClipboardX, Eye, FlaskConical, Loader2, MessageCircleQuestion, Play, Plus, Shuffle, Sparkles, Timer, Trash2, XCircle } from "lucide-react";
 import { AppShell } from "../components/AppShell";
-import { Button, Card, Chip, ErrorState, Segmented, Skeleton, Toggle, Ur, cx } from "../components/ui";
+import { Button, Card, Chip, ErrorState, Segmented, Skeleton, Toggle, cx } from "../components/ui";
 import { api, ApiError } from "../lib/api";
 import { formatDue } from "../lib/format";
 import { useApi } from "../lib/useApi";
@@ -500,7 +500,7 @@ export function Builder() {
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" loading={saving === "draft"} disabled={saving !== null} onClick={() => save("draft")}>Save as draft</Button>
               <Button size="lg" icon={Check} loading={saving === "published"} disabled={saving !== null} onClick={() => save("published")}>
-                Publish to {course?.code ?? "the course"} (students see it now) <Ur>شائع کریں</Ur>
+                Publish to {course?.code ?? "the course"} (students see it now)
               </Button>
             </div>
           </div>

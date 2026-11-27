@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Dialog } from "./Dialog";
 import { Logo } from "./Logo";
-import { Button, DemoBadge, cx } from "./ui";
+import { Button, cx } from "./ui";
 import { api } from "../lib/api";
 import { useMe } from "../lib/session";
 import { useApi, type Loadable } from "../lib/useApi";
@@ -18,7 +18,6 @@ import { courseStyle } from "../lib/courseStyle";
 import { formatDue, timeAgo } from "../lib/format";
 import { kindOf, needsWork, type Notice, type StudentHomeData } from "../lib/student";
 
-export const INSTITUTION = "Pothohar Institute of Computing";
 
 interface TeacherNavCourse {
   id: string;
@@ -225,7 +224,7 @@ function PersonMenu() {
         <div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-xl">
           <div className="border-b border-line px-4 py-3">
             <p className="font-semibold">{me.name}</p>
-            <p className="text-sm text-ink-3">{me.role === "teacher" ? "Teacher" : "Student"} · {INSTITUTION}</p>
+            <p className="text-sm text-ink-3">{me.role === "teacher" ? "Teacher" : "Student"}</p>
           </div>
           {me.demo && (
             <button type="button" onClick={() => { setOpen(false); setResetOpen(true); }} className="flex min-h-11 w-full items-center gap-2.5 px-4 text-left hover:bg-canvas">
@@ -238,7 +237,7 @@ function PersonMenu() {
         </div>
       )}
       <Dialog open={resetOpen} title="Start over with a fresh demo?" onClose={() => !resetting && setResetOpen(false)}>
-        <p className="text-ink-2">You'll get a brand-new private copy of the demo institution, as a {me.role}. Anything you did in this demo is left behind.</p>
+        <p className="text-ink-2">You'll get a fresh private copy of the sample courses, as a {me.role}. Anything you did here is left behind.</p>
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setResetOpen(false)} disabled={resetting} data-autofocus>
             Keep this demo
@@ -295,7 +294,6 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <Link to={base} onClick={onNavigate} aria-label="Socratic AI home">
           <Logo />
         </Link>
-        <p className="mt-2 text-xs font-medium text-ink-3">{INSTITUTION}</p>
       </div>
       <div className="space-y-0.5 px-3">
         <NavLink to={base} end onClick={onNavigate} className={navItem}>
@@ -406,7 +404,6 @@ export function Shell() {
                 <Logo className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline" />
               </Link>
               <div className="flex-1" />
-              {me.demo && <DemoBadge />}
               <SwitchRole />
               {me.role === "student" && <NotificationBell notices={student.status === "ready" ? student.data.notifications : []} />}
               <PersonMenu />

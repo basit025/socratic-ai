@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fallbackQuestion, predictionMatches, reconcileScore, validInputCall, type VivaScore } from "./viva.js";
+import { fallbackQuestion, predictionMatches, questionPrompt, reconcileScore, validInputCall, type VivaScore } from "./viva.js";
 
 const code = "def over_summary(balls):\n    total = 0\n    for r in balls:\n        total += r\n    return (total, 0)\n";
 
@@ -53,5 +53,23 @@ describe("viva helpers", () => {
     expect(wrong.score.per_question[1]!.score).toBe(3);
     // A consistent score is left alone.
     expect(reconcileScore(score(23, 22, 25, 20, [9, 10, 9]), [q("a"), q("1", true), q("b")]).understanding).toBe(90);
+  });
+});
+
+describe("viva questions don't re-ask what the student already said (T08)", () => {
+  const base = { title: "Cricket Over Tracker", instructions: "An empty over has scored nothing yet.", code, testsSummary: "5/5", previous: [], sandboxId: "s", kind: "predict_output" as const };
+
+  it("passes the student's chat with Ustaad to the question writer", () => {
+    const p = questionPrompt({ ...base, discussed: ["Empty list gives (0, 0)."] });
+    expect(p).toContain("<chat_with_ustaad>");
+    expect(p).toContain("Empty list gives (0, 0).");
+  });
+
+  it("tells the writer not to reuse a case the brief or chat already mentions", () => {
+    expect(questionPrompt(base)).toMatch(/Never use an input or case that the brief or the student's chat with Ustaad already mentions/);
+  });
+
+  it("leaves the chat block out when there was no chat", () => {
+    expect(questionPrompt(base)).not.toContain("<chat_with_ustaad>");
   });
 });

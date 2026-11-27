@@ -13,7 +13,7 @@
     "lint": "tsc -p tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit",
     "test": "vitest run",
     "preview": "vite preview --config client/vite.config.ts",
-    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
+    "prepare": "git config core.hooksPath .githooks || exit 0",
     "check-secrets": "bash scripts/check-secrets.sh",
     "smoke:llm": "tsx scripts/smoke-llm.ts",
     "seed": "tsx server/seed/seed.ts",

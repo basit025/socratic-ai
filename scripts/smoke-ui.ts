@@ -59,7 +59,8 @@ async function main() {
     ok(`"Try as student" → student home in ${Date.now() - t1} ms`);
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "2-student-home-1440");
-    (await s.$eval("body", (b) => b.innerText.includes("Demo data"))) ? ok("Demo data badge visible") : fail("Demo data badge missing");
+    const leftovers = await s.$eval("body", (b) => [/[؀-ۿ]/.test(b.innerText) && "Urdu script", b.innerText.includes("Demo data") && "Demo data badge", /Hackathon/i.test(b.innerText) && "hackathon label"].filter(Boolean));
+    leftovers.length ? fail(`removed content is back: ${leftovers.join(", ")}`) : ok("no Urdu labels, Demo data badge or hackathon label");
 
     // Python runner (exposed on window in dev builds only)
     const ready = await s.evaluate(async () => {
@@ -165,7 +166,8 @@ async function main() {
     await s.reload({ waitUntil: "domcontentloaded" });
     await s.waitForSelector(".cm-content", { timeout: 20000 });
     (await s.$eval(".cm-content", (e) => (e as HTMLElement).innerText.includes("lambda balls"))) ? ok("work survives a page reload") : fail("work lost on reload");
-    await s.type("#ustaad-input", "Why does my code print 14 for the total?");
+    // A real explanation (goal, logic, output): Submit unlocks only when Ustaad's checks are met (T02).
+    await s.type("#ustaad-input", "My function must return the total runs and the number of big hits. sum(balls) adds every ball, and the list keeps the balls that are 6 or more. It printed (14, 1) because 1+4+0+6+2+1 is 14 and only the 6 counts.");
     await s.keyboard.press("Enter");
     const t4 = Date.now();
     await s.waitForFunction(() => [...document.querySelectorAll("p")].filter((p) => p.textContent === "Ustaad").length >= 1, { timeout: 40000 });

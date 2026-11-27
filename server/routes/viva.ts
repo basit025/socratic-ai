@@ -216,6 +216,12 @@ vivaRouter.get("/submissions/:id/viva", requireSession("student"), async (req, r
   }
 });
 
+/** The student's own messages to Ustaad while working on this submission (oldest first). */
+async function studentChat(submissionId: string): Promise<string[]> {
+  const rows = await select<{ body: string }>(`ustaad_messages?select=body&submission_id=${eq(submissionId)}&role=eq.student&order=created_at.asc&limit=20`);
+  return rows.map((r) => r.body);
+}
+
 // ---------------------------------------------------------------- start the viva (first question)
 vivaRouter.post("/submissions/:id/viva/start", requireSession("student"), async (req, res, next) => {
   try {
@@ -228,7 +234,7 @@ vivaRouter.post("/submissions/:id/viva/start", requireSession("student"), async 
       return;
     }
     await enforceAi(sid, ipHash(req));
-    const q = await generateQuestion({ title: ctx.a.title, instructions: instructions(ctx), code: ctx.sub.content, testsSummary: testsSummary(ctx), previous: [], kind: KIND_ORDER[0]!, sandboxId: sid, mode: mode(ctx) });
+    const q = await generateQuestion({ title: ctx.a.title, instructions: instructions(ctx), code: ctx.sub.content, testsSummary: testsSummary(ctx), previous: [], discussed: await studentChat(ctx.sub.id), kind: KIND_ORDER[0]!, sandboxId: sid, mode: mode(ctx) });
     const question: VivaQuestion = { kind: KIND_ORDER[0]!, prompt: q.prompt, input_call: q.input_call, seconds_allowed: ctx.a.rules?.viva_seconds_per_q ?? 90, asked_at: new Date().toISOString(), ...(q.fallback ? { fallback: true } : {}) };
     await insert("viva_sessions", { sandbox_id: sid, submission_id: ctx.sub.id, questions: [question], current_index: 0 });
     res.status(201).json({ current: publicQuestion(question, 0) });
@@ -280,6 +286,7 @@ vivaRouter.post("/submissions/:id/viva/answer", requireSession("student"), async
         code: ctx.sub.content,
         testsSummary: testsSummary(ctx),
         previous: viva.questions.map((x) => ({ prompt: x.prompt, answer: x.answer ?? "" })),
+        discussed: await studentChat(ctx.sub.id),
         kind,
         sandboxId: sid,
         mode: mode(ctx),

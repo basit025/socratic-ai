@@ -12,6 +12,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { announcements, assignments, courses, modules, students, teachers } from "./content.js";
 import { computeFlags } from "../integrity/flags.js";
 import { suggestedGrade } from "../integrity/grading.js";
@@ -24,7 +25,7 @@ import { computeExpected } from "./expected.js";
 export interface SessionFile {
   label: string;
   student: string;
-  alsoAs?: { student: string; daysAgo: number }[]; // the same session reused under other classmates (shares its event log)
+  alsoAs?: { student: string; daysAgo: number }[]; // older files only: the seed ignores it (one session, one student)
   simulated?: boolean;                              // a persona-driven demo student run through the real platform
   persona?: string | null;
   assignment: string;
@@ -42,7 +43,7 @@ export interface SessionFile {
   messages: { role: string; body: string; hint: string | null; ms: number }[];
 }
 
-export function loadSessions(dir = path.join(path.dirname(new URL(import.meta.url).pathname), "sessions")): SessionFile[] {
+export function loadSessions(dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "sessions")): SessionFile[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
@@ -59,6 +60,41 @@ const days = (n: number): string => `now() + interval '${Number(n)} days'`;
 const dayAt = (n: number, hhmm: string): string =>
   `((date_trunc('day', now() at time zone 'Asia/Karachi') + interval '${Number(n)} days' + interval '${hhmm.replace(/[^0-9:]/g, "")}') at time zone 'Asia/Karachi')`;
 const SEED = "(select public.seed_sandbox_id())";
+
+/**
+ * Who owns each past submission. Every session belongs to exactly one student, so no two classmates
+ * ever show the same work, scores and flags (`alsoAs` in older session files is ignored).
+ * The demo student takes the first strong session of each closed assignment in her courses, so her
+ * own marks page isn't empty; that classmate then has no submission instead of a duplicate.
+ */
+export function planPastSubmissions(sessions: SessionFile[]): { session: SessionFile; student: string; daysAgo: number }[] {
+  const demo = students.find((x) => x.email)!;
+  const taken = new Set<string>();
+  const demoTook = new Set<string>();
+  const plan: { session: SessionFile; student: string; daysAgo: number }[] = [];
+  for (const f of sessions) {
+    const a = assignments.find((x) => x.title === f.assignment);
+    if (!a) throw new Error(`Session ${f.label}: no seeded assignment titled "${f.assignment}".`);
+    if (!f.events.length) throw new Error(`Session ${f.label} has no events.`);
+    const course = courses.find((c) => c.key === a.course)!;
+    let student = f.student;
+    if (a.status === "closed" && f.persona === "strong" && !demoTook.has(a.key) && course.students.includes(demo.key)) {
+      demoTook.add(a.key);
+      student = demo.key;
+    }
+    if (!students.find((x) => x.key === student)) throw new Error(`Session ${f.label}: "${student}" must be a seeded classmate.`);
+    if (student === demo.key && a.status !== "closed") throw new Error(`Session ${f.label}: the demo student may own past work only on closed assignments.`);
+    // One submission per student per assignment: if this classmate already has one, use the next free classmate.
+    if (taken.has(`${a.key}:${student}`)) {
+      const free = course.students.find((k) => k !== demo.key && !taken.has(`${a.key}:${k}`));
+      if (!free) continue;
+      student = free;
+    }
+    taken.add(`${a.key}:${student}`);
+    plan.push({ session: f, student, daysAgo: f.submittedDaysAgo });
+  }
+  return plan;
+}
 
 export async function buildSeedSql(opts: { recording?: boolean; sessions?: SessionFile[] } = {}): Promise<string> {
   const sessions = opts.sessions ?? [];
@@ -115,43 +151,20 @@ export async function buildSeedSql(opts: { recording?: boolean; sessions?: Sessi
     );
   }
 
-  // Recorded sessions → past submissions of fictional classmates. A session can be reused under
-  // several classmates (alsoAs): each copy is its own submission that replays the first one's log.
-  const taken = new Set<string>();
-  const demoCopied = new Set<string>();
-  for (const f of sessions) {
-    const a = assignments.find((x) => x.title === f.assignment);
-    if (!a) throw new Error(`Session ${f.label}: no seeded assignment titled "${f.assignment}".`);
-    if (!f.events.length) throw new Error(`Session ${f.label} has no events.`);
-    let sourceSid: string | null = null;
-    const owners = [{ student: f.student, daysAgo: f.submittedDaysAgo }, ...(f.alsoAs ?? [])];
-    // The demo student's own past work: on each closed assignment she takes, she gets a copy of the
-    // first strong session, already marked, so her course pages and marks aren't empty.
-    const demo = students.find((x) => x.email && x.key !== "")!;
-    if (a.status === "closed" && f.persona === "strong" && !demoCopied.has(a.key) && courses.find((c) => c.key === a.course)!.students.includes(demo.key)) {
-      demoCopied.add(a.key);
-      owners.push({ student: demo.key, daysAgo: f.submittedDaysAgo });
-    }
-    const classmates = courses.find((c) => c.key === a.course)!.students.filter((k) => !students.find((x) => x.key === k)?.email);
-    for (const [ownerNo, owner] of owners.entries()) {
-      const demoOwner = students.find((x) => x.key === owner.student)?.email != null;
-      // The demo student may own past work only on CLOSED assignments (her open work is the live demo).
-      if (!students.find((x) => x.key === owner.student) || (demoOwner && a.status !== "closed")) throw new Error(`Session ${f.label}: "${owner.student}" must be a seeded classmate (the demo student only on closed assignments).`);
-      // One submission per student per assignment: if this classmate already has one (sessions made in
-      // different runs can overlap), the copy goes to the next classmate in the course who doesn't.
-      const key = taken.has(`${a.key}:${owner.student}`) ? classmates.find((k) => !taken.has(`${a.key}:${k}`)) : owner.student;
-      if (!key) continue; // everyone in the course already has a submission
-      const student = students.find((x) => x.key === key)!;
+  // Recorded sessions → past submissions of fictional classmates: one session, one student.
+  for (const [i, { session: f, student: studentKey, daysAgo }] of planPastSubmissions(sessions).entries()) {
+    const a = assignments.find((x) => x.title === f.assignment)!;
+    {
+      const student = students.find((x) => x.key === studentKey)!;
       const graded = student.email != null; // the demo student's past work is already marked
-      taken.add(`${a.key}:${student.key}`);
 
       const sid = randomUUID();
       const pid = idFor(`p:${student.key}`);
       const aid = idFor(`a:${a.key}`);
       const end = Math.max(f.submittedAtMs ?? 0, f.events.at(-1)!.ms);
-      // Spread submission times through the evening so reused copies don't line up to the minute.
-      const clock = ownerNo === 0 ? "21:30" : `${String(17 + (ownerNo * 7) % 6).padStart(2, "0")}:${String((ownerNo * 17) % 60).padStart(2, "0")}`;
-      const submitted = dayAt(-Math.max(0, owner.daysAgo), clock);
+      // Spread submission times through the evening so classmates don't hand in at the same minute.
+      const clock = `${String(17 + (i * 7) % 6).padStart(2, "0")}:${String((i * 17) % 60).padStart(2, "0")}`;
+      const submitted = dayAt(-Math.max(0, daysAgo), clock);
       const at = (ms: number | null) => (ms == null ? "null" : `(${submitted} - interval '${Math.round(end - ms)} milliseconds')`);
       let variantId: string | null = null;
       if (f.variant && a.variantSpec) {
@@ -165,10 +178,10 @@ export async function buildSeedSql(opts: { recording?: boolean; sessions?: Sessi
       const grade = suggestedGrade({ marks: a.marks, testsPassed: f.testsPassed, testsTotal: f.testsTotal, vivaScore, vivaWeight: a.rules.vivaWeight });
       out.push(
         // The demo student's past work has been marked by her teacher, so her course pages show real marks.
-        `insert into public.submissions (id, sandbox_id, assignment_id, student_id, variant_id, status, content, last_output, test_results, tests_passed, tests_total, viva_score, suggested_grade, final_grade, graded_at, started_at, submitted_at, event_source_id) values (${lit(sid)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${lit(variantId)}, ${graded ? "'graded'" : "'submitted'"}, ${lit(f.content)}, ${lit(f.lastOutput)}, ${f.testResults == null ? "null" : json(f.testResults)}, ${f.testsPassed ?? "null"}, ${f.testsTotal ?? "null"}, ${vivaScore ?? "null"}, ${grade}, ${graded ? grade : "null"}, ${graded ? `(${submitted} + interval '2 days')` : "null"}, ${at(0)}, ${at(f.submittedAtMs ?? end)}, ${lit(sourceSid)});`,
+        `insert into public.submissions (id, sandbox_id, assignment_id, student_id, variant_id, status, content, last_output, test_results, tests_passed, tests_total, viva_score, suggested_grade, final_grade, graded_at, started_at, submitted_at, event_source_id) values (${lit(sid)}, ${SEED}, ${lit(aid)}, ${lit(pid)}, ${lit(variantId)}, ${graded ? "'graded'" : "'submitted'"}, ${lit(f.content)}, ${lit(f.lastOutput)}, ${f.testResults == null ? "null" : json(f.testResults)}, ${f.testsPassed ?? "null"}, ${f.testsTotal ?? "null"}, ${vivaScore ?? "null"}, ${grade}, ${graded ? grade : "null"}, ${graded ? `(${submitted} + interval '2 days')` : "null"}, ${at(0)}, ${at(f.submittedAtMs ?? end)}, null);`,
       );
-      if (sourceSid === null) for (let i = 0; i < f.events.length; i += 200) {
-        const rows = f.events.slice(i, i + 200).map((e) => `(${SEED}, ${lit(sid)}, ${e.seq}, ${lit(e.type)}, ${json(e.payload)}, ${at(e.ms)})`);
+      for (let e0 = 0; e0 < f.events.length; e0 += 200) {
+        const rows = f.events.slice(e0, e0 + 200).map((e) => `(${SEED}, ${lit(sid)}, ${e.seq}, ${lit(e.type)}, ${json(e.payload)}, ${at(e.ms)})`);
         out.push(`insert into public.process_events (sandbox_id, submission_id, seq, type, payload, client_time) values ${rows.join(", ")};`);
       }
       if (f.viva) {
@@ -188,7 +201,6 @@ export async function buildSeedSql(opts: { recording?: boolean; sessions?: Sessi
       for (const fl of flags) {
         out.push(`insert into public.flags (sandbox_id, submission_id, rule, severity, message, evidence) values (${SEED}, ${lit(sid)}, ${lit(fl.rule)}, ${lit(fl.severity)}, ${lit(fl.message)}, ${json(fl.evidence)});`);
       }
-      sourceSid ??= sid;
     }
   }
 
@@ -239,7 +251,7 @@ async function main() {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${statements.length} statements in ${chunks.length} parts, ${sessions.filter((x) => !x.simulated).length} real + ${sessions.filter((x) => x.simulated).length} simulated sessions, ${sessions.reduce((n, x) => n + 1 + (x.alsoAs?.length ?? 0), 0)} past submissions${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
+  console.log(`Seeded ${target} in ${((Date.now() - started) / 1000).toFixed(1)} s (${statements.length} statements in ${chunks.length} parts, ${sessions.filter((x) => !x.simulated).length} real + ${sessions.filter((x) => x.simulated).length} simulated sessions, ${planPastSubmissions(sessions).length} past submissions${recording ? ", RECORDING MODE: all assignments open" : ""}).`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).endsWith(path.join("seed", "seed.ts"))) {

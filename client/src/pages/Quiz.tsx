@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { ArrowRight, CheckCircle2, ClipboardX, Clock, Expand, ListChecks, Maximize, Send, ShieldAlert, Timer, XCircle } from "lucide-react";
-import { Button, Card, Chip, ErrorState, Spinner, Ur, cx } from "../components/ui";
+import { Button, Card, Chip, ErrorState, Spinner, cx } from "../components/ui";
 import { BackToCourse } from "../components/BackToCourse";
 import { Appear, Pop } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
@@ -306,7 +306,6 @@ export function QuizPlayer({ assignment, submissionId, nextSeq }: { assignment: 
               <Button size="lg" icon={fs ? Expand : Timer} loading={busy} onClick={start} disabled={!assignment.open}>
                 Start quiz: {view.total} questions{view.timeLimitMinutes ? `, ${view.timeLimitMinutes} min` : ""}
               </Button>
-              <Ur>کوئز شروع کریں</Ur>
             </div>
           </Card>
         </Appear>
