@@ -21,6 +21,7 @@ import { JourneyStepper, type JourneyStep } from "../workspace/JourneyStepper";
 import { EventRecorder, type SaveState } from "../workspace/recorder";
 import { UstaadPanel, type ChatMessage } from "../workspace/UstaadPanel";
 import { WrittenEditor } from "../workspace/WrittenEditor";
+import { isOwnCode, journeyStates } from "../workspace/journey";
 import { NO_CHECKS, loadChecks, mergeChecks, missingCheck, missingHint, saveChecks, type ExplainChecks } from "../workspace/explainChecks";
 import { QuizPlayer } from "./Quiz";
 import { HandwrittenPage } from "./Handwritten";
@@ -110,6 +111,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
   const [lastRun, setLastRun] = useState<RunView | null>(null);
   const [running, setRunning] = useState(false);
   const [hasRun, setHasRun] = useState(false);
+  const [ranOwnCode, setRanOwnCode] = useState(false); // a run of code that differs from the starter (the Run step)
   const [startedWriting, setStartedWriting] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
@@ -130,6 +132,16 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
   const outputRef = useRef<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveState = useSaveState(recorder);
+  // Is the journey card on screen? When it isn't, the slim next-step bar shows instead.
+  const journeyRef = useRef<HTMLDivElement | null>(null);
+  const [journeyVisible, setJourneyVisible] = useState(true);
+  useEffect(() => {
+    const el = journeyRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setJourneyVisible(Boolean(e?.isIntersecting)), { rootMargin: "-64px 0px 0px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [data.status]); // the card mounts once the assignment has loaded
 
   const a = data.status === "ready" ? data.data.assignment : null;
   const sub = data.status === "ready" ? data.data.submission : null;
@@ -149,6 +161,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
     docRef.current = initial;
     outputRef.current = d.submission?.lastOutput ?? null;
     setHasRun(Boolean(d.submission?.hasRun));
+    setRanOwnCode(Boolean(d.submission?.hasRun) && isOwnCode(initial, d.assignment.starterCode));
     setStartedWriting(Boolean(d.submission && (d.submission.hasRun || initial !== d.assignment.starterCode)));
     setMessages(d.messages.map((m) => ({ role: m.role, text: m.text, hint: m.hint })));
     setRunUnlocked(d.assignment.rules?.workflow !== "explain_first" || Boolean(d.submission?.hasRun));
@@ -207,6 +220,8 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
     outputRef.current = [r.output, r.error].filter(Boolean).join("\n");
     setLastRun(view);
     setHasRun(true);
+    setStartedWriting(true); // running the code means they've engaged with the task (Understand)
+    if (a && isOwnCode(docRef.current, a.starterCode)) setRanOwnCode(true);
     setRunning(false);
     recorder?.recordRun(r.ok, r.durationMs || performance.now() - started, r.error);
   };
@@ -254,7 +269,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
   const talked = messages.some((m) => m.role === "student");
   const missing = missingCheck(checks, kind, workflow);
   // Explain is done only when Ustaad's checks say so (T02), never after any one message.
-  const explained = talked && missing === null && (isWritten || workflow === "explain_first" || hasRun);
+  const explained = talked && missing === null && (isWritten || workflow === "explain_first" || ranOwnCode);
   const submitLock = explained ? undefined : "Ustaad must check your explanation first";
   const written = startedWriting && a != null && doc.trim() !== a.starterCode.trim();
   const steps: JourneyStep[] = useMemo(() => {
@@ -270,27 +285,22 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
             { key: "understand", label: "Understand", done: startedWriting },
             { key: "write", label: "Write", done: written },
             { key: "explain", label: "Explain", done: explained },
-            { key: "run", label: "Run", done: hasRun, lockedHint: runUnlocked ? undefined : "Explain your plan first" },
+            { key: "run", label: "Run", done: ranOwnCode, lockedHint: runUnlocked ? undefined : "Explain your plan first" },
             { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null, lockedHint: submitLock },
           ]
         : [
             { key: "understand", label: "Understand", done: startedWriting },
             { key: "write", label: "Write", done: written },
-            { key: "run", label: "Run", done: hasRun },
-            { key: "explain", label: "Explain", done: explained, lockedHint: hasRun ? undefined : "Run your code first" },
+            { key: "run", label: "Run", done: ranOwnCode },
+            { key: "explain", label: "Explain", done: explained, lockedHint: ranOwnCode ? undefined : "Run your code first" },
             { key: "submit", label: "Submit + viva", done: sub?.status !== "in_progress" && sub != null, lockedHint: submitLock },
           ];
-    let currentFound = false;
-    return raw.map((s) => {
-      if (s.done) return { key: s.key, label: s.label, state: "done" as const };
-      if (!currentFound) {
-        currentFound = true;
-        return { key: s.key, label: s.label, state: "current" as const };
-      }
-      return { key: s.key, label: s.label, state: s.lockedHint ? ("locked" as const) : ("upcoming" as const), hint: s.lockedHint };
-    });
-  }, [isWritten, workflow, startedWriting, written, explained, hasRun, runUnlocked, sub, submitLock]);
+    // Steps finish in order: never a done step after an open one.
+    return journeyStates(raw);
+  }, [isWritten, workflow, startedWriting, written, explained, ranOwnCode, runUnlocked, sub, submitLock]);
   const current = steps.find((s) => s.state === "current")?.key ?? "submit";
+  const currentStep = steps.find((s) => s.state === "current") ?? null;
+  const stepNo = currentStep ? steps.indexOf(currentStep) + 1 : steps.length;
 
   const vivaLine = a?.rules
     ? `Ustaad will ask ${a.rules.vivaQuestions} questions about your own ${isWritten ? "answer" : "code"}, ${a.rules.vivaSecondsPerQ} seconds each. Paste is off. The viva is ${a.rules.vivaWeight}% of your marks.`
@@ -404,18 +414,42 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
           )}
 
           {editable && (
-            // Sticky on desktop so the next step (and Submit) stays in view while the student works in the editor (T07).
-            <Card className="mb-5 p-4 sm:p-5 lg:sticky lg:top-[4.75rem] lg:z-20 lg:shadow-md">
-              <JourneyStepper steps={steps} />
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-                <p className="max-w-2xl text-[15px] text-ink-2">{nextStep.text}</p>
+            <div ref={journeyRef}>
+              <Card className="mb-5 p-4 sm:p-5">
+                <JourneyStepper steps={steps} />
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+                  <p className="max-w-2xl text-[15px] text-ink-2">{nextStep.text}</p>
+                  {nextStep.button && (
+                    <Button icon={nextStep.button.icon} onClick={nextStep.button.onClick} disabled={nextStep.button.disabled}>
+                      {nextStep.button.label}
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            </div>
+          )}
+          {/* Once the journey card scrolls away, a slim bar keeps the step and the next action in view
+              without covering the editor (T07, revised). */}
+          {editable && !journeyVisible && currentStep && (
+            <div role="region" aria-label="Next step" className="fixed inset-x-0 top-16 z-20 border-b border-line bg-surface/95 shadow-sm backdrop-blur">
+              <div className="mx-auto flex h-12 max-w-7xl items-center gap-3 px-4 sm:px-6">
+                <span className="shrink-0 rounded-full bg-action-soft px-2.5 py-0.5 text-[13px] font-semibold text-action">
+                  Step {stepNo} of {steps.length}: {currentStep.label}
+                </span>
+                <p className="min-w-0 flex-1 truncate text-sm text-ink-2" title={nextStep.text}>{nextStep.text}</p>
                 {nextStep.button && (
-                  <Button icon={nextStep.button.icon} onClick={nextStep.button.onClick} disabled={nextStep.button.disabled}>
+                  <button
+                    type="button"
+                    onClick={nextStep.button.onClick}
+                    disabled={nextStep.button.disabled}
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-action px-3 text-sm font-semibold text-white hover:bg-action-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <nextStep.button.icon className="size-4" aria-hidden />
                     {nextStep.button.label}
-                  </Button>
+                  </button>
                 )}
               </div>
-            </Card>
+            </div>
           )}
 
           <div className="grid gap-5 lg:grid-cols-12">
@@ -533,7 +567,7 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
 
             <div className="lg:col-span-5">
               {sub && (
-                <div className="lg:sticky lg:top-20">
+                <div className="lg:sticky lg:top-32">
                   <UstaadPanel
                     studentName={me.name.split(" ")[0] ?? me.name}
                     messages={messages}

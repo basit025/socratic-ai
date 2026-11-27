@@ -10,6 +10,7 @@ import { eq, insert, insertIgnoringDuplicates, select, update } from "../lib/db.
 import { notFound, PublicError } from "../lib/errors.js";
 import { enforceAi } from "../lib/limits.js";
 import { ipHash } from "../lib/session.js";
+import { fence, looksLikeInstructionToAi, verifiedQuote } from "../lib/promptSafety.js";
 import { chooseOption, renderInstructions, type VariantSpec } from "../lib/variants.js";
 import { generateJson } from "../llm.js";
 import { buildUstaadPrompt, USTAAD_SYSTEM_PROMPT, USTAAD_WRITING_PROMPT, UstaadReplySchema } from "../ustaad.js";
@@ -209,12 +210,27 @@ workspaceRouter.post("/submissions/:id/ustaad", requireSession("student"), async
     if (sub.status !== "in_progress") throw new PublicError(409, "Hints are for work in progress. This assignment is already submitted.", "submitted");
     const a = await loadAssignment(sid, sub.assignment_id);
     if (!a) throw notFound("That assignment");
+    const workflow = a.rules?.workflow ?? "run_first";
+
+    // A message that tries to instruct the AI never reaches it (prompt injection). It is still saved,
+    // so the teacher sees the attempt in the chat.
+    if (looksLikeInstructionToAi(body.data.message)) {
+      const text = "I can only talk about your work, not take instructions about how I check it. Tell me in your own words what your code does.";
+      await insert("ustaad_messages", [
+        { sandbox_id: sid, submission_id: sub.id, role: "student", body: body.data.message, hint: null },
+        { sandbox_id: sid, submission_id: sub.id, role: "ustaad", body: text, hint: null },
+      ]);
+      res.json({ reply: { text, hint: null, nextStep: null, allowExecution: workflow !== "explain_first", checks: { goalClear: false, logicExplained: false, outputInterpreted: false } } });
+      return;
+    }
     await enforceAi(sid, ipHash(req));
 
     const variant = (await select<{ rendered_instructions: string }>(`variants?select=rendered_instructions&assignment_id=${eq(a.id)}&student_id=${eq(pid)}`))[0];
     const history = await select<{ role: "student" | "ustaad"; body: string }>(
       `ustaad_messages?select=role,body&submission_id=${eq(sub.id)}&order=created_at.desc&limit=6`,
     );
+    // Earlier student turns are fenced too, and an earlier instruction attempt is left out entirely.
+    const priorTurns = history.reverse().filter((m) => m.role === "ustaad" || !looksLikeInstructionToAi(m.body));
     const prompt = buildUstaadPrompt({
       assignmentTitle: a.title,
       instructions: variant?.rendered_instructions ?? renderInstructions(a.instructions_md, a.secrets?.variant_spec ?? {}, null),
@@ -231,7 +247,7 @@ workspaceRouter.post("/submissions/:id/ustaad", requireSession("student"), async
         purpose: "hint",
         system: a.type === "written" ? USTAAD_WRITING_PROMPT : USTAAD_SYSTEM_PROMPT,
         messages: [
-          ...history.reverse().map((m) => ({ role: m.role === "ustaad" ? ("assistant" as const) : ("user" as const), content: m.body })),
+          ...priorTurns.map((m) => (m.role === "ustaad" ? { role: "assistant" as const, content: m.body } : { role: "user" as const, content: `<student_message>\n${fence(m.body)}\n</student_message>` })),
           { role: "user" as const, content: prompt },
         ],
         schema: UstaadReplySchema,
@@ -242,6 +258,17 @@ workspaceRouter.post("/submissions/:id/ustaad", requireSession("student"), async
       },
     );
     const r = result.data;
+    // A check counts only when Ustaad quotes the student's own chat words and the server finds them
+    // there. Code comments, Ustaad's own words and instruction attempts never count.
+    const own = [...priorTurns.filter((m) => m.role === "student").map((m) => m.body), body.data.message];
+    const c = r.comprehensionChecks;
+    const checks = {
+      goalClear: c.goalClear && verifiedQuote(c.goalEvidence, own),
+      logicExplained: c.logicExplained && verifiedQuote(c.logicEvidence, own),
+      outputInterpreted: c.outputInterpreted && body.data.hasRun && verifiedQuote(c.outputEvidence, own),
+    };
+    // Explain-first: running unlocks only on a verified plan (goal and logic), not on the model's say-so.
+    const allowExecution = workflow === "explain_first" ? r.allowExecution && checks.goalClear && checks.logicExplained : true;
     await insert("ustaad_messages", [
       { sandbox_id: sid, submission_id: sub.id, role: "student", body: body.data.message, hint: null },
       { sandbox_id: sid, submission_id: sub.id, role: "ustaad", body: r.message, hint: r.hint },
@@ -251,8 +278,8 @@ workspaceRouter.post("/submissions/:id/ustaad", requireSession("student"), async
         text: r.message,
         hint: r.hint,
         nextStep: r.nextStepInstruction,
-        allowExecution: r.allowExecution,
-        checks: { goalClear: r.comprehensionChecks.goalClear, logicExplained: r.comprehensionChecks.logicExplained, outputInterpreted: r.comprehensionChecks.outputInterpreted },
+        allowExecution,
+        checks,
       },
     });
   } catch (err) {

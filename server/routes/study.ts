@@ -11,6 +11,7 @@ import { notFound, PublicError } from "../lib/errors.js";
 import { enforceAi } from "../lib/limits.js";
 import { ipHash } from "../lib/session.js";
 import { generateJson } from "../llm.js";
+import { fence } from "../lib/promptSafety.js";
 import {
   buildPracticePrompt,
   buildTutorPrompt,
@@ -78,7 +79,11 @@ studyRouter.post("/courses/:id/tutor", requireSession(), async (req, res, next) 
       gradedTitles: graded.map((g) => g.title),
       message: body.data.message,
     });
-    const history = (body.data.history ?? []).slice(-6).map((m) => ({ role: m.role === "ustaad" ? ("assistant" as const) : ("user" as const), content: m.text }));
+    // History comes from the browser: student turns are fenced like the current message, and no turn can
+    // close one of our tags. (The tutor grades nothing, so a forged tutor turn can't change a mark.)
+    const history = (body.data.history ?? []).slice(-6).map((m) =>
+      m.role === "ustaad" ? { role: "assistant" as const, content: fence(m.text) } : { role: "user" as const, content: `<student_message>\n${fence(m.text)}\n</student_message>` },
+    );
     const result = await generateJson({
       purpose: "hint",
       system: TUTOR_SYSTEM_PROMPT,

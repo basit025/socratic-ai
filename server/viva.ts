@@ -6,6 +6,7 @@
  */
 import { z } from "zod";
 import { generateJson, LlmUnavailableError } from "./llm.js";
+import { fence, looksLikeInstructionToAi } from "./lib/promptSafety.js";
 
 export type VivaKind = "explain_line" | "predict_output" | "modify";
 export const KIND_ORDER: VivaKind[] = ["explain_line", "predict_output", "modify", "explain_line", "predict_output"];
@@ -102,11 +103,11 @@ export function questionPrompt(c: QuestionContext): string {
     `Assignment: ${c.title}`,
     `Brief:\n${c.instructions}`,
     `Hidden test results: ${c.testsSummary}`,
-    c.mode === "written" ? `<student_code>\n(This is a WRITTEN answer, not code. Ask about the student's own words.)\n${c.code.slice(0, 8000)}\n</student_code>` : `<student_code>\n${c.code.slice(0, 8000)}\n</student_code>`,
+    c.mode === "written" ? `<student_code>\n(This is a WRITTEN answer, not code. Ask about the student's own words.)\n${fence(c.code.slice(0, 8000))}\n</student_code>` : `<student_code>\n${fence(c.code.slice(0, 8000))}\n</student_code>`,
     c.previous.length
-      ? `<previous_answers>\n${c.previous.map((p, i) => `Q${i + 1}: ${p.prompt}\nA${i + 1}: ${p.answer || "(no answer)"}`).join("\n\n")}\n</previous_answers>`
+      ? `<previous_answers>\n${c.previous.map((p, i) => `Q${i + 1}: ${p.prompt}\nA${i + 1}: ${fence(p.answer || "(no answer)")}`).join("\n\n")}\n</previous_answers>`
       : "",
-    c.discussed?.length ? `<chat_with_ustaad>\n${c.discussed.slice(-6).map((m) => `- ${m.slice(0, 400)}`).join("\n")}\n</chat_with_ustaad>` : "",
+    c.discussed?.length ? `<chat_with_ustaad>\n${c.discussed.slice(-6).map((m) => `- ${fence(m.slice(0, 400))}`).join("\n")}\n</chat_with_ustaad>` : "",
     `Question kind: ${c.kind}\nHow to ask it: ${(c.mode === "written" ? KIND_GUIDE_WRITTEN : KIND_GUIDE)[c.kind]}`,
   ]
     .filter(Boolean)
@@ -200,11 +201,15 @@ export function reconcileScore(s: VivaScore, questions: VivaQuestion[]): { score
   const perQ = questions.map((q, i) => {
     let v = s.per_question[i]?.score ?? 0;
     if (!(q.answer ?? "").trim()) v = 0;
+    else if (looksLikeInstructionToAi(q.answer ?? "")) v = 0; // an answer that tries to instruct the scorer earns nothing
     else if (q.auto_check && q.auto_check.predicted_match === false) v = Math.min(v, 3);
     else if (q.auto_check && q.auto_check.predicted_match === true) v = Math.max(v, 8);
     return v;
   });
-  const per_question = questions.map((_, i) => ({ score: perQ[i]!, feedback: s.per_question[i]?.feedback ?? "" }));
+  const per_question = questions.map((q, i) => ({
+    score: perQ[i]!,
+    feedback: (q.answer ?? "").trim() && looksLikeInstructionToAi(q.answer ?? "") ? "This answer gave instructions to the AI instead of answering the question, so it scores 0." : (s.per_question[i]?.feedback ?? ""),
+  }));
   const rubric = { ...s.rubric };
   const checks = questions.filter((q) => q.auto_check && q.auto_check.predicted_match !== null);
   if (checks.length) {
@@ -249,7 +254,7 @@ export async function scoreViva(c: ScoreContext): Promise<{ score: VivaScore; un
     .map((q, i) =>
       [
         `Q${i + 1} (${q.kind}${q.late ? ", answered after the time limit" : ""}): ${q.prompt}`,
-        `A${i + 1}: ${q.answer?.trim() || "(no answer)"}`,
+        `A${i + 1}: <student_answer>${fence(q.answer?.trim() || "(no answer)")}</student_answer>`,
         q.auto_check ? `ground_truth: running \`${q.auto_check.call}\` on the student's own code returns ${q.auto_check.actual}` : "",
       ]
         .filter(Boolean)
@@ -263,7 +268,7 @@ export async function scoreViva(c: ScoreContext): Promise<{ score: VivaScore; un
       messages: [
         {
           role: "user",
-          content: `Assignment: ${c.title}\n\n${c.mode === "written" ? "This is a WRITTEN answer, not code: read output_prediction as 'applies the idea to a new case' and modification as 'can change or strengthen the answer'.\n\n" : ""}<student_code>\n${c.code.slice(0, 8000)}\n</student_code>\n\nViva transcript:\n${transcript}`,
+          content: `Assignment: ${c.title}\n\n${c.mode === "written" ? "This is a WRITTEN answer, not code: read output_prediction as 'applies the idea to a new case' and modification as 'can change or strengthen the answer'.\n\n" : ""}<student_code>\n${fence(c.code.slice(0, 8000))}\n</student_code>\n\nViva transcript:\n${transcript}`,
         },
       ],
       schema: ScoreSchema,

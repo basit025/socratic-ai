@@ -5,6 +5,7 @@
  * course's graded assignments (their titles are passed in so it can recognise them).
  */
 import { z } from "zod";
+import { fence } from "./lib/promptSafety.js";
 
 export const TutorReplySchema = z.object({
   message: z.string().describe("Ustaad's reply in Markdown: clear, at most about 180 words, may use a short list or a small code example of the CONCEPT"),
@@ -78,7 +79,7 @@ export function buildTutorPrompt(c: TutorContext, maxChars = 24_000): string {
     focus ? `The student is reading lecture ${focus.week}: ${focus.title}.` : "The student is asking about the course in general.",
     material,
     c.slide ? `<slide>\n## ${c.slide.heading}\n${c.slide.body.slice(0, 3000)}\n</slide>\nThe student is looking at this slide right now.` : "",
-    `<student_message>\n${c.message.slice(0, 1500)}\n</student_message>`,
+    `<student_message>\n${fence(c.message.slice(0, 1500))}\n</student_message>`,
   ]
     .filter(Boolean)
     .join("\n\n");
