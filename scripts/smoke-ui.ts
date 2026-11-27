@@ -118,8 +118,8 @@ async function main() {
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
     await s.waitForSelector("[data-course-card]", { timeout: 15000 });
     await showAllTasks(s);
-    await s.waitForFunction(() => document.body.innerText.includes("Should Phones Be Allowed in Class?"), { timeout: 15000 });
-    await s.locator("a ::-p-text(Should Phones Be Allowed in Class?)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("Usability Review of a University Website"), { timeout: 15000 });
+    await s.locator("a ::-p-text(Usability Review of a University Website)").click();
     await s.waitForSelector("textarea[aria-label^='Your answer']", { timeout: 20000 });
     await s.type("textarea[aria-label^='Your answer']", "Phones should be allowed in class because they help us look things up quickly.");
     await s.waitForFunction(() => document.body.innerText.includes("14 words"), { timeout: 5000 });
