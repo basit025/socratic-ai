@@ -85,14 +85,15 @@ export function parseMarkdown(src: string): Block[] {
   return blocks;
 }
 
-export function Markdown({ text, className }: { text: string; className?: string }) {
+export function Markdown({ text, className, variant = "notes" }: { text: string; className?: string; variant?: "notes" | "slide" }) {
+  const slide = variant === "slide";
   return (
-    <div className={cx("space-y-3 text-[15px] leading-relaxed text-ink-2", className)}>
+    <div className={cx(slide ? "space-y-4 text-lg leading-relaxed text-ink-2 xl:text-xl" : "space-y-3 text-[15px] leading-relaxed text-ink-2", className)}>
       {parseMarkdown(text).map((b, i) => {
         switch (b.kind) {
           case "h":
             return b.level === 3 ? (
-              <h3 key={i} className="pt-1 text-base font-semibold text-ink">{inline(b.text)}</h3>
+              <h3 key={i} className={cx("pt-1 font-semibold text-ink", slide ? "text-xl xl:text-2xl" : "text-base")}>{inline(b.text)}</h3>
             ) : (
               <h4 key={i} className="pt-1 text-[15px] font-semibold text-ink">{inline(b.text)}</h4>
             );
@@ -119,14 +120,14 @@ export function Markdown({ text, className }: { text: string; className?: string
             );
           case "code":
             return (
-              <pre key={i} className="overflow-x-auto rounded-lg border border-line bg-canvas px-3.5 py-3 font-mono text-[13.5px] leading-6 text-ink" aria-label={b.lang ? `${b.lang} code` : "code"}>
+              <pre key={i} className={cx("overflow-x-auto rounded-lg border border-line bg-canvas px-3.5 py-3 font-mono leading-6 text-ink", slide ? "text-base xl:text-lg leading-7" : "text-[13.5px]")} aria-label={b.lang ? `${b.lang} code` : "code"}>
                 <code>{b.text}</code>
               </pre>
             );
           case "table":
             return (
               <div key={i} className="overflow-x-auto rounded-lg border border-line">
-                <table className="w-full text-left text-sm">
+                <table className={cx("w-full text-left", slide ? "text-base xl:text-lg" : "text-sm")}>
                   <thead className="bg-canvas text-ink">
                     <tr>{b.head.map((h, j) => <th key={j} className="px-3 py-2 font-semibold">{inline(h)}</th>)}</tr>
                   </thead>

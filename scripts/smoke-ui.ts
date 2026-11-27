@@ -24,10 +24,12 @@ function watch(page: Page, label: string) {
   page.on("pageerror", (e) => problems.push(`[${label}] page error: ${(e as Error).message}`));
 }
 
-/** The student home lists the next 8 tasks; expand it so any open task can be clicked. */
+/** The student home lists the first 12 to-dos; expand it so any open task can be clicked. */
 const showAllTasks = async (page: Page) => {
-  const more = await page.$("::-p-text(open tasks)");
-  if (more) await more.click();
+  await page.evaluate(() => {
+    const more = [...document.querySelectorAll("button")].find((b) => /^Show all \d+ tasks$/.test(b.textContent?.trim() ?? ""));
+    more?.click();
+  });
 };
 
 const shot = async (page: Page, name: string) => {
@@ -53,7 +55,7 @@ async function main() {
 
     const t1 = Date.now();
     await s.locator("button ::-p-text(Try as student)").click();
-    await s.waitForFunction(() => location.pathname === "/student" && document.body.innerText.includes("Assalam"), { timeout: 15000 });
+    await s.waitForFunction(() => location.pathname === "/student" && (document.querySelector("h1")?.textContent ?? "").includes("Ayesha"), { timeout: 15000 });
     ok(`"Try as student" → student home in ${Date.now() - t1} ms`);
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "2-student-home-1440");
@@ -95,7 +97,7 @@ async function main() {
 
     // ------------------------------------------------ workspace: a real student session
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForFunction(() => /Open (assignment|quiz)|Continue (assignment|quiz)/.test(document.body.innerText), { timeout: 15000 });
+    await s.waitForFunction(() => document.querySelectorAll("[data-course-card]").length > 0, { timeout: 15000 });
     const courseCount = await s.$$eval("[data-course-card]", (cs) => cs.length);
     courseCount >= 3 ? ok(`student home lists ${courseCount} courses (lived-in institution)`) : fail(`only ${courseCount} course(s) on student home`);
 
@@ -243,13 +245,23 @@ async function main() {
     ok("switched back to the student view");
 
     // Course page and the student's view of the teacher's mark
-    await s.locator("[data-course-card] a ::-p-text(Programming Fundamentals)").click();
-    await s.waitForFunction(() => document.body.innerText.includes("this week") && document.body.innerText.includes("Announcements"), { timeout: 15000 });
-    ok("student course page: weeks (current week open) and announcements");
+    await s.waitForSelector("a[data-course-card]", { timeout: 15000 });
+    await s.locator("a[data-course-card] ::-p-text(Programming Fundamentals)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("This week's lecture") && document.body.innerText.includes("Announcements"), { timeout: 15000 });
+    ok("student course page: overview with announcements and this week's lecture");
     await shot(s, "17-course-page");
-    await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.locator("nav[aria-label='Course sections'] a ::-p-text(Lectures)").click();
+    await s.waitForSelector("a[href*='/lectures/1']", { timeout: 10000 });
+    await s.click("a[href*='/lectures/1']");
+    await s.waitForSelector("[aria-roledescription='slide']", { timeout: 10000 });
+    await s.locator("button ::-p-text(Next slide)").click();
+    await s.waitForFunction(() => document.querySelector("[aria-roledescription='slide']")?.getAttribute("aria-label")?.startsWith("Slide 2"), { timeout: 5000 });
+    ok("lecture slides open and move to the next slide");
+    await s.locator("nav[aria-label='Course sections'] a ::-p-text(Marks)").click();
     await s.waitForFunction(() => document.body.innerText.includes("Marked: 7/10"), { timeout: 15000 });
-    ok('student home shows the confirmed mark "Marked: 7/10"');
+    ok('course marks show the confirmed mark "Marked: 7/10"');
+    await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
+    await s.waitForSelector("a[data-course-card]", { timeout: 15000 });
 
     // ------------------------------------------------ timed quiz: one question at a time → result
     await showAllTasks(s);

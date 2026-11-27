@@ -4,9 +4,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { AlertTriangle, ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, ClipboardX, Copy, Loader2, Lock, MessageCircleQuestion, Play, Send, Shuffle, Timer } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, ClipboardX, Copy, Loader2, Lock, MessageCircleQuestion, Play, Send, Shuffle, Timer } from "lucide-react";
 import { Dialog } from "../components/Dialog";
 import { AppShell } from "../components/AppShell";
+import { BackToCourse } from "../components/BackToCourse";
 import { Button, Card, Chip, ErrorState, Skeleton, Ur, cx } from "../components/ui";
 import { Appear } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
@@ -312,10 +313,8 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
 
   // ------------------------------------------------ render
   return (
-    <AppShell>
-      <Link to="/student" className="mb-4 inline-flex items-center gap-1.5 font-medium text-action hover:underline">
-        <ArrowLeft className="size-4" aria-hidden /> My courses
-      </Link>
+    <AppShell wide>
+      <BackToCourse course={data.status === "ready" ? data.data.assignment.course : null} />
 
       {data.status === "loading" && (
         <div className="space-y-4">

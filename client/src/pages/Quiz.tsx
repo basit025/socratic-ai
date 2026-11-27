@@ -8,13 +8,12 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardX, Clock, Expand, ListChecks, Maximize, Send, ShieldAlert, Timer, XCircle } from "lucide-react";
-import { Button, Card, Chip, DemoBadge, ErrorState, Spinner, Ur, cx } from "../components/ui";
+import { ArrowRight, CheckCircle2, ClipboardX, Clock, Expand, ListChecks, Maximize, Send, ShieldAlert, Timer, XCircle } from "lucide-react";
+import { Button, Card, Chip, ErrorState, Spinner, Ur, cx } from "../components/ui";
+import { BackToCourse } from "../components/BackToCourse";
 import { Appear, Pop } from "../components/Motion";
-import { Logo } from "../components/Logo";
 import { api, ApiError } from "../lib/api";
 import { formatDue } from "../lib/format";
-import { useMe } from "../lib/session";
 import { EventRecorder } from "../workspace/recorder";
 
 interface QuizQuestionView {
@@ -46,7 +45,7 @@ export interface QuizAssignment {
   open: boolean;
   dueAt: string | null;
   marks: number;
-  course: { code: string; name: string };
+  course: { id?: string; code: string; name: string };
   instructions: string;
 }
 
@@ -89,26 +88,21 @@ function QuizTimer({ secondsLeft, total }: { secondsLeft: number; total: number 
 }
 
 function Frame({ title, right, children }: { title: string; right?: ReactNode; children: ReactNode }) {
+  // Inside the platform's frame; the quiz bar stays visible so the timer is always in view.
   return (
-    <div className="min-h-screen bg-canvas">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-3 px-4">
-          <span className="flex items-center gap-3">
-            <Logo />
-            <DemoBadge />
-          </span>
-          {right ?? <span className="truncate text-sm font-medium text-ink-3">Quiz · {title}</span>}
-        </div>
-      </header>
-      <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
-    </div>
+    <main className="mx-auto max-w-3xl px-4 pb-8">
+      <div className="sticky top-16 z-20 -mx-4 mb-5 flex h-14 items-center justify-between gap-3 border-b border-line bg-canvas/95 px-4 backdrop-blur">
+        <span className="truncate text-sm font-semibold text-ink-2">Quiz · {title}</span>
+        {right}
+      </div>
+      {children}
+    </main>
   );
 }
 
 const canFullscreen = () => typeof document !== "undefined" && Boolean(document.documentElement.requestFullscreen) && document.fullscreenEnabled !== false;
 
 export function QuizPlayer({ assignment, submissionId, nextSeq }: { assignment: QuizAssignment; submissionId: string | null; nextSeq: number }) {
-  const me = useMe();
   const [view, setView] = useState<QuizView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -256,9 +250,7 @@ export function QuizPlayer({ assignment, submissionId, nextSeq }: { assignment: 
         <Card className="p-6">
           <h1 className="text-2xl font-bold">{assignment.title}</h1>
           <p className="mt-2 text-ink-2">This quiz is closed, so it can't be started any more.</p>
-          <Link to="/student" className="mt-5 inline-flex min-h-11 items-center gap-2 font-semibold text-action hover:underline">
-            <ArrowLeft className="size-4" aria-hidden /> My courses
-          </Link>
+          <BackToCourse course={assignment.course} tab="quizzes" className="mt-5" />
         </Card>
       </Frame>
     );
@@ -283,9 +275,7 @@ export function QuizPlayer({ assignment, submissionId, nextSeq }: { assignment: 
     const fs = view.fullscreenRequired && canFullscreen();
     return (
       <Frame title={view.title}>
-        <Link to="/student" className="mb-4 inline-flex items-center gap-1.5 font-medium text-action hover:underline">
-          <ArrowLeft className="size-4" aria-hidden /> My courses
-        </Link>
+        <BackToCourse course={assignment.course} tab="quizzes" />
         <Appear>
           <Card className="p-6 sm:p-8">
             <p className="text-sm font-medium text-ink-3">
@@ -356,8 +346,8 @@ export function QuizPlayer({ assignment, submissionId, nextSeq }: { assignment: 
               ))}
             </ol>
             <p className="mt-4 text-sm text-ink-3">Correct answers aren't shown yet: classmates may still be taking this quiz.</p>
-            <Link to={me.role === "student" ? "/student" : "/"} className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-action px-5 font-semibold text-white hover:bg-action-hover">
-              Back to my courses <ArrowRight className="size-5" aria-hidden />
+            <Link to={assignment.course.id ? `/student/courses/${assignment.course.id}/quizzes` : "/student"} className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg bg-action px-5 font-semibold text-white hover:bg-action-hover">
+              Back to the quizzes <ArrowRight className="size-5" aria-hidden />
             </Link>
           </Card>
         </Appear>

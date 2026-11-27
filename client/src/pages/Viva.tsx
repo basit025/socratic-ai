@@ -3,10 +3,10 @@
  * timer ring, progress dots and a big answer box: nothing else on screen. Ends with a clear result.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router";
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardX, Loader2, Lightbulb, Timer, XCircle } from "lucide-react";
-import { Logo } from "../components/Logo";
-import { Button, Card, Chip, DemoBadge, ErrorState, FullPageLoading, Ur, cx } from "../components/ui";
+import { useParams } from "react-router";
+import { ArrowRight, CheckCircle2, ClipboardX, Loader2, Lightbulb, Timer, XCircle } from "lucide-react";
+import { Button, Card, Chip, ErrorState, FullPageLoading, Ur, cx } from "../components/ui";
+import { BackToCourse } from "../components/BackToCourse";
 import { Appear } from "../components/Motion";
 import { api, ApiError } from "../lib/api";
 import { runner, useRunnerStatus } from "../runner/runner";
@@ -74,24 +74,19 @@ function TimerRing({ secondsLeft, total }: { secondsLeft: number; total: number 
 
 function VivaFrame({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-3 px-4">
-          <span className="flex items-center gap-3">
-            <Logo />
-            <DemoBadge />
-          </span>
-          <span className="truncate text-sm font-medium text-ink-3">Viva · {title}</span>
-        </div>
-      </header>
-      <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
-    </div>
+    <main className="mx-auto max-w-3xl px-4 pb-8">
+      <div className="sticky top-16 z-20 -mx-4 mb-5 flex h-14 items-center border-b border-line bg-canvas/95 px-4 backdrop-blur">
+        <span className="truncate text-sm font-semibold text-ink-2">Viva · {title}</span>
+      </div>
+      {children}
+    </main>
   );
 }
 
 export function Viva() {
   const { id = "" } = useParams();
   const [state, setState] = useState<VivaState | null>(null);
+  const [course, setCourse] = useState<{ id: string; code: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"loading" | "tests" | "ready" | "asking" | "thinking">("loading");
   const [answer, setAnswer] = useState("");
@@ -117,7 +112,8 @@ export function Viva() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const ws = await api<{ submission: { id: string } | null }>(`/student/assignments/${id}`);
+      const ws = await api<{ submission: { id: string } | null; assignment: { course: { id: string; code: string; name: string } } }>(`/student/assignments/${id}`);
+      setCourse(ws.assignment.course);
       if (!ws.submission) throw new ApiError(404, "Open the assignment first.");
       let v = await api<VivaState>(`/submissions/${ws.submission.id}/viva`);
       if (v.testsPending) {
@@ -313,9 +309,7 @@ export function Viva() {
             See what your teacher sees
           </Button>
         </Card>
-        <Link to="/student" className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg px-1 font-semibold text-action hover:underline">
-          <ArrowLeft className="size-5" aria-hidden /> Back to my courses
-        </Link>
+        <BackToCourse course={course} tab="assignments" className="mt-4" />
       </VivaFrame>
     );
   }

@@ -1,0 +1,227 @@
+/**
+ * One lecture: its slides (or the same material as notes), the work set for it, and the way to the next one.
+ * Slides come from the teacher's notes, one per section. Arrow keys move between slides.
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Maximize2, Minimize2, Presentation, ScrollText } from "lucide-react";
+import { Markdown } from "../components/Markdown";
+import { Button, Card, Chip, Segmented, cx, type ChipTone } from "../components/ui";
+import { courseStyle } from "../lib/courseStyle";
+import { toSlides } from "../lib/slides";
+import { kindOf } from "../lib/student";
+
+export interface LectureWeek {
+  week: number;
+  title: string;
+  notes: string;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  type: string;
+  meta: string;
+  chip: { tone: ChipTone; label: string };
+  to: string;
+}
+
+export function LectureView({
+  course, lecture, prev, next, base, tasks,
+}: {
+  course: { id: string; code: string; name: string; teacher: string };
+  lecture: LectureWeek;
+  prev: LectureWeek | null;
+  next: LectureWeek | null;
+  base: string;
+  tasks: Task[];
+}) {
+  const cs = courseStyle(course.code);
+  const slides = useMemo(() => toSlides(lecture.title, lecture.notes), [lecture]);
+  const total = slides.length + 1; // + the title slide
+  const [mode, setMode] = useState<"slides" | "notes">("slides");
+  const [i, setI] = useState(0);
+  const [full, setFull] = useState(false);
+  const stage = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setI(0), [lecture.week]);
+  useEffect(() => {
+    if (mode !== "slides") return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && /input|textarea|select/i.test(t.tagName)) return;
+      if (e.key === "ArrowRight" || e.key === "PageDown" || (e.key === " " && full)) {
+        e.preventDefault();
+        setI((n) => Math.min(total - 1, n + 1));
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        setI((n) => Math.max(0, n - 1));
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mode, total, full]);
+  useEffect(() => {
+    const onFs = () => setFull(document.fullscreenElement === stage.current && !!stage.current);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+  const toggleFull = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void stage.current?.requestFullscreen?.().catch(() => {});
+  };
+
+  const slide = i === 0 ? null : slides[i - 1]!;
+
+  return (
+    <div>
+      <Link to={`${base}/courses/${course.id}/lectures`} className="mb-3 inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-action hover:underline">
+        <ArrowLeft className="size-4" aria-hidden /> All lectures
+      </Link>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold" style={{ color: cs.color }}>Lecture {lecture.week}</p>
+          <h2 className="text-2xl font-bold tracking-tight">{lecture.title}</h2>
+          <p className="mt-0.5 text-sm text-ink-3">{slides.length + 1} slides · {course.teacher}</p>
+        </div>
+        <Segmented
+          label="View the lecture as"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: "slides", label: "Slides" },
+            { value: "notes", label: "Notes" },
+          ]}
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
+        <div className="min-w-0">
+          {mode === "slides" ? (
+            <>
+              <div
+                ref={stage}
+                className={cx("relative overflow-hidden rounded-xl border border-line bg-surface shadow-sm", full ? "flex flex-col justify-center !rounded-none p-[6vh_8vw]" : "aspect-[16/10] sm:aspect-video")}
+                aria-roledescription="slide"
+                aria-label={`Slide ${i + 1} of ${total}`}
+              >
+                {slide == null ? (
+                  <div className="flex h-full flex-col justify-end p-6 text-white sm:p-10" style={{ backgroundColor: cs.color }}>
+                    <svg aria-hidden className="absolute inset-0 h-full w-full opacity-[0.12]" preserveAspectRatio="xMidYMid slice" viewBox="0 0 160 90">
+                      <circle cx="140" cy="12" r="38" fill="#fff" />
+                      <circle cx="98" cy="96" r="28" fill="#fff" />
+                    </svg>
+                    <p className="relative text-sm font-semibold tracking-wide opacity-90 sm:text-base">{course.code} · {course.name}</p>
+                    <p className="relative mt-2 text-sm font-medium opacity-90 sm:text-lg">Lecture {lecture.week}</p>
+                    <h3 className="relative text-2xl leading-tight font-bold sm:text-4xl xl:text-5xl">{lecture.title}</h3>
+                    <p className="relative mt-3 text-sm opacity-90 sm:text-base">{course.teacher}</p>
+                  </div>
+                ) : (
+                  <div className={cx("flex h-full flex-col", !full && "p-5 sm:p-8 xl:p-10")}>
+                    <div className="mb-4 flex items-center gap-3">
+                      <span className="h-7 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: cs.color }} aria-hidden />
+                      <h3 className="text-xl font-bold tracking-tight text-ink sm:text-2xl xl:text-3xl">{slide.heading}</h3>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                      <Markdown text={slide.body} variant="slide" />
+                    </div>
+                    <p className="mt-3 flex justify-between text-xs text-ink-3">
+                      <span>{course.code} · Lecture {lecture.week}</span>
+                      <span className="tabular-nums">{i + 1} / {total}</span>
+                    </p>
+                  </div>
+                )}
+                {full && (
+                  <button type="button" onClick={toggleFull} className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-ink/10 text-ink hover:bg-ink/20" aria-label="Exit full screen">
+                    <Minimize2 className="size-5" aria-hidden />
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button variant="secondary" icon={ChevronLeft} disabled={i === 0} onClick={() => setI(i - 1)}>Previous</Button>
+                <Button icon={ChevronRight} disabled={i === total - 1} onClick={() => setI(i + 1)} className="flex-row-reverse">Next slide</Button>
+                <span className="px-2 text-sm text-ink-3 tabular-nums">Slide {i + 1} of {total} · use ← → keys</span>
+                <Button variant="ghost" icon={Maximize2} onClick={toggleFull} className="ml-auto">Full screen</Button>
+              </div>
+              <ol className="mt-3 flex gap-1.5 overflow-x-auto pb-1" aria-label="Slides">
+                {[lecture.title, ...slides.map((s) => s.heading)].map((h, n) => (
+                  <li key={n}>
+                    <button
+                      type="button"
+                      onClick={() => setI(n)}
+                      aria-current={n === i ? "true" : undefined}
+                      title={h}
+                      className={cx("min-h-11 w-36 shrink-0 truncate rounded-lg border px-2.5 text-left text-xs font-medium", n === i ? "border-action bg-action-soft text-action" : "border-line bg-surface text-ink-2 hover:border-line-strong")}
+                    >
+                      <span className="tabular-nums text-ink-3">{n + 1}.</span> {h}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : (
+            <Card className="p-5 sm:p-8">
+              <Markdown text={lecture.notes} className="max-w-3xl text-base" />
+            </Card>
+          )}
+
+          <nav className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="Other lectures">
+            {prev ? (
+              <Link to={`${base}/courses/${course.id}/lectures/${prev.week}`} className="group rounded-xl border border-line bg-surface p-4 hover:border-action">
+                <span className="flex items-center gap-1 text-sm text-ink-3"><ArrowLeft className="size-4" aria-hidden /> Previous lecture</span>
+                <span className="block font-semibold group-hover:text-action">{prev.week}. {prev.title}</span>
+              </Link>
+            ) : <span />}
+            {next && (
+              <Link to={`${base}/courses/${course.id}/lectures/${next.week}`} className="group rounded-xl border border-line bg-surface p-4 text-right hover:border-action">
+                <span className="flex items-center justify-end gap-1 text-sm text-ink-3">Next lecture <ArrowRight className="size-4" aria-hidden /></span>
+                <span className="block font-semibold group-hover:text-action">{next.week}. {next.title}</span>
+              </Link>
+            )}
+          </nav>
+        </div>
+
+        <aside className="space-y-4">
+          <Card className="overflow-hidden">
+            <h3 className="flex items-center gap-2 border-b border-line px-4 py-3 font-semibold">
+              <Presentation className="size-5 text-ink-3" aria-hidden /> Work for this lecture
+            </h3>
+            {tasks.length === 0 ? (
+              <p className="px-4 py-4 text-sm text-ink-3">No assignment or quiz is set for this lecture. Use the notes to revise.</p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {tasks.map((t) => {
+                  const k = kindOf(t.type);
+                  return (
+                    <li key={t.id}>
+                      <Link to={t.to} className="block px-4 py-3 hover:bg-canvas">
+                        <span className="flex items-center gap-2 text-xs font-medium text-ink-3"><k.icon className="size-3.5" aria-hidden /> {k.label}</span>
+                        <span className="block font-medium">{t.title}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-3">
+                          <Chip tone={t.chip.tone}>{t.chip.label}</Chip> {t.meta}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+          <Card className="p-4">
+            <p className="flex items-center gap-2 font-semibold"><ScrollText className="size-5 text-ink-3" aria-hidden /> In this lecture</p>
+            <ol className="mt-2 space-y-1 text-sm text-ink-2">
+              {slides.map((s, n) => (
+                <li key={n}>
+                  <button type="button" onClick={() => { setMode("slides"); setI(n + 1); }} className="min-h-8 text-left hover:text-action hover:underline">
+                    {n + 1}. {s.heading}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </Card>
+        </aside>
+      </div>
+    </div>
+  );
+}
