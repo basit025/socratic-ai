@@ -1,0 +1,12 @@
+#!/bin/sh
+# Rejects AI or tool attribution lines in a commit message. Commits carry the author's name only.
+# Installed by `npm install` (core.hooksPath=.githooks).
+msg="$1"
+if grep -v '^#' "$msg" | grep -E -i -q \
+  -e '^co-authored-by:.*(claude|anthropic|openai|chatgpt|codex|copilot|cursor|gemini|devin|\[bot\])' \
+  -e 'generated (with|by) .*(claude|chatgpt|codex|copilot|cursor|gemini|devin)' \
+  -e '🤖'; then
+  echo "commit-msg: remove the AI or tool attribution line from the commit message." >&2
+  exit 1
+fi
+exit 0
