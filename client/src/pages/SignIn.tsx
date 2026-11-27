@@ -44,11 +44,11 @@ export function SignIn() {
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--color-action-soft),_transparent_60%)]">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
         <Link to="/" aria-label="Socratic AI home"><Logo /></Link>
-        <Link to="/" className="flex items-center gap-1.5 text-sm font-medium text-ink-3 hover:text-ink"><ArrowLeft className="size-4" aria-hidden /> Try the demo instead</Link>
+        <Link to="/" className="flex items-center gap-1.5 text-sm font-medium text-ink-3 hover:text-ink"><ArrowLeft className="size-4" aria-hidden /> Explore without an account</Link>
       </header>
       <main className="mx-auto max-w-md px-4 pb-16 pt-6">
         <h1 className="text-center text-3xl font-bold tracking-tight">{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
-        <p className="mt-2 text-center text-ink-2">For real classes. To look around first, use the demo: no account needed.</p>
+        <p className="mt-2 text-center text-ink-2">For your classes. To look around first, open the sample institution: no account needed.</p>
         <div className="mt-6 flex justify-center">
           <Segmented label="Sign in or create an account" value={mode} onChange={(v) => { setMode(v); setError(null); }} options={[{ value: "signin", label: "Sign in" }, { value: "signup", label: "Create account" }]} />
         </div>

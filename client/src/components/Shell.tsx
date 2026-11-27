@@ -229,22 +229,22 @@ function PersonMenu() {
           </div>
           {me.demo && (
             <button type="button" onClick={() => { setOpen(false); setResetOpen(true); }} className="flex min-h-11 w-full items-center gap-2.5 px-4 text-left hover:bg-canvas">
-              <RotateCcw className="size-4 text-ink-3" aria-hidden /> Start over with a fresh demo
+              <RotateCcw className="size-4 text-ink-3" aria-hidden /> Reset sample workspace
             </button>
           )}
           <button type="button" onClick={leave} disabled={leaving} className="flex min-h-11 w-full items-center gap-2.5 px-4 text-left hover:bg-canvas">
-            <LogOut className="size-4 text-ink-3" aria-hidden /> {me.demo ? "Leave the demo" : "Sign out"}
+            <LogOut className="size-4 text-ink-3" aria-hidden /> Sign out
           </button>
         </div>
       )}
-      <Dialog open={resetOpen} title="Start over with a fresh demo?" onClose={() => !resetting && setResetOpen(false)}>
-        <p className="text-ink-2">You'll get a brand-new private copy of the demo institution, as a {me.role}. Anything you did in this demo is left behind.</p>
+      <Dialog open={resetOpen} title="Reset the sample workspace?" onClose={() => !resetting && setResetOpen(false)}>
+        <p className="text-ink-2">You'll get a fresh copy of the sample institution, as a {me.role}. Anything you changed here is cleared.</p>
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setResetOpen(false)} disabled={resetting} data-autofocus>
-            Keep this demo
+            Cancel
           </Button>
           <Button icon={RotateCcw} loading={resetting} onClick={startOver}>
-            Start over
+            Reset
           </Button>
         </div>
       </Dialog>
@@ -266,7 +266,7 @@ function SwitchRole() {
     }
   };
   return (
-    <Button variant="ghost" icon={ArrowLeftRight} loading={switching} onClick={go} title={`See this demo as the ${me.role === "teacher" ? "student" : "teacher"}`}>
+    <Button variant="ghost" icon={ArrowLeftRight} loading={switching} onClick={go} title={`See this workspace as the ${me.role === "teacher" ? "student" : "teacher"}`}>
       <span className="hidden lg:inline">{me.role === "teacher" ? "Student view" : "Teacher view"}</span>
     </Button>
   );

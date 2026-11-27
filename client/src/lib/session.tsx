@@ -34,7 +34,7 @@ export function RequireRole({ role, children }: { role: Me["role"]; children: Re
     return () => ctrl.abort();
   }, []);
 
-  if (!state) return <FullPageLoading label="Opening your demo…" />;
+  if (!state) return <FullPageLoading label="Opening Socratic AI…" />;
   if ("error" in state) return <Navigate to={state.error === "none" ? "/?ended=1" : "/"} replace />;
   if (state.me.role !== role) return <Navigate to={state.me.role === "teacher" ? "/teacher" : "/student"} replace />;
   return <MeContext.Provider value={state.me}>{children}</MeContext.Provider>;

@@ -59,7 +59,7 @@ async function main() {
     ok(`"Try as student" → student home in ${Date.now() - t1} ms`);
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "2-student-home-1440");
-    (await s.$eval("body", (b) => b.innerText.includes("Demo data"))) ? ok("Demo data badge visible") : fail("Demo data badge missing");
+    (await s.$eval("body", (b) => b.innerText.includes("Sample workspace"))) ? ok("sample-data label visible") : fail("sample-data label missing");
 
     // Python runner (exposed on window in dev builds only)
     const ready = await s.evaluate(async () => {
@@ -118,8 +118,8 @@ async function main() {
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
     await s.waitForSelector("[data-course-card]", { timeout: 15000 });
     await showAllTasks(s);
-    await s.waitForFunction(() => document.body.innerText.includes("Should Phones Be Allowed in Class?"), { timeout: 15000 });
-    await s.locator("a ::-p-text(Should Phones Be Allowed in Class?)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("Usability Review of a University Website"), { timeout: 15000 });
+    await s.locator("a ::-p-text(Usability Review of a University Website)").click();
     await s.waitForSelector("textarea[aria-label^='Your answer']", { timeout: 20000 });
     await s.type("textarea[aria-label^='Your answer']", "Phones should be allowed in class because they help us look things up quickly.");
     await s.waitForFunction(() => document.body.innerText.includes("14 words"), { timeout: 5000 });
@@ -257,6 +257,15 @@ async function main() {
     await s.locator("button ::-p-text(Next slide)").click();
     await s.waitForFunction(() => document.querySelector("[aria-roledescription='slide']")?.getAttribute("aria-label")?.startsWith("Slide 2"), { timeout: 5000 });
     ok("lecture slides open and move to the next slide");
+    let t9 = Date.now();
+    await s.locator("section[aria-label='Study with Ustaad'] button ::-p-text(Explain this slide in simple words)").click();
+    await s.waitForFunction(() => (document.querySelector("section[aria-label='Study with Ustaad']")?.querySelectorAll(".prose, .rounded-tl-md").length ?? 0) >= 1, { timeout: 40000 });
+    ok(`Study with Ustaad explained the slide in ${Date.now() - t9} ms`);
+    t9 = Date.now();
+    await s.locator("button ::-p-text(Quiz me on this lecture)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("0 of 5 answered") || /0 of \d answered/.test(document.body.innerText), { timeout: 40000 });
+    ok(`practice questions made in ${Date.now() - t9} ms`);
+    await shot(s, "18-lecture-study");
     await s.locator("nav[aria-label='Course sections'] a ::-p-text(Marks)").click();
     await s.waitForFunction(() => document.body.innerText.includes("Marked: 7/10"), { timeout: 15000 });
     ok('course marks show the confirmed mark "Marked: 7/10"');
