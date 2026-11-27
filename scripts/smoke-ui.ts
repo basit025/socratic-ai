@@ -257,6 +257,15 @@ async function main() {
     await s.locator("button ::-p-text(Next slide)").click();
     await s.waitForFunction(() => document.querySelector("[aria-roledescription='slide']")?.getAttribute("aria-label")?.startsWith("Slide 2"), { timeout: 5000 });
     ok("lecture slides open and move to the next slide");
+    let t9 = Date.now();
+    await s.locator("section[aria-label='Study with Ustaad'] button ::-p-text(Explain this slide in simple words)").click();
+    await s.waitForFunction(() => (document.querySelector("section[aria-label='Study with Ustaad']")?.querySelectorAll(".prose, .rounded-tl-md").length ?? 0) >= 1, { timeout: 40000 });
+    ok(`Study with Ustaad explained the slide in ${Date.now() - t9} ms`);
+    t9 = Date.now();
+    await s.locator("button ::-p-text(Quiz me on this lecture)").click();
+    await s.waitForFunction(() => document.body.innerText.includes("0 of 5 answered") || /0 of \d answered/.test(document.body.innerText), { timeout: 40000 });
+    ok(`practice questions made in ${Date.now() - t9} ms`);
+    await shot(s, "18-lecture-study");
     await s.locator("nav[aria-label='Course sections'] a ::-p-text(Marks)").click();
     await s.waitForFunction(() => document.body.innerText.includes("Marked: 7/10"), { timeout: 15000 });
     ok('course marks show the confirmed mark "Marked: 7/10"');

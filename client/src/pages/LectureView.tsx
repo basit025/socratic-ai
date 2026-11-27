@@ -10,6 +10,7 @@ import { Button, Card, Chip, Segmented, cx, type ChipTone } from "../components/
 import { courseStyle } from "../lib/courseStyle";
 import { toSlides } from "../lib/slides";
 import { kindOf } from "../lib/student";
+import { PracticeQuiz, StudyChat } from "../components/StudyPanel";
 
 export interface LectureWeek {
   week: number;
@@ -95,7 +96,7 @@ export function LectureView({
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_24rem]">
         <div className="min-w-0">
           {mode === "slides" ? (
             <>
@@ -166,6 +167,8 @@ export function LectureView({
             </Card>
           )}
 
+          <PracticeQuiz courseId={course.id} week={lecture.week} lectureTitle={lecture.title} />
+
           <nav className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="Other lectures">
             {prev ? (
               <Link to={`${base}/courses/${course.id}/lectures/${prev.week}`} className="group rounded-xl border border-line bg-surface p-4 hover:border-action">
@@ -183,6 +186,14 @@ export function LectureView({
         </div>
 
         <aside className="space-y-4">
+          <StudyChat
+            courseId={course.id}
+            courseCode={course.code}
+            week={lecture.week}
+            lectureTitle={lecture.title}
+            getSlide={() => (mode === "slides" && slide ? slide : null)}
+            className="h-[34rem]"
+          />
           <Card className="overflow-hidden">
             <h3 className="flex items-center gap-2 border-b border-line px-4 py-3 font-semibold">
               <Presentation className="size-5 text-ink-3" aria-hidden /> Work for this lecture

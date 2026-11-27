@@ -20,6 +20,7 @@ import { useMe } from "../lib/session";
 import { toSlides } from "../lib/slides";
 import { coursePercent, fmtMark, kindOf, needsWork, resultsLink, statusOf, type MySubmission } from "../lib/student";
 import { useApi } from "../lib/useApi";
+import { StudyChat, UstaadAvatar } from "../components/StudyPanel";
 import { LectureView } from "./LectureView";
 
 interface Item {
@@ -66,7 +67,7 @@ function rulesLine(a: Item): string {
   if (a.type === "quiz")
     return [a.questions ? `${a.questions} questions` : null, a.timeLimitMinutes ? `${a.timeLimitMinutes} min` : null, a.fullscreen ? "full screen" : null].filter(Boolean).join(" · ");
   const lang = a.type === "code" ? (a.language === "javascript" ? "JavaScript lab" : a.language === "html" ? "HTML lab" : "Python lab") : kindOf(a.type).label;
-  return [lang, a.vivaQuestions ? `viva: ${a.vivaQuestions} questions` : null, a.pasteBlocked ? "paste off" : null].filter(Boolean).join(" · ");
+  return [lang, a.type !== "handwritten" ? "Ustaad hints" : null, a.vivaQuestions ? `viva: ${a.vivaQuestions} questions` : null, a.pasteBlocked ? "paste off" : null].filter(Boolean).join(" · ");
 }
 
 // ---------------------------------------------------------------- lecture "viewed" marks (this browser only)
@@ -364,6 +365,8 @@ export function CoursePage() {
                     </Card>
                   </section>
 
+                  {isStudent && <StudyChat courseId={d.course.id} courseCode={d.course.code} className="h-[26rem]" />}
+
                   {current && (
                     <section>
                       <SectionTitle icon={BookOpenText}>This week's lecture</SectionTitle>
@@ -502,6 +505,17 @@ export function CoursePage() {
             {tab === "quizzes" && (
               <>
                 <SectionTitle icon={ListChecks}>Quizzes</SectionTitle>
+                {isStudent && quizzes.length > 0 && (
+                  <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-action-line bg-action-soft px-4 py-3">
+                    <UstaadAvatar className="size-9" />
+                    <p className="min-w-0 flex-1 text-[15px] text-ink-2">
+                      <strong className="text-ink">Revise with Ustaad first.</strong> Every lecture has practice questions and an AI tutor. During a graded quiz Ustaad is off, so the mark is all yours.
+                    </p>
+                    <Link to={`${base}/courses/${id}/lectures`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-surface px-4 font-semibold text-action ring-1 ring-action-line hover:bg-white">
+                      Go to lectures <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+                  </div>
+                )}
                 {quizzes.length === 0 ? (
                   <EmptyState icon={ListChecks} title="No quizzes yet" body={isStudent ? "Timed quizzes appear here when your teacher publishes them." : "Create a timed quiz from the assignment builder."} />
                 ) : (
