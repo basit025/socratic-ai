@@ -6,8 +6,9 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { AlertTriangle, ArrowLeft, ArrowRight, Camera, CheckCircle2, ClipboardX, KeyRound, Loader2, PenLine, RotateCcw, Timer } from "lucide-react";
+import { AlertTriangle, ArrowRight, Camera, CheckCircle2, ClipboardX, KeyRound, Loader2, PenLine, RotateCcw, Timer } from "lucide-react";
 import { AppShell } from "../components/AppShell";
+import { BackToCourse } from "../components/BackToCourse";
 import { Button, Card, Chip, ErrorState, Spinner, Ur, cx } from "../components/ui";
 import { Markdown } from "../components/Markdown";
 import { Appear, Pop } from "../components/Motion";
@@ -21,7 +22,7 @@ export interface HandwrittenAssignment {
   open: boolean;
   dueAt: string | null;
   marks: number;
-  course: { code: string; name: string };
+  course: { id?: string; code: string; name: string };
   rules: { vivaQuestions: number; vivaSecondsPerQ: number } | null;
 }
 
@@ -116,9 +117,7 @@ export function HandwrittenPage({ assignment: a, submissionId }: { assignment: H
 
   return (
     <AppShell>
-      <Link to="/student" className="mb-4 inline-flex items-center gap-1.5 font-medium text-action hover:underline">
-        <ArrowLeft className="size-4" aria-hidden /> My courses
-      </Link>
+      <BackToCourse course={a.course} />
       <div className="mb-5">
         <p className="text-sm font-medium text-ink-3">{a.course.code} · {a.course.name}</p>
         <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">{a.title}</h1>

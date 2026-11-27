@@ -59,7 +59,7 @@ export function DemoBadge({ className }: { className?: string }) {
   return (
     <span
       title="Everything here is fictional demo data: the institution and the people. Classmates' past work comes from simulated students who worked through the real platform (its real viva, scoring and flags)."
-      className={cx("inline-flex items-center rounded-md border border-attention-line bg-attention-soft px-2 py-0.5 text-xs font-semibold text-attention", className)}
+      className={cx("inline-flex items-center rounded-md border border-attention-line bg-attention-soft px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-attention", className)}
     >
       Demo data
     </span>

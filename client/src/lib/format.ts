@@ -42,3 +42,30 @@ export function greeting(now = new Date()): string {
 export function firstName(fullName: string): string {
   return fullName.split(" ")[0] ?? fullName;
 }
+
+/** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago", then a date. */
+export function timeAgo(iso: string, now = Date.now()): string {
+  const ms = now - Date.parse(iso);
+  if (ms < 60_000) return "just now";
+  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)} min ago`;
+  const d = -dayDiff(iso, now);
+  if (d === 0) return `${Math.floor(ms / 3_600_000)} h ago`;
+  if (d === 1) return "yesterday";
+  if (d < 7) return `${d} days ago`;
+  return dateFmt.format(Date.parse(iso));
+}
+
+/** "Fri 27 Nov" */
+export function formatDay(iso: string | number): string {
+  return dateFmt.format(typeof iso === "number" ? iso : Date.parse(iso));
+}
+
+/** "11:59 PM" */
+export function formatTime(iso: string): string {
+  return timeFmt.format(Date.parse(iso));
+}
+
+/** YYYY-MM-DD in Pakistan time, for grouping by calendar day. */
+export function dayKey(t: string | number): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(typeof t === "number" ? t : Date.parse(t));
+}
