@@ -10,6 +10,7 @@ export const LIMITS = {
   loginPerIp: { window: 900, max: 20, message: "Too many sign-in attempts from this network. Please wait 15 minutes and try again." },
   joinPerIp: { window: 900, max: 30, message: "Too many join attempts. Please wait a few minutes and try again." },
   aiPerSandbox: { window: 3600, max: 60, message: "You've asked Ustaad a lot this hour. Take a moment to try it yourself, then ask again in a few minutes." },
+  pilotPerIp: { window: 3600, max: 5, message: "We've already received several requests from this network. We'll be in touch soon." },
   aiPerIp: { window: 3600, max: 200, message: "Ustaad is getting a lot of questions from this network right now. Please try again in a few minutes." },
 } as const;
 

@@ -298,6 +298,7 @@ export function QuizPlayer({ assignment, submissionId, nextSeq }: { assignment: 
                 {fs && <li>The quiz opens fullscreen. Leaving fullscreen or switching tabs is recorded for your teacher.</li>}
                 {!fs && <li>Switching tabs or apps is recorded for your teacher.</li>}
                 <li>When time runs out, the quiz hands itself in with the answers you've given.</li>
+                <li>Ustaad, the AI tutor, is off during a quiz: the mark shows what you know. Revise with Ustaad in the lectures first.</li>
               </ul>
               <p className="mt-2 text-sm text-ink-3">No webcam, no microphone. Your teacher sees your answers and the times you left the quiz.</p>
             </div>

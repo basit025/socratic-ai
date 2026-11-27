@@ -86,12 +86,13 @@ export const students: SeedPerson[] = [
 const keys = students.map((s) => s.key);
 const firstYears = keys.slice(0, 34);
 const secondYears = keys.slice(15, 45);
-/** Who takes which of the lecture-material courses. Ayesha (the demo student) has a full semester. */
+/** Who takes which of the lecture-material courses. Ayesha (the sample student) takes 5 courses in all:
+ *  CS-101, WEB-102, CS-201, CS-341 and CS-381, so her semester looks like a real, manageable load. */
 const ROSTERS: Record<string, string[]> = {
   cs201: ["ayesha", ...secondYears],
-  cs211: ["ayesha", ...keys.slice(5, 33)],
+  cs211: keys.slice(5, 34),
   cs341: ["ayesha", ...keys.slice(12, 41)],
-  cs352: ["ayesha", ...keys.slice(14, 42)],
+  cs352: keys.slice(14, 43),
   cs381: ["ayesha", ...keys.slice(8, 37)],
   cs461: keys.slice(16, 45),
   cs372: keys.slice(13, 42),
@@ -113,7 +114,7 @@ export const courses: SeedCourse[] = [
   // A new, empty section: shows the creation flow and the teaching empty states.
   { key: "cs101b", teacher: "sana", code: "CS-101", name: "Programming Fundamentals", section: "Section B (new)", term: "Fall 2026", joinCode: "PKC7HB", students: [] },
   { key: "web102", teacher: "imran", code: "WEB-102", name: "Web Development", section: "Section A", term: "Fall 2026", joinCode: "WEB4KQ", students: ["ayesha", ...firstYears.slice(5, 34)] },
-  { key: "eng101", teacher: "hina", code: "ENG-101", name: "Communication Skills", section: "Section C", term: "Fall 2026", joinCode: "ENG3RT", students: ["ayesha", ...firstYears.slice(3, 32)] },
+  { key: "eng101", teacher: "hina", code: "ENG-101", name: "Communication Skills", section: "Section C", term: "Fall 2026", joinCode: "ENG3RT", students: firstYears.slice(3, 33).filter((k) => k !== "ayesha") },
   // Courses built from the team's own lecture material (server/seed/courses/). Rosters are set here.
   ...coursePacks.map((p) => ({ ...p.course, students: ROSTERS[p.course.key] ?? [] })),
 ];
@@ -190,7 +191,28 @@ export interface SeedQuiz {
 
 const labRules = (o: Partial<SeedAssignment["rules"]> = {}): SeedAssignment["rules"] => ({ pasteBlocked: true, workflow: "run_first", vivaQuestions: 3, vivaSecondsPerQ: 90, vivaWeight: 50, variantsOn: false, ...o });
 
-export const assignments: SeedAssignment[] = [
+/**
+ * Pacing for the sample student's five courses: at most two or three pieces of open work per course,
+ * due dates spread over the next two weeks (never a pile on one day), the rest scheduled as drafts.
+ * Applied on top of each course's own dates. Keys must exist (checked in content.test.ts).
+ */
+type Pace = Pick<SeedAssignment, "status" | "opensInDays" | "dueInDays">;
+const pub = (opensInDays: number, dueInDays: number): Pace => ({ status: "published", opensInDays, dueInDays });
+const later = (opensInDays: number, dueInDays: number): Pace => ({ status: "draft", opensInDays, dueInDays });
+export const PACE: Record<string, Pace> = {
+  // CS-101
+  cricket: pub(-2, 3), "quiz-python": pub(-2, 6), rickshaw: later(5, 12),
+  // WEB-102
+  attendance: pub(-2, 4), "quiz-js": pub(-1, 8), bill: later(6, 13),
+  // CS-201
+  "dsa-quiz-trees": pub(-1, 7), queue: pub(-4, 10), "dsa-bst": pub(-2, 13), "dsa-trace": later(4, 12), "quiz-ds": later(8, 15),
+  // CS-341
+  "dm-quiz": pub(-2, 4), "dm-apriori": pub(-1, 9), "dm-kmeans": pub(-3, 11),
+  // CS-381
+  "hci-quiz": pub(-2, 5), "hci-review": pub(-1, 12),
+};
+
+export const assignments: SeedAssignment[] = ([
   // ------------------------------------------------------------ CS-101 (Python)
   {
     key: "chai", course: "cs101", week: 1, type: "code", language: "python", title: "Chai Bill Splitter", status: "closed", opensInDays: -16, dueInDays: -10, marks: 10,
@@ -416,7 +438,7 @@ export const assignments: SeedAssignment[] = [
   },
   ...quizAssignments,
   ...coursePacks.flatMap((p) => p.assignments),
-];
+] satisfies SeedAssignment[]).map((a): SeedAssignment => (PACE[a.key] ? { ...a, ...PACE[a.key] } : a));
 
 export interface SeedAnnouncement {
   course: string;
