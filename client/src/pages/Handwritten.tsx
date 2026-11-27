@@ -41,6 +41,7 @@ export function HandwrittenPage({ assignment: a, submissionId }: { assignment: H
   const navigate = useNavigate();
   const [state, setState] = useState<State | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rejected, setRejected] = useState(false); // the last photo was refused as a page: it can't be re-sent
   const [stage, setStage] = useState<Stage>("task");
   const [photo, setPhoto] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -109,6 +110,8 @@ export function HandwrittenPage({ assignment: a, submissionId }: { assignment: H
       setStage("read");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't send your photo. Check your connection and try again.");
+      // 422 = the page itself was refused (unreadable, or not this assignment): this photo can't be used.
+      setRejected(e instanceof ApiError && e.status === 422);
       setStage("preview");
     }
   };
@@ -191,8 +194,15 @@ export function HandwrittenPage({ assignment: a, submissionId }: { assignment: H
                   <p className="text-sm text-ink-2">Can you read every line, and is <strong className="font-mono">{state.codeWord}</strong> visible at the top?</p>
                   {error && <p role="alert" className="text-sm font-medium text-danger">{error}</p>}
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Button variant="secondary" icon={RotateCcw} onClick={() => { setPhoto(null); void openCamera(); }}>Retake</Button>
-                    <Button size="lg" icon={ArrowRight} onClick={send}>Use this photo (you can't change it after)</Button>
+                    {rejected ? (
+                      // The page was refused: the only way forward is a new photo (one primary action).
+                      <Button size="lg" icon={RotateCcw} onClick={() => { setPhoto(null); setError(null); setRejected(false); void openCamera(); }}>Retake the photo</Button>
+                    ) : (
+                      <>
+                        <Button variant="secondary" icon={RotateCcw} onClick={() => { setPhoto(null); setError(null); void openCamera(); }}>Retake</Button>
+                        <Button size="lg" icon={ArrowRight} onClick={send}>{error ? "Try again with this photo" : "Use this photo (you can't change it after)"}</Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </Card>
