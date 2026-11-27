@@ -9,7 +9,7 @@ Built for the **Capital Youth Expo 2026 Hackathon (04-HK), Track 1: Education.**
 - **Originality:** all core logic is written between **Nov 16 and Nov 28, 2026**. No pasting in pre-built projects or cloned products. Commit small and often; the history is our evidence.
 - **Disclosure:** every external API, model, library and UI kit goes in `README.md` (section "Third-party APIs and libraries"). Update it in the same commit that adds a dependency.
 - **Freeze (revised Nov 27):** building continues through **Saturday Nov 28 early morning**; then video, deck and submission, **submitted Saturday night** (official deadline Nov 28, 11:59 PM PKT). After submission only minor environment/config fixes are allowed.
-- **Never fabricate:** no invented metrics, quotes or "users". Seeded content shows a visible **"Demo data"** badge.
+- **Never fabricate:** no invented metrics, quotes or "users". Seeded content shows a visible **"Sample workspace"** label (the honesty disclosure; never the word "demo" in the product UI).
 - **Secrets:** API keys live only in Vercel (type Secret) and in each developer's git-ignored `.env.local`; operator-only values in git-ignored `.env.ops`. Never commit `.env*` files (except `.env.example`), never print a key in logs or tool output, never pass one in a URL query string.
   - Two automatic guards: the **pre-commit hook** (`scripts/check-secrets.sh`, installed by `npm install` via `core.hooksPath=.githooks`) blocks env files and key-shaped strings; **GitHub push protection** is on for the repo. Never bypass with `--no-verify` except for a proven false positive.
   - Only `VITE_`-prefixed variables reach the browser bundle; none of them may hold a secret.
@@ -88,10 +88,11 @@ vercel.json      build, rewrites, region, cron
 - **Migrations:** SQL files in `supabase/migrations/`, applied in order, **preview first, then production**: `npx supabase db query --remote=<ref> --yes -f supabase/migrations/<file>.sql` (needs `npx supabase login`). Never edit a migration that has been applied; add a new one. After applying, test as `service_role` through the REST API, not only through the CLI (the CLI's admin connection hides missing grants).
 - **Code runner:** Pyodide loads from the jsDelivr CDN in the browser, inside a Web Worker, so running student code costs no server time and an infinite loop can never freeze the page.
 
-### Team and git flow (decided Nov 23: solo build)
-- **One builder:** R1 (Basit) with Claude Code writes all code. Teammates do **no code**: course content (in the plain formats under `content/`), Thursday's test, recorded sessions, research, video and deck.
-- Claude works on a branch per feature, opens a PR, checks the Vercel preview link, then merges. Basit reviews previews for product and UI decisions.
-- Judges' Q&A answer for "who built what": one engineer building with an AI coding assistant (disclosed in the README); four teammates on research, content, user testing, video and pitch.
+### Team and git flow (revised Nov 27: two builders)
+- **Two builders for the final stretch:** Basit (with Claude Code) and Hammad, coding in parallel. **Read `docs/COLLABORATION.md` before starting:** area ownership (Hammad: instructor side; Basit: student side, AI, landing, seed), shared "hot" files, git workflow, consistency rules, freeze times.
+- Claim a task in the team chat and open a draft PR early; keep PRs small; `git pull --rebase origin main` at least hourly; never push to `main` directly; ask before editing files in the other person's area.
+- Teammates without code tasks: course content, research, video and deck.
+- Judges' Q&A answer for "who built what": engineers building with an AI coding assistant (disclosed in the README); teammates on research, content, user testing, video and pitch.
 - Every push to `main` deploys to production; every pull request gets a Vercel preview URL for teammates to test.
 - Work on branches, open a PR, test on the preview URL, then merge. Only tested work merges to `main`, and `main` is always deployable.
 - `npm run lint && npm test && npm run build` must pass before every merge.
