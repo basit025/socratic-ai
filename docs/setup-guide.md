@@ -20,7 +20,7 @@ Follow this file from top to bottom in one sitting (about 75 minutes). When you 
 | Step | What | Time | Protects |
 | --- | --- | --- | --- |
 | 1 | Clean live URL | 3 min | Presentation |
-| 2 | Two Supabase databases in Mumbai | 15 min | Technical Execution |
+| 2 | Two Supabase databases in South Asia | 15 min | Technical Execution |
 | 3 | Plan the AI keys (who provides which) | 3 min | Technical Execution |
 | 4 | Create Gemini, Groq and OpenRouter keys (+ paid credit) | 15 min | Technical Execution |
 | 5 | Cron secret | 1 min | Technical Execution |
@@ -37,11 +37,11 @@ The production URL is **https://socratic-ai-pk.vercel.app**. It is the only URL 
 
 ---
 
-## Step 2: Create two Supabase databases in Mumbai (15 min)
+## Step 2: Create two Supabase databases in South Asia (15 min)
 
-*Why: our server runs in Mumbai. The database must be in the same city, or every page waits on Mumbai↔Tokyo round-trips. Two projects keep testing away from the demo data judges see.*
+*Why: our server runs in South Asia. The database must be in the same region, or every page waits on South Asia↔Tokyo round-trips. Two projects keep testing away from the demo data judges see.*
 
-You need two projects, both in **Mumbai (ap-south-1)**:
+You need two projects, both in **South Asia (ap-south-1)**:
 
 | Project name | Used by |
 | --- | --- |
@@ -69,13 +69,13 @@ openssl rand -hex 20
 
 1. In the dashboard, click **New project**.
 2. Look at the **Region** field. Besides "Americas / Europe / Asia-Pacific", look for a link, toggle or dropdown such as **"Specific region"**, **"Advanced"** or a list of cities.
-3. **If you can pick "South Asia (Mumbai)" / `ap-south-1`:**
-   - Name: `socratic-ai-prod`, Database password: the prod password from 2.2, Region: **Mumbai**, Plan: Free → **Create new project**.
-   - Repeat with name `socratic-ai-preview` and the preview password, also **Mumbai**.
+3. **If you can pick "South Asia" / `ap-south-1`:**
+   - Name: `socratic-ai-prod`, Database password: the prod password from 2.2, Region: **South Asia**, Plan: Free → **Create new project**.
+   - Repeat with name `socratic-ai-preview` and the preview password, also **South Asia**.
    - Skip 2.4 and go to **2.5**.
 4. **If you can only pick the broad groups, don't create anything.** Close the form and use 2.4.
 
-### 2.4 Create the projects with the command line (reliable way to get Mumbai)
+### 2.4 Create the projects with the command line (reliable way to get South Asia)
 
 1. Log in (a browser window opens; click **Authorize**):
 
@@ -113,7 +113,7 @@ openssl rand -hex 20
    npx supabase projects list
    ```
 
-   Both rows must show **REGION = `ap-south-1`** (Mumbai). Copy each project's **REFERENCE ID** (about 20 letters). Wait 2 minutes for the projects to finish starting.
+   Both rows must show **REGION = `ap-south-1`**. Copy each project's **REFERENCE ID** (about 20 letters). Wait 2 minutes for the projects to finish starting.
 
 ### 2.5 Copy the keys for each project
 
@@ -137,9 +137,9 @@ This prints the `anon` and `service_role` keys. The Project URL is `https://REFE
 
 ### 2.6 Confirm the region in the dashboard
 
-Open each project → **Project Settings → General**. The region should say **South Asia (Mumbai)** / `ap-south-1`.
+Open each project → **Project Settings → General**. The region should say **South Asia** / `ap-south-1`.
 
-> If either project ended up anywhere other than Mumbai, still finish the guide, and say so in your Step 9 report. Claude will move the server to the same city (a one-line change).
+> If either project ended up anywhere other than South Asia, still finish the guide, and say so in your Step 9 report. Claude will move the server to the same region (a one-line change).
 
 **Save in your password manager (6 values):**
 
