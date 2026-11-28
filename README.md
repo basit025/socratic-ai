@@ -118,11 +118,10 @@ Formats and rules: [`docs/event-format.md`](docs/event-format.md) · full specif
 
 - **A second phone can't be blocked**, but it can be made useless: retyping leaves a fingerprint in the replay, variants make shared answers wrong, and the timed viva on the student's own work carries the marks.
 - **Someone else doing both the work and the viva** while logged in as the student needs identity checks; high-stakes exams belong in a lab with an invigilator.
-- **Flags can be wrong.** That's why they are evidence for the teacher, never verdicts.
 
 ## About the sample institution
 
-The institution you enter with **Try as student / Try as teacher** ("Pothohar Institute of Computing"), its people and their work are fictional. Classmates' past submissions come from **simulated students** (strong, struggling and copying personas) who worked through the real platform: the platform's own viva questions, AI scoring and flag rules produced every score and flag you see. They show how the platform behaves; they are not measured results. Measured results will be reported only from real students and teachers, exactly as measured.
+The institution you enter with **Try as student / Try as teacher**, its people and their work are fictional. Classmates' past submissions come from **simulated students** (strong, struggling and copying personas) who worked through the real platform: the platform's own viva questions, AI scoring and flag rules produced every score and flag you see. They show how the platform behaves; they are not measured results. Measured results will be reported only from real students and teachers, exactly as measured.
 
 ## Run it locally
 
