@@ -39,8 +39,11 @@ export function greeting(now = new Date()): string {
   return "Good evening";
 }
 
+/** What to call someone in a greeting: "Ayesha Khan" → "Ayesha"; a title stays with the name: "Dr. Nauman Shamim" → "Dr. Nauman". */
 export function firstName(fullName: string): string {
-  return fullName.split(" ")[0] ?? fullName;
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length > 1 && /^(Dr|Mr|Ms|Mrs|Prof)\.?$/i.test(parts[0]!)) return `${parts[0]} ${parts[1]}`;
+  return parts[0] || fullName;
 }
 
 /** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago", then a date. */

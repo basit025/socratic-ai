@@ -15,7 +15,7 @@ import { ipHash, setSessionCookie, type Session } from "../lib/session.js";
 export const accountsRouter = Router();
 
 const ACCOUNT_DAYS = 14;
-const initials = (name: string) => name.trim().split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "?";
+const initials = (name: string) => name.trim().replace(/^(Dr|Mr|Ms|Mrs|Prof)\.?\s+/i, "").split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "?";
 
 const SignupBody = z.object({
   role: z.enum(["teacher", "student"]),

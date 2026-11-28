@@ -54,6 +54,7 @@ export function useShellReload() {
 
 export function initials(name: string) {
   return name
+    .replace(/^(Dr|Mr|Ms|Mrs|Prof)\.?\s+/i, "") // "Dr. Nauman Shamim" → NS
     .split(" ")
     .map((p) => p[0])
     .join("")

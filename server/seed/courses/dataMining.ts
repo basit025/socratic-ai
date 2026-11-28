@@ -4,7 +4,7 @@ import { closed, draft, lab, open, quiz, weeks, written, type CoursePack } from 
 const C = "cs341";
 
 export const dataMining: CoursePack = {
-  course: { key: C, teacher: "sana", code: "CS-341", name: "Data Mining", section: "Section A", term: "Fall 2026", joinCode: "DMN5RK", students: [] },
+  course: { key: C, teacher: "ijaz", code: "CS-341", name: "Data Mining", section: "Section A", term: "Fall 2026", joinCode: "DMN5RK", students: [] },
   modules: weeks(C, [
     ["What data mining is", `
 ### Why mine data?
