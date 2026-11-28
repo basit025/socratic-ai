@@ -92,7 +92,7 @@ flowchart LR
     V[Viva screen] --> API
     T[Teacher report<br/>replay + flags] --> API
   end
-  API[Express API<br/>one Vercel Function, Mumbai] --> DB[(Supabase Postgres<br/>append-only event log<br/>server-only access)]
+  API[Express API<br/>one Vercel Function] --> DB[(Supabase Postgres<br/>append-only event log<br/>server-only access)]
   API --> LLM{{server/llm.ts}}
   LLM --> G[Gemini Flash-Lite]
   LLM -.429 / 5xx / timeout.-> Q[Groq]
@@ -137,7 +137,7 @@ npx tsx scripts/lecture-slides.ts             # operators: turn lecture-material
 
 ## Deployment
 
-One Vercel project serves the Vite front end from its CDN and the Express API as a single function in Mumbai (`bom1`), next to two Supabase projects in Mumbai (production and preview: Postgres and Storage). Every push to `main` deploys; every pull request gets a preview link. A daily cron (`/api/cron/reset-demo`, 03:00 PKT, secret-protected) clears expired sandboxes. Keys live only in Vercel; a pre-commit hook and GitHub push protection keep secrets out of the repository.
+One Vercel project serves the Vite front end from its CDN and the Express API as a single serverless function, in the same region as its two Supabase projects (production and preview: Postgres and Storage). Every push to `main` deploys; every pull request gets a preview link. A daily cron (`/api/cron/reset-demo`, 03:00 PKT, secret-protected) clears expired sandboxes. Keys live only in Vercel; a pre-commit hook and GitHub push protection keep secrets out of the repository.
 
 ## Third-party APIs and libraries
 
@@ -167,9 +167,6 @@ Every external service, model and library used in this repository is listed here
 | [LibreOffice](https://www.libreoffice.org), [Poppler](https://poppler.freedesktop.org) and [ImageMagick](https://imagemagick.org) (operator tools, not shipped) | `scripts/lecture-slides.ts`: turn the teachers' PowerPoint/PDF slides into page images and text for the lecture viewer | MPL-2.0 / GPL-2.0 / ImageMagick License |
 | [Inter](https://rsms.me/inter/), [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (Google Fonts) | Interface and code fonts | SIL Open Font License |
 | [Puppeteer](https://pptr.dev) (`puppeteer-core`) | Browser smoke tests and screenshots (development only) | Apache-2.0 |
-| [Gemini TTS](https://ai.google.dev/gemini-api/docs/speech-generation) (`gemini-3.1-flash-tts-preview`) | The voiceover of the submission video (an AI voice, reading our own script) | Google AI Studio free tier |
-| [Groq Whisper](https://console.groq.com/docs/speech-to-text) (`whisper-large-v3`) | Checks the video voiceover word by word against the script, and times the captions | Groq free tier |
-| [FFmpeg](https://ffmpeg.org) (operator tool, not shipped) | Edits the submission video from live-platform recordings | LGPL/GPL |
 | [Supabase CLI](https://supabase.com/docs/guides/cli) | Applies database migrations and seeds (development tool, run with `npx`) | MIT |
 
 ### AI coding assistants
