@@ -33,17 +33,19 @@ The top bar also has a **light/dark** switch, and the sidebar folds into an icon
 
 ## The problem
 
-- **A course lives in five places.** In a typical Pakistani university course, announcements are in a WhatsApp group, slides are PDFs on an LMS, assignments are emailed, quizzes are on Google Forms and marks are in the teacher's Excel sheet. Students miss deadlines; teachers repeat the same work everywhere.
-- **AI can do the homework.** Any lab can be pasted into a chatbot and submitted in minutes. The teacher sees the same polished output whether the student learned or not.
+**In the age of AI, a student can hand in perfect work without learning anything, and nobody can tell.** Marks stop meaning understanding, and the learning itself quietly stops happening.
+
+- **AI can do the homework.** Any lab, essay or assignment can be pasted into a chatbot and submitted in minutes. The teacher sees the same polished output whether the student learned or copied.
+- **The copying goes unchecked.** Today's tools check only the final answer, and a copied answer is a correct answer. Students who skip the thinking get the same marks as students who did it, so fewer bother to learn.
 - **AI detectors don't solve it.** A Stanford study found seven popular detectors flagged, on average, 61% of essays by non-native English writers as AI-generated ([Stanford HAI](https://hai.stanford.edu/news/ai-detectors-biased-against-non-native-english-writers)). Almost every Pakistani student writes in a second language.
 - **HEC's framework** asks that students don't present AI work as their own, and that no student is punished on a detection report alone ([HEC framework](https://www.hec.gov.pk//english/policies/Pages/Framework-GenAI.aspx)).
-- **Vivas work but don't scale.** Asking a student to explain their work is the check teachers trust, but a teacher with 180 students can't hold 180 vivas a week.
+- **Vivas work but don't scale.** Asking a student to explain their own work is the check teachers trust, because a student who understands can explain. But a teacher with 180 students can't hold 180 vivas a week.
+
+A second, smaller problem makes the first one harder to fix: a typical Pakistani course is scattered across a WhatsApp group, an LMS of PDFs, emailed assignments, Google Forms and the teacher's Excel sheet. Learning can't be checked when the work happens somewhere nobody can see.
 
 ## Our approach
 
-**One platform for the whole course.** Lectures with the teacher's own slides, notes and an AI tutor; coding labs (Python and JavaScript run in the browser); written answers; timed quizzes; announcements; marks and a gradebook. One home page per student and per teacher.
-
-**Marks that reflect understanding, without guessing who used AI.** Instead of detecting AI text, Socratic AI checks learning directly, in three layers. Any one can be beaten; beating all three is more work than doing the assignment honestly.
+**Our main contribution: verify learning instead of detecting AI.** Socratic AI makes sure students understand what they hand in: first they learn, then they explain. It checks learning directly, in three layers. Any one can be beaten; beating all three is more work than doing the assignment honestly.
 
 | Layer | What it does | What it catches |
 | --- | --- | --- |
@@ -58,6 +60,8 @@ What makes the viva fair and hard to game:
 - **The teacher decides.** Flags are plain sentences ("Left the page for 3 min 10 s, then typed 220 characters within a minute of coming back"), each with **Show me**, which jumps to that moment in the replay. No AI-text detector, no webcam, no automatic penalty.
 
 **Ustaad teaches, it doesn't hand out answers.** In a lab it replies with a hint and one question, and never writes solution code. On lectures it explains slides, gives local examples (chai, cricket, rickshaws) and makes practice questions. It matches the student's language: English or Roman Urdu.
+
+**And the whole course in one place.** Learning can only be verified where the work happens, so the course lives here too: lectures with the teacher's own slides, coding labs (Python and JavaScript run in the browser), written answers, timed quizzes, announcements, marks and a gradebook. This is a secondary contribution: an LMS stores the submission, while Socratic AI shows whether the student understood it.
 
 ## Screens
 
