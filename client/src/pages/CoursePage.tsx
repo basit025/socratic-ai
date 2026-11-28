@@ -300,7 +300,7 @@ export function CoursePage() {
                           isActive || tab === t.key ? "border-current" : "border-transparent text-ink-3 hover:text-ink",
                         )
                       }
-                      style={({ isActive }) => (isActive || tab === t.key ? { color: cs.color } : undefined)}
+                      style={({ isActive }) => (isActive || tab === t.key ? { color: cs.text } : undefined)}
                     >
                       <t.icon className="size-4" aria-hidden />
                       {t.label}
@@ -351,7 +351,7 @@ export function CoursePage() {
                             return (
                               <li key={a.id}>
                                 <Link to={linkFor(a)} className="flex items-start gap-3 px-4 py-3 hover:bg-canvas">
-                                  <k.icon className="mt-0.5 size-5 shrink-0" style={{ color: cs.color }} aria-hidden />
+                                  <k.icon className="mt-0.5 size-5 shrink-0" style={{ color: cs.text }} aria-hidden />
                                   <span className="min-w-0">
                                     <span className="block font-medium leading-snug">{a.title}</span>
                                     <span className="block text-sm text-ink-3">{isStudent ? formatDue(a.dueAt, true) : `${a.handedIn ?? 0}/${d.course.students} handed in · ${formatDue(a.dueAt, true).split(" · ")[0]}`}</span>
@@ -373,7 +373,7 @@ export function CoursePage() {
                       <Link to={`${base}/courses/${id}/lectures/${current.week}`} className="group block overflow-hidden rounded-xl border border-line bg-surface hover:border-action">
                         <div className="h-2" style={{ backgroundColor: cs.color }} aria-hidden />
                         <div className="p-4">
-                          <p className="text-sm font-semibold" style={{ color: cs.color }}>Lecture {current.week}</p>
+                          <p className="text-sm font-semibold" style={{ color: cs.text }}>Lecture {current.week}</p>
                           <p className="font-semibold leading-snug group-hover:text-action">{current.title}</p>
                           <p className="mt-1 text-sm text-ink-3">{toSlides(current.title, current.notes).length + 1} slides and notes</p>
                           <p className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-action">Open the slides <ArrowRight className="size-4" aria-hidden /></p>
@@ -413,7 +413,7 @@ export function CoursePage() {
                         return (
                           <li key={w.week}>
                             <Link to={`${base}/courses/${id}/lectures/${w.week}`} className="group flex items-center gap-4 px-4 py-4 hover:bg-canvas sm:px-5">
-                              <span className="flex size-11 shrink-0 items-center justify-center rounded-lg text-lg font-bold tabular-nums" style={{ backgroundColor: cs.soft, color: cs.color }}>
+                              <span className="flex size-11 shrink-0 items-center justify-center rounded-lg text-lg font-bold tabular-nums" style={{ backgroundColor: cs.soft, color: cs.text }}>
                                 {w.week}
                               </span>
                               <span className="min-w-0 flex-1">
@@ -511,7 +511,7 @@ export function CoursePage() {
                     <p className="min-w-0 flex-1 text-[15px] text-ink-2">
                       <strong className="text-ink">Revise with Ustaad first.</strong> Every lecture has practice questions and an AI tutor. During a graded quiz Ustaad is off, so the mark is all yours.
                     </p>
-                    <Link to={`${base}/courses/${id}/lectures`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-surface px-4 font-semibold text-action ring-1 ring-action-line hover:bg-white">
+                    <Link to={`${base}/courses/${id}/lectures`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-surface px-4 font-semibold text-action ring-1 ring-action-line hover:bg-action-soft">
                       Go to lectures <ArrowRight className="size-4" aria-hidden />
                     </Link>
                   </div>

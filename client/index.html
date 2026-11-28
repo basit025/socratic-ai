@@ -12,6 +12,15 @@
     <meta property="og:title" content="Socratic AI: Strong Fundamentals in the Age of AI" />
     <meta property="og:description" content="One organized learning platform for students and teachers: courses, weekly material, assignments, coding labs, quizzes and marks in one place, with the AI mentor Ustaad making sure every mark reflects real understanding." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      // Apply a remembered dark theme before the first paint on signed-in pages (the landing page stays light).
+      try {
+        if (localStorage.getItem("socratic.theme") === "dark" && /^\/(student|teacher)(\/|$)/.test(location.pathname)) {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        }
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />

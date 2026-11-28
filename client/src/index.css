@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Dark mode is a class on <html> (set by lib/theme.ts), not the system setting, so the switch in the top bar decides. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * Design tokens. One colour language everywhere, always paired with an icon and words:
  *   action (blue) = do this · done (green) · attention (amber) · locked (grey) = upcoming or unavailable
@@ -36,7 +39,79 @@
   --color-danger: #b91c1c;
   --color-danger-soft: #fef2f2;
   --color-danger-line: #fecaca;
+
+  /* Behind dialogs and the mobile menu: always dark, in both themes. */
+  --color-scrim: #020617;
 }
+
+/* Code colours in the editor (CodeEditor.tsx), light theme. */
+:root {
+  --syn-keyword: #7c3aed;
+  --syn-string: #047857;
+  --syn-number: #b45309;
+  --syn-comment: #64748b;
+  --syn-function: #1d4ed8;
+  --syn-type: #0e7490;
+  --syn-operator: #334155;
+  --syn-invalid: #b91c1c;
+
+  /* How far course colours are lightened when used as text (lib/courseStyle.ts). */
+  --course-lift: 0%;
+}
+
+/*
+ * Dark theme: the same tokens, redefined. Text colours are lighter so they pass WCAG AA on the dark surface;
+ * solid buttons and badges (white text on a colour) keep a deeper shade, set below.
+ */
+:root.dark {
+  --color-ink: #e5e9f0;
+  --color-ink-2: #c3cbd8;
+  --color-ink-3: #8f9bb0;
+  --color-line: #24304a;
+  --color-line-strong: #34425e;
+  --color-canvas: #0b1120;
+  --color-surface: #111a2e;
+
+  --color-action: #6f9bff;
+  --color-action-hover: #2556c4;
+  --color-action-soft: #162447;
+  --color-action-line: #2a4380;
+
+  --color-done: #4ade80;
+  --color-done-soft: #0f2a1d;
+  --color-done-line: #1d5a38;
+
+  --color-attention: #f5b14a;
+  --color-attention-soft: #2d2110;
+  --color-attention-line: #6b4a12;
+
+  --color-locked: #8f9bb0;
+  --color-locked-soft: #1b2538;
+  --color-locked-line: #2a3650;
+
+  --color-danger: #ff7a7f;
+  --color-danger-soft: #2e1416;
+  --color-danger-line: #6e2a2e;
+
+  --syn-keyword: #c4a5ff;
+  --syn-string: #7ee2a8;
+  --syn-number: #f5b14a;
+  --syn-comment: #8f9bb0;
+  --syn-function: #8fb4ff;
+  --syn-type: #67d4e6;
+  --syn-operator: #c3cbd8;
+  --syn-invalid: #ff7a7f;
+
+  --course-lift: 50%;
+}
+
+/* Unlayered, so they win over the utilities: solid colours that carry white text stay deep enough for AA. */
+:root.dark .bg-action { background-color: #2f66d8; }
+:root.dark .bg-done { background-color: #15803d; }
+:root.dark .bg-attention { background-color: #b45309; }
+:root.dark .bg-danger { background-color: #c62828; }
+:root.dark .bg-action:hover:is(.hover\:bg-action-hover) { background-color: var(--color-action-hover); }
+:root.dark .bg-action:disabled:is(.disabled\:bg-locked\/60) { background-color: color-mix(in oklab, var(--color-locked) 60%, transparent); }
 
 @layer base {
   html {

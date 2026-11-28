@@ -81,7 +81,7 @@ export function LectureView({
       </Link>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold" style={{ color: cs.color }}>Lecture {lecture.week}</p>
+          <p className="text-sm font-semibold" style={{ color: cs.text }}>Lecture {lecture.week}</p>
           <h2 className="text-2xl font-bold tracking-tight">{lecture.title}</h2>
           <p className="mt-0.5 text-sm text-ink-3">{slides.length + 1} slides · {course.teacher}</p>
         </div>

@@ -167,7 +167,7 @@ Every external service, model and library used in this repository is listed here
 | [Tailwind CSS](https://tailwindcss.com) 4 | Styling and design tokens | MIT |
 | [React Router](https://reactrouter.com) | Page routing | MIT |
 | [Lucide](https://lucide.dev) (`lucide-react`) | Icons | ISC |
-| [CodeMirror 6](https://codemirror.net) | Code editor in the student workspace (with paste blocking) | MIT |
+| [CodeMirror 6](https://codemirror.net) (incl. `@codemirror/language`, and `@lezer/highlight` from the same project) | Code editor in the student workspace (with paste blocking); syntax colours that follow light and dark mode | MIT |
 | [Motion](https://motion.dev) | Small feedback animations (a step completing, a result appearing) | MIT |
 | [Pyodide](https://pyodide.org) (jsDelivr CDN in the browser; npm for the seed script) | Runs students' Python in a Web Worker; computes hidden-test answers when seeding | MPL-2.0 |
 | [Inter](https://rsms.me/inter/), [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (Google Fonts) | Interface and code fonts | SIL Open Font License |
