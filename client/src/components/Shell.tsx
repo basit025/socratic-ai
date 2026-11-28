@@ -10,7 +10,7 @@ import {
   RotateCcw, Sun, Trophy, X,
 } from "lucide-react";
 import { Dialog } from "./Dialog";
-import { Logo, LogoMark } from "./Logo";
+import { Logo } from "./Logo";
 import { Button, cx } from "./ui";
 import { api } from "../lib/api";
 import { useMe } from "../lib/session";
@@ -330,21 +330,23 @@ function Sidebar({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollap
 
   return (
     <nav aria-label="Main" className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
-        <Link to={base} onClick={onNavigate} aria-label="Socratic AI home">
-          <Logo />
-        </Link>
+      {/* The toggle sits in the top-left corner in both states, so folding and unfolding is the same click. */}
+      <div className="flex items-center gap-2 px-4 pt-4 pb-3">
         {onCollapse && (
           <button
             type="button"
             onClick={onCollapse}
             aria-label="Collapse the sidebar"
-            title="Collapse the sidebar"
-            className="flex size-10 items-center justify-center rounded-lg text-ink-3 hover:bg-locked-soft hover:text-ink"
+            aria-expanded="true"
+            title="Collapse the sidebar (Ctrl+B)"
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg text-ink-3 hover:bg-locked-soft hover:text-ink"
           >
             <PanelLeftClose className="size-5" aria-hidden />
           </button>
         )}
+        <Link to={base} onClick={onNavigate} aria-label="Socratic AI home">
+          <Logo />
+        </Link>
       </div>
       <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
         <NavLink to={base} end onClick={onNavigate} className={navItem}>
@@ -435,17 +437,15 @@ function SidebarRail({ onExpand }: { onExpand: () => void }) {
   const base = me.role === "teacher" ? "/teacher" : "/student";
   const courses = useNavCourses();
   return (
-    <nav aria-label="Main" className="flex h-full flex-col items-center">
-      <div className="flex flex-col items-center gap-1 pt-4 pb-2">
-        <Link to={base} aria-label="Socratic AI home" title="Home">
-          <LogoMark className="size-8" />
-        </Link>
+    <nav aria-label="Main" className="flex h-full flex-col">
+      <div className="px-4 pt-4 pb-3">
         <button
           type="button"
           onClick={onExpand}
           aria-label="Expand the sidebar"
-          title="Expand the sidebar"
-          className="mt-1 flex size-11 items-center justify-center rounded-lg text-ink-3 hover:bg-locked-soft hover:text-ink"
+          aria-expanded="false"
+          title="Expand the sidebar (Ctrl+B)"
+          className="flex size-10 items-center justify-center rounded-lg text-ink-3 hover:bg-locked-soft hover:text-ink"
         >
           <PanelLeftOpen className="size-5" aria-hidden />
         </button>
@@ -517,6 +517,22 @@ export function Shell() {
     writePref(SIDEBAR_KEY, c ? "collapsed" : "open");
     setCollapsed(c);
   };
+  // Ctrl+B (⌘B on a Mac) folds or unfolds the sidebar, except while typing.
+  useEffect(() => {
+    if (focus) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== "b") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (/input|textarea|select/i.test(t.tagName) || t.isContentEditable)) return;
+      e.preventDefault();
+      setCollapsed((c) => {
+        writePref(SIDEBAR_KEY, c ? "open" : "collapsed");
+        return !c;
+      });
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [focus]);
 
   const state: ShellState = { student: me.role === "student" ? student : null, teacher: me.role === "teacher" ? teacher : null };
 
@@ -550,7 +566,7 @@ export function Shell() {
               >
                 <Menu className="size-5" aria-hidden />
               </button>
-              <Link to={me.role === "teacher" ? "/teacher" : "/student"} className={cx(!focus && "lg:hidden")} aria-label="Socratic AI home">
+              <Link to={me.role === "teacher" ? "/teacher" : "/student"} className={cx(!focus && !collapsed && "lg:hidden")} aria-label="Socratic AI home">
                 <Logo className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline" />
               </Link>
               <div className="flex-1" />
