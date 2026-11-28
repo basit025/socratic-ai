@@ -247,7 +247,16 @@ export function CoursePage() {
 
         return (
           <>
-            {/* Course banner */}
+            {/* Course banner: one slim line while a lecture is open, so the slides get the screen */}
+            {tab === "lectures" && lectureWeek != null ? (
+              <div className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-white" style={{ backgroundColor: cs.color }}>
+                <cs.icon className="size-5 shrink-0 opacity-90" aria-hidden />
+                <p className="min-w-0 truncate text-[15px]">
+                  <span className="font-semibold">{d.course.code} · {d.course.name}</span>
+                  <span className="opacity-90"> · {d.course.teacher}</span>
+                </p>
+              </div>
+            ) : (
             <div className="relative overflow-hidden rounded-2xl px-5 py-6 text-white sm:px-8 sm:py-7" style={{ backgroundColor: cs.color }}>
               <svg aria-hidden className="absolute inset-0 h-full w-full opacity-[0.12]" preserveAspectRatio="xMidYMid slice" viewBox="0 0 400 120">
                 <circle cx="360" cy="10" r="80" fill="#fff" />
@@ -285,6 +294,7 @@ export function CoursePage() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Tabs */}
             <nav aria-label="Course sections" className="sticky top-16 z-20 -mx-4 mb-6 border-b border-line bg-canvas/95 px-4 backdrop-blur sm:-mx-6 sm:px-6">

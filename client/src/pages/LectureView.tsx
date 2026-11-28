@@ -13,6 +13,14 @@ import { kindOf } from "../lib/student";
 import { useApi } from "../lib/useApi";
 import { PracticeQuiz, StudyChat } from "../components/StudyPanel";
 
+/**
+ * A slide never needs scrolling: it is as wide as the column allows, but never taller than the window minus the
+ * top bar, the course tabs and the slide controls (12.25rem); the width shrinks to keep the slide's shape.
+ * scroll-mt-32 parks it just under the sticky top bar and tabs when it is scrolled into view.
+ */
+const FIT_4_3 = "mx-auto aspect-[4/3] w-full max-w-[calc((100dvh-12.25rem)*4/3)] scroll-mt-32";
+const FIT_16_9 = "mx-auto aspect-[16/10] w-full scroll-mt-32 sm:aspect-video sm:max-w-[calc((100dvh-12.25rem)*16/9)]";
+
 export interface LectureWeek {
   week: number;
   title: string;
@@ -53,13 +61,27 @@ export function LectureView({
   const thumbs = useRef<HTMLOListElement>(null);
 
   useEffect(() => setMode(deckCount > 0 ? "deck" : "slides"), [lecture.week, deckCount]);
+  // Opening a lecture (or switching to slides) on a short laptop screen: bring the whole slide and its buttons into view.
+  useEffect(() => {
+    if (mode === "notes") return;
+    const t = setTimeout(() => {
+      const el = stage.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.top < 112 || r.bottom + 64 > window.innerHeight) el.scrollIntoView({ block: "start" });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [lecture.week, mode]);
   useEffect(() => setI(0), [lecture.week, mode]);
   // Fetch the next page ahead of time, and keep the current thumbnail in view.
   useEffect(() => {
     if (mode !== "deck") return;
     const nextPage = pages[i + 1];
     if (nextPage) new Image().src = nextPage.url;
-    thumbs.current?.querySelector(`[data-thumb="${i}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    // Scroll only the strip sideways (scrollIntoView would also move the page).
+    const strip = thumbs.current;
+    const thumb = strip?.querySelector<HTMLElement>(`[data-thumb="${i}"]`);
+    if (strip && thumb) strip.scrollTo({ left: thumb.offsetLeft - strip.clientWidth / 2 + thumb.clientWidth / 2, behavior: "smooth" });
   }, [mode, i, pages]);
   useEffect(() => {
     if (mode === "notes") return;
@@ -99,8 +121,17 @@ export function LectureView({
     </div>
   );
   const exitFull = full && (
-    <button type="button" onClick={toggleFull} className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-ink/10 text-ink hover:bg-ink/20" aria-label="Exit full screen">
-      <Minimize2 className="size-5" aria-hidden />
+    <button
+      type="button"
+      onClick={toggleFull}
+      title="Exit full screen (Esc)"
+      className={cx(
+        "absolute top-3 right-3 flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold",
+        mode === "deck" ? "bg-white/15 text-white hover:bg-white/25" : "bg-ink/10 text-ink hover:bg-ink/20",
+      )}
+      aria-label="Exit full screen"
+    >
+      <Minimize2 className="size-4" aria-hidden /> Exit full screen
     </button>
   );
 
@@ -140,7 +171,7 @@ export function LectureView({
             <>
               <div
                 ref={stage}
-                className={cx("relative overflow-hidden rounded-xl border border-line bg-locked-soft shadow-sm", full ? "flex items-center justify-center !rounded-none bg-scrim" : "aspect-[4/3]")}
+                className={cx("relative overflow-hidden rounded-xl border border-line bg-locked-soft shadow-sm", full ? "flex items-center justify-center !rounded-none bg-scrim" : FIT_4_3)}
                 aria-roledescription="slide"
                 aria-label={`Slide ${i + 1} of ${total}`}
               >
@@ -163,7 +194,7 @@ export function LectureView({
               </div>
               {controls}
               {pages.length > 0 && (
-                <ol ref={thumbs} className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Slides">
+                <ol ref={thumbs} className="relative mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Slides">
                   {pages.map((p, n) => (
                     <li key={p.url} data-thumb={n}>
                       <button
@@ -185,7 +216,7 @@ export function LectureView({
             <>
               <div
                 ref={stage}
-                className={cx("relative overflow-hidden rounded-xl border border-line bg-surface shadow-sm", full ? "flex flex-col justify-center !rounded-none p-[6vh_8vw]" : "aspect-[16/10] sm:aspect-video")}
+                className={cx("relative overflow-hidden rounded-xl border border-line bg-surface shadow-sm", full ? "flex flex-col justify-center !rounded-none p-[6vh_8vw]" : FIT_16_9)}
                 aria-roledescription="slide"
                 aria-label={`Slide ${i + 1} of ${total}`}
               >
@@ -268,7 +299,7 @@ export function LectureView({
             getSlide={() =>
               page ? { heading: `Slide ${i + 1} of ${total} in the teacher's deck`, body: page.text || "(This slide is mostly a picture or diagram.)" } : slide
             }
-            className="h-[34rem]"
+            className="h-[calc(100dvh-12.25rem)] min-h-[26rem] max-h-[42rem]"
           />
           <Card className="overflow-hidden">
             <h3 className="flex items-center gap-2 border-b border-line px-4 py-3 font-semibold">
