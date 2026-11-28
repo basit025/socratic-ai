@@ -1,21 +1,24 @@
 /**
- * One lecture: its slides (or the same material as notes), the work set for it, and the way to the next one.
- * Slides come from the teacher's notes, one per section. Arrow keys move between slides.
+ * One lecture: the teacher's own slide deck when there is one, key-point slides made from the notes, the notes
+ * themselves, the work set for it, and the way to the next one. Arrow keys move between slides.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Maximize2, Minimize2, Presentation, ScrollText } from "lucide-react";
 import { Markdown } from "../components/Markdown";
-import { Button, Card, Chip, Segmented, cx, type ChipTone } from "../components/ui";
+import { Button, Card, Chip, ErrorState, Segmented, Skeleton, cx, type ChipTone } from "../components/ui";
 import { courseStyle } from "../lib/courseStyle";
 import { toSlides } from "../lib/slides";
 import { kindOf } from "../lib/student";
+import { useApi } from "../lib/useApi";
 import { PracticeQuiz, StudyChat } from "../components/StudyPanel";
 
 export interface LectureWeek {
   week: number;
   title: string;
   notes: string;
+  /** Pages in the teacher's own slide deck (0 or missing: none). */
+  slides?: number;
 }
 
 interface Task {
@@ -39,15 +42,27 @@ export function LectureView({
 }) {
   const cs = courseStyle(course.code);
   const slides = useMemo(() => toSlides(lecture.title, lecture.notes), [lecture]);
-  const total = slides.length + 1; // + the title slide
-  const [mode, setMode] = useState<"slides" | "notes">("slides");
+  const deckCount = lecture.slides ?? 0;
+  const deck = useApi<{ pages: { url: string; text: string }[] }>(deckCount > 0 ? `/courses/${course.id}/lectures/${lecture.week}/slides` : null);
+  const pages = deck.status === "ready" ? deck.data.pages : [];
+  const [mode, setMode] = useState<"deck" | "slides" | "notes">(deckCount > 0 ? "deck" : "slides");
+  const total = mode === "deck" ? Math.max(1, pages.length || deckCount) : slides.length + 1; // key points: + the title slide
   const [i, setI] = useState(0);
   const [full, setFull] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
+  const thumbs = useRef<HTMLOListElement>(null);
 
-  useEffect(() => setI(0), [lecture.week]);
+  useEffect(() => setMode(deckCount > 0 ? "deck" : "slides"), [lecture.week, deckCount]);
+  useEffect(() => setI(0), [lecture.week, mode]);
+  // Fetch the next page ahead of time, and keep the current thumbnail in view.
   useEffect(() => {
-    if (mode !== "slides") return;
+    if (mode !== "deck") return;
+    const nextPage = pages[i + 1];
+    if (nextPage) new Image().src = nextPage.url;
+    thumbs.current?.querySelector(`[data-thumb="${i}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [mode, i, pages]);
+  useEffect(() => {
+    if (mode === "notes") return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && /input|textarea|select/i.test(t.tagName)) return;
@@ -72,7 +87,22 @@ export function LectureView({
     else void stage.current?.requestFullscreen?.().catch(() => {});
   };
 
-  const slide = i === 0 ? null : slides[i - 1]!;
+  const slide = mode === "slides" && i > 0 ? (slides[i - 1] ?? null) : null;
+  const page = mode === "deck" ? (pages[i] ?? null) : null;
+
+  const controls = (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <Button variant="secondary" icon={ChevronLeft} disabled={i === 0} onClick={() => setI(i - 1)}>Previous</Button>
+      <Button icon={ChevronRight} disabled={i >= total - 1} onClick={() => setI(i + 1)} className="flex-row-reverse">Next slide</Button>
+      <span className="px-2 text-sm text-ink-3 tabular-nums">Slide {i + 1} of {total} · use ← → keys</span>
+      <Button variant="ghost" icon={Maximize2} onClick={toggleFull} className="ml-auto">Full screen</Button>
+    </div>
+  );
+  const exitFull = full && (
+    <button type="button" onClick={toggleFull} className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-ink/10 text-ink hover:bg-ink/20" aria-label="Exit full screen">
+      <Minimize2 className="size-5" aria-hidden />
+    </button>
+  );
 
   return (
     <div>
@@ -81,24 +111,77 @@ export function LectureView({
       </Link>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold" style={{ color: cs.color }}>Lecture {lecture.week}</p>
+          <p className="text-sm font-semibold" style={{ color: cs.text }}>Lecture {lecture.week}</p>
           <h2 className="text-2xl font-bold tracking-tight">{lecture.title}</h2>
-          <p className="mt-0.5 text-sm text-ink-3">{slides.length + 1} slides · {course.teacher}</p>
+          <p className="mt-0.5 text-sm text-ink-3">{deckCount || slides.length + 1} slides · {course.teacher}</p>
         </div>
         <Segmented
           label="View the lecture as"
           value={mode}
           onChange={setMode}
-          options={[
-            { value: "slides", label: "Slides" },
-            { value: "notes", label: "Notes" },
-          ]}
+          options={
+            deckCount > 0
+              ? [
+                  { value: "deck", label: "Slides" },
+                  { value: "slides", label: "Key points" },
+                  { value: "notes", label: "Notes" },
+                ]
+              : [
+                  { value: "slides", label: "Slides" },
+                  { value: "notes", label: "Notes" },
+                ]
+          }
         />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_24rem]">
         <div className="min-w-0">
-          {mode === "slides" ? (
+          {mode === "deck" ? (
+            <>
+              <div
+                ref={stage}
+                className={cx("relative overflow-hidden rounded-xl border border-line bg-locked-soft shadow-sm", full ? "flex items-center justify-center !rounded-none bg-scrim" : "aspect-[4/3]")}
+                aria-roledescription="slide"
+                aria-label={`Slide ${i + 1} of ${total}`}
+              >
+                {deck.status === "loading" && <Skeleton className="absolute inset-0 !rounded-none" />}
+                {deck.status === "error" && (
+                  <div className="flex h-full items-center justify-center p-6">
+                    <ErrorState message="The slides didn't load. Check your connection and try again, or read the key points meanwhile." onRetry={deck.reload} />
+                  </div>
+                )}
+                {page && (
+                  <img
+                    key={page.url}
+                    src={page.url}
+                    alt={`Slide ${i + 1}: ${page.text.split("\n")[0] || lecture.title}`}
+                    draggable={false}
+                    className="h-full w-full object-contain"
+                  />
+                )}
+                {exitFull}
+              </div>
+              {controls}
+              {pages.length > 0 && (
+                <ol ref={thumbs} className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Slides">
+                  {pages.map((p, n) => (
+                    <li key={p.url} data-thumb={n}>
+                      <button
+                        type="button"
+                        onClick={() => setI(n)}
+                        aria-current={n === i ? "true" : undefined}
+                        aria-label={`Slide ${n + 1}`}
+                        className={cx("relative block w-28 shrink-0 overflow-hidden rounded-lg border-2", n === i ? "border-action" : "border-line hover:border-line-strong")}
+                      >
+                        <img src={p.url} loading="lazy" alt="" className="aspect-[4/3] w-full bg-locked-soft object-cover" />
+                        <span className="absolute bottom-1 left-1 rounded bg-surface/90 px-1.5 text-xs font-semibold text-ink-2 tabular-nums">{n + 1}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </>
+          ) : mode === "slides" ? (
             <>
               <div
                 ref={stage}
@@ -132,19 +215,10 @@ export function LectureView({
                     </p>
                   </div>
                 )}
-                {full && (
-                  <button type="button" onClick={toggleFull} className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg bg-ink/10 text-ink hover:bg-ink/20" aria-label="Exit full screen">
-                    <Minimize2 className="size-5" aria-hidden />
-                  </button>
-                )}
+                {exitFull}
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button variant="secondary" icon={ChevronLeft} disabled={i === 0} onClick={() => setI(i - 1)}>Previous</Button>
-                <Button icon={ChevronRight} disabled={i === total - 1} onClick={() => setI(i + 1)} className="flex-row-reverse">Next slide</Button>
-                <span className="px-2 text-sm text-ink-3 tabular-nums">Slide {i + 1} of {total} · use ← → keys</span>
-                <Button variant="ghost" icon={Maximize2} onClick={toggleFull} className="ml-auto">Full screen</Button>
-              </div>
+              {controls}
               <ol className="mt-3 flex gap-1.5 overflow-x-auto pb-1" aria-label="Slides">
                 {[lecture.title, ...slides.map((s) => s.heading)].map((h, n) => (
                   <li key={n}>
@@ -191,7 +265,9 @@ export function LectureView({
             courseCode={course.code}
             week={lecture.week}
             lectureTitle={lecture.title}
-            getSlide={() => (mode === "slides" && slide ? slide : null)}
+            getSlide={() =>
+              page ? { heading: `Slide ${i + 1} of ${total} in the teacher's deck`, body: page.text || "(This slide is mostly a picture or diagram.)" } : slide
+            }
             className="h-[34rem]"
           />
           <Card className="overflow-hidden">

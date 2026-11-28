@@ -20,6 +20,7 @@ import { CodeEditor, type CodeEditorHandle } from "../workspace/CodeEditor";
 import { JourneyStepper, type JourneyStep } from "../workspace/JourneyStepper";
 import { EventRecorder, type SaveState } from "../workspace/recorder";
 import { UstaadPanel, type ChatMessage } from "../workspace/UstaadPanel";
+import { ResizableSplit } from "../components/ResizableSplit";
 import { WrittenEditor } from "../workspace/WrittenEditor";
 import { isOwnCode, journeyStates } from "../workspace/journey";
 import { NO_CHECKS, loadChecks, mergeChecks, missingCheck, missingHint, saveChecks, type ExplainChecks } from "../workspace/explainChecks";
@@ -448,121 +449,124 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
             </div>
           )}
 
-          <div className="grid gap-5 lg:grid-cols-12">
-            <div className="space-y-5 lg:col-span-7">
-              <Card className="p-5">
-                <h2 className="mb-2 flex items-center justify-between gap-2 font-semibold">
-                  Your task
-                  {pasteBlocked && (
-                    <span className="flex items-center gap-1 text-xs font-normal text-ink-3">
-                      <Copy className="size-3.5" aria-hidden /> Copying the task is off
-                    </span>
-                  )}
-                </h2>
-                <div
-                  className={cx("text-[15px] leading-relaxed text-ink-2", pasteBlocked && "select-none")}
-                  onCopy={(e) => pasteBlocked && e.preventDefault()}
-                  onCut={(e) => pasteBlocked && e.preventDefault()}
-                  onContextMenu={(e) => pasteBlocked && e.preventDefault()}
-                >
-                  <Brief text={a.instructions} />
-                </div>
-              </Card>
-
-              {(sub || !a.open) && isWritten && (
-                <Card className="overflow-hidden">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
-                    <span className="text-sm font-semibold">Your answer</span>
-                    {editable && <SavedIndicator state={saveState} />}
-                  </div>
-                  <div className="relative">
-                    {data.status === "ready" && (
-                      <WrittenEditor
-                        initial={sub?.content ?? a.starterCode}
-                        readOnly={!editable}
-                        pasteBlocked={pasteBlocked}
-                        onChange={onChange}
-                        onBlocked={onBlocked}
-                        focusRef={(el) => (textRef.current = el)}
-                        label={`Your answer for ${a.title}`}
-                      />
+          <ResizableSplit
+            storageKey="socratic.ustaad.width"
+            label="Ustaad panel"
+            main={
+              <>
+                <Card className="p-5">
+                  <h2 className="mb-2 flex items-center justify-between gap-2 font-semibold">
+                    Your task
+                    {pasteBlocked && (
+                      <span className="flex items-center gap-1 text-xs font-normal text-ink-3">
+                        <Copy className="size-3.5" aria-hidden /> Copying the task is off
+                      </span>
                     )}
-                    {notice && (
-                      <div role="alert" className="absolute inset-x-3 top-3 z-10 flex items-start gap-2 rounded-lg border border-attention-line bg-attention-soft px-3 py-2.5 text-sm text-ink shadow-sm">
-                        <ClipboardX className="mt-0.5 size-4 shrink-0 text-attention" aria-hidden />
-                        {notice}
-                      </div>
-                    )}
+                  </h2>
+                  <div
+                    className={cx("text-[15px] leading-relaxed text-ink-2", pasteBlocked && "select-none")}
+                    onCopy={(e) => pasteBlocked && e.preventDefault()}
+                    onCut={(e) => pasteBlocked && e.preventDefault()}
+                    onContextMenu={(e) => pasteBlocked && e.preventDefault()}
+                  >
+                    <Brief text={a.instructions} />
                   </div>
                 </Card>
-              )}
-              {(sub || !a.open) && !isWritten && (
-                <Card className="overflow-hidden">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
-                    <span className="font-mono text-sm font-medium">{a.language === "javascript" ? "solution.js" : "solution.py"}</span>
-                    <div className="flex items-center gap-3">
+
+                {(sub || !a.open) && isWritten && (
+                  <Card className="overflow-hidden">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
+                      <span className="text-sm font-semibold">Your answer</span>
                       {editable && <SavedIndicator state={saveState} />}
-                      {editable && (
-                        <Button variant="secondary" icon={running ? Loader2 : Play} onClick={run} disabled={runnerStatus !== "ready" || running} title="Run my code (Ctrl+Enter)">
-                          {runnerStatus === "ready" ? (running ? "Running…" : "Run my code") : runnerStatus === "error" ? "Runner unavailable" : "Preparing the code runner…"}
-                        </Button>
+                    </div>
+                    <div className="relative">
+                      {data.status === "ready" && (
+                        <WrittenEditor
+                          initial={sub?.content ?? a.starterCode}
+                          readOnly={!editable}
+                          pasteBlocked={pasteBlocked}
+                          onChange={onChange}
+                          onBlocked={onBlocked}
+                          focusRef={(el) => (textRef.current = el)}
+                          label={`Your answer for ${a.title}`}
+                        />
+                      )}
+                      {notice && (
+                        <div role="alert" className="absolute inset-x-3 top-3 z-10 flex items-start gap-2 rounded-lg border border-attention-line bg-attention-soft px-3 py-2.5 text-sm text-ink shadow-sm">
+                          <ClipboardX className="mt-0.5 size-4 shrink-0 text-attention" aria-hidden />
+                          {notice}
+                        </div>
                       )}
                     </div>
-                  </div>
-                  <div className="relative">
-                    {data.status === "ready" && (
-                      <CodeEditor
-                        initialDoc={sub?.content ?? a.starterCode}
-                        language={a.language}
-                        pasteBlocked={pasteBlocked}
-                        readOnly={!editable}
-                        onChange={onChange}
-                        onBlocked={onBlocked}
-                        onRunShortcut={() => void run()}
-                        handleRef={(h) => (editor.current = h)}
-                        label={`Code editor for ${a.title}`}
-                      />
-                    )}
-                    {notice && (
-                      <div role="alert" className="absolute inset-x-3 top-3 z-10 flex items-start gap-2 rounded-lg border border-attention-line bg-attention-soft px-3 py-2.5 text-sm text-ink shadow-sm">
-                        <ClipboardX className="mt-0.5 size-4 shrink-0 text-attention" aria-hidden />
-                        {notice}
+                  </Card>
+                )}
+                {(sub || !a.open) && !isWritten && (
+                  <Card className="overflow-hidden">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
+                      <span className="font-mono text-sm font-medium">{a.language === "javascript" ? "solution.js" : "solution.py"}</span>
+                      <div className="flex items-center gap-3">
+                        {editable && <SavedIndicator state={saveState} />}
+                        {editable && (
+                          <Button variant="secondary" icon={running ? Loader2 : Play} onClick={run} disabled={runnerStatus !== "ready" || running} title="Run my code (Ctrl+Enter)">
+                            {runnerStatus === "ready" ? (running ? "Running…" : "Run my code") : runnerStatus === "error" ? "Runner unavailable" : "Preparing the code runner…"}
+                          </Button>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="border-t border-line bg-canvas">
-                    <div className="flex items-center justify-between px-4 py-2 text-sm">
-                      <span className="font-semibold text-ink-2">Output</span>
-                      {lastRun &&
-                        (lastRun.ok ? (
-                          <span className="flex items-center gap-1.5 font-medium text-done">
-                            <CheckCircle2 className="size-4" aria-hidden /> Ran without errors{lastRun.durationMs ? ` · ${lastRun.durationMs} ms` : ""}
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1.5 font-medium text-danger">
-                            <AlertTriangle className="size-4" aria-hidden /> {lastRun.timedOut ? "Stopped after 5 seconds" : "Your code has an error"}
-                          </span>
-                        ))}
                     </div>
-                    <Appear key={lastRun ? `${lastRun.output}|${lastRun.error}|${lastRun.durationMs}` : "empty"}>
-                    <pre
-                      aria-live="polite"
-                      className={cx("max-h-56 min-h-24 overflow-auto px-4 pb-4 font-mono text-sm whitespace-pre-wrap", lastRun && !lastRun.ok ? "text-danger" : "text-ink")}
-                    >
-                      {lastRun
-                        ? [lastRun.output, lastRun.error].filter(Boolean).join("\n") || "(Your program ran but printed nothing. Add print(...) to see results.)"
-                        : runnerStatus === "ready"
-                          ? 'Click "Run my code" to see what your program prints.'
-                          : "Preparing the code runner… this happens once and takes a few seconds."}
-                    </pre>
-                    </Appear>
-                  </div>
-                </Card>
-              )}
-            </div>
-
-            <div className="lg:col-span-5">
-              {sub && (
+                    <div className="relative">
+                      {data.status === "ready" && (
+                        <CodeEditor
+                          initialDoc={sub?.content ?? a.starterCode}
+                          language={a.language}
+                          pasteBlocked={pasteBlocked}
+                          readOnly={!editable}
+                          onChange={onChange}
+                          onBlocked={onBlocked}
+                          onRunShortcut={() => void run()}
+                          handleRef={(h) => (editor.current = h)}
+                          label={`Code editor for ${a.title}`}
+                        />
+                      )}
+                      {notice && (
+                        <div role="alert" className="absolute inset-x-3 top-3 z-10 flex items-start gap-2 rounded-lg border border-attention-line bg-attention-soft px-3 py-2.5 text-sm text-ink shadow-sm">
+                          <ClipboardX className="mt-0.5 size-4 shrink-0 text-attention" aria-hidden />
+                          {notice}
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-line bg-canvas">
+                      <div className="flex items-center justify-between px-4 py-2 text-sm">
+                        <span className="font-semibold text-ink-2">Output</span>
+                        {lastRun &&
+                          (lastRun.ok ? (
+                            <span className="flex items-center gap-1.5 font-medium text-done">
+                              <CheckCircle2 className="size-4" aria-hidden /> Ran without errors{lastRun.durationMs ? ` · ${lastRun.durationMs} ms` : ""}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 font-medium text-danger">
+                              <AlertTriangle className="size-4" aria-hidden /> {lastRun.timedOut ? "Stopped after 5 seconds" : "Your code has an error"}
+                            </span>
+                          ))}
+                      </div>
+                      <Appear key={lastRun ? `${lastRun.output}|${lastRun.error}|${lastRun.durationMs}` : "empty"}>
+                      <pre
+                        aria-live="polite"
+                        className={cx("max-h-56 min-h-24 overflow-auto px-4 pb-4 font-mono text-sm whitespace-pre-wrap", lastRun && !lastRun.ok ? "text-danger" : "text-ink")}
+                      >
+                        {lastRun
+                          ? [lastRun.output, lastRun.error].filter(Boolean).join("\n") || "(Your program ran but printed nothing. Add print(...) to see results.)"
+                          : runnerStatus === "ready"
+                            ? 'Click "Run my code" to see what your program prints.'
+                            : "Preparing the code runner… this happens once and takes a few seconds."}
+                      </pre>
+                      </Appear>
+                    </div>
+                  </Card>
+                )}
+              </>
+            }
+            side={
+              sub ? (
                 <div className="lg:sticky lg:top-32">
                   <UstaadPanel
                     workNoun={isWritten ? "answer" : "code"}
@@ -579,9 +583,9 @@ function CodeWorkspace({ data }: { data: Loadable<WorkspaceData> & { reload: () 
                     inputRef={(el) => (chatInput.current = el)}
                   />
                 </div>
-              )}
-            </div>
-          </div>
+              ) : null
+            }
+          />
         </>
       )}
       <Dialog open={confirmOpen} title="Submit and start your viva?" onClose={() => !submitting && setConfirmOpen(false)}>

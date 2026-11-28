@@ -117,7 +117,7 @@ export function StudentCalendar() {
                         const cs = courseStyle(a.course.code);
                         const done = a.submission && a.submission.status !== "in_progress";
                         return (
-                          <span key={a.id} className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-xs font-medium" style={{ backgroundColor: cs.soft, color: cs.color }}>
+                          <span key={a.id} className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-xs font-medium" style={{ backgroundColor: cs.soft, color: cs.text }}>
                             {done && <CheckCircle2 className="size-3 shrink-0" aria-hidden />}
                             <span className="truncate">{a.course.code} {a.title}</span>
                           </span>

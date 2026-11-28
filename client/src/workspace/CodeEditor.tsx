@@ -6,6 +6,8 @@ import { useEffect, useRef } from "react";
 import { basicSetup } from "codemirror";
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { tags as t } from "@lezer/highlight";
 import { indentWithTab } from "@codemirror/commands";
 import { python } from "@codemirror/lang-python";
 import { javascript } from "@codemirror/lang-javascript";
@@ -28,15 +30,33 @@ interface Props {
   label: string;
 }
 
+// Colours come from the theme tokens (index.css), so the editor follows light and dark mode.
 const theme = EditorView.theme({
-  "&": { fontSize: "15px", backgroundColor: "#ffffff", height: "100%" },
-  ".cm-content": { fontFamily: "var(--font-mono)", padding: "12px 0", caretColor: "#1d4ed8" },
-  ".cm-gutters": { backgroundColor: "#f8fafc", color: "#94a3b8", borderRight: "1px solid #e2e8f0" },
-  ".cm-activeLine": { backgroundColor: "#eff6ff80" },
-  ".cm-activeLineGutter": { backgroundColor: "#eff6ff", color: "#1d4ed8" },
+  "&": { fontSize: "15px", backgroundColor: "var(--color-surface)", color: "var(--color-ink)", height: "100%" },
+  ".cm-content": { fontFamily: "var(--font-mono)", padding: "12px 0", caretColor: "var(--color-action)" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--color-ink)" },
+  ".cm-gutters": { backgroundColor: "var(--color-canvas)", color: "var(--color-ink-3)", borderRight: "1px solid var(--color-line)" },
+  ".cm-activeLine": { backgroundColor: "color-mix(in srgb, var(--color-action-soft) 50%, transparent)" },
+  ".cm-activeLineGutter": { backgroundColor: "var(--color-action-soft)", color: "var(--color-action)" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "color-mix(in srgb, var(--color-action) 25%, transparent)" },
+  ".cm-matchingBracket": { backgroundColor: "color-mix(in srgb, var(--color-done) 22%, transparent)", outline: "none" },
+  ".cm-tooltip, .cm-panels": { backgroundColor: "var(--color-surface)", color: "var(--color-ink)", border: "1px solid var(--color-line)" },
   "&.cm-focused": { outline: "none" },
   ".cm-scroller": { lineHeight: "1.65" },
 });
+
+const syntax = syntaxHighlighting(
+  HighlightStyle.define([
+    { tag: [t.keyword, t.controlKeyword, t.operatorKeyword, t.definitionKeyword, t.moduleKeyword, t.bool, t.null, t.self], color: "var(--syn-keyword)" },
+    { tag: [t.string, t.special(t.string), t.regexp], color: "var(--syn-string)" },
+    { tag: [t.number, t.integer, t.float], color: "var(--syn-number)" },
+    { tag: [t.comment, t.lineComment, t.blockComment], color: "var(--syn-comment)", fontStyle: "italic" },
+    { tag: [t.function(t.variableName), t.function(t.propertyName), t.definition(t.function(t.variableName))], color: "var(--syn-function)" },
+    { tag: [t.className, t.typeName, t.namespace, t.standard(t.variableName)], color: "var(--syn-type)" },
+    { tag: [t.operator, t.punctuation, t.bracket], color: "var(--syn-operator)" },
+    { tag: t.invalid, color: "var(--syn-invalid)" },
+  ]),
+);
 
 export function CodeEditor({ initialDoc, language, pasteBlocked, readOnly, onChange, onBlocked, onRunShortcut, handleRef, label }: Props) {
   const host = useRef<HTMLDivElement | null>(null);
@@ -51,6 +71,7 @@ export function CodeEditor({ initialDoc, language, pasteBlocked, readOnly, onCha
       keymap.of([indentWithTab, { key: "Mod-Enter", run: () => (cb.current.onRunShortcut(), true) }]),
       language === "javascript" ? javascript() : python(),
       theme,
+      syntax,
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({ "aria-label": label }),
       EditorState.readOnly.of(readOnly),

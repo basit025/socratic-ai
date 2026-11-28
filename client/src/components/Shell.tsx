@@ -1,22 +1,24 @@
 /**
- * The signed-in frame, like a real campus platform: a sidebar (Home, Calendar, Marks and every course),
- * a top bar (notifications, the person, demo controls) and the page. It stays mounted while pages change,
+ * The signed-in frame, like a real campus platform: a sidebar (Home, My courses, Calendar, Marks) that folds to an
+ * icon rail, a top bar (light/dark switch, notifications, the person) and the page. It stays mounted while pages change,
  * so navigating never flashes a loading screen. While doing an assignment the sidebar folds away (focus mode).
  */
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import {
-  ArrowLeftRight, Bell, CalendarDays, CheckCircle2, ChevronDown, Clock, FilePlus2, Home, LayoutGrid, LogOut, Megaphone, Menu, RotateCcw, Trophy, X,
+  ArrowLeftRight, Bell, BookOpen, CalendarDays, CheckCircle2, ChevronDown, Clock, FilePlus2, Home, LayoutGrid, LogOut, Megaphone, Menu, Moon, PanelLeftClose, PanelLeftOpen,
+  RotateCcw, Sun, Trophy, X,
 } from "lucide-react";
 import { Dialog } from "./Dialog";
-import { Logo } from "./Logo";
-import { Button, DemoBadge, cx } from "./ui";
+import { Logo, LogoMark } from "./Logo";
+import { Button, cx } from "./ui";
 import { api } from "../lib/api";
 import { useMe } from "../lib/session";
 import { useApi, type Loadable } from "../lib/useApi";
 import { courseStyle } from "../lib/courseStyle";
 import { formatDue, timeAgo } from "../lib/format";
 import { kindOf, needsWork, type Notice, type StudentHomeData } from "../lib/student";
+import { readPref, useTheme, writePref } from "../lib/theme";
 
 
 interface TeacherNavCourse {
@@ -52,6 +54,7 @@ export function useShellReload() {
 
 export function initials(name: string) {
   return name
+    .replace(/^(Dr|Mr|Ms|Mrs|Prof)\.?\s+/i, "") // "Dr. Nauman Shamim" → NS
     .split(" ")
     .map((p) => p[0])
     .join("")
@@ -172,7 +175,7 @@ function NotificationBell({ notices }: { notices: Notice[] }) {
   );
 }
 
-// ---------------------------------------------------------------- person menu (demo controls live here)
+// ---------------------------------------------------------------- person menu
 function PersonMenu() {
   const me = useMe();
   const navigate = useNavigate();
@@ -228,7 +231,7 @@ function PersonMenu() {
           </div>
           {me.demo && (
             <button type="button" onClick={() => { setOpen(false); setResetOpen(true); }} className="flex min-h-11 w-full items-center gap-2.5 px-4 text-left hover:bg-canvas">
-              <RotateCcw className="size-4 text-ink-3" aria-hidden /> Reset sample workspace
+              <RotateCcw className="size-4 text-ink-3" aria-hidden /> Reset workspace
             </button>
           )}
           <button type="button" onClick={leave} disabled={leaving} className="flex min-h-11 w-full items-center gap-2.5 px-4 text-left hover:bg-canvas">
@@ -236,8 +239,8 @@ function PersonMenu() {
           </button>
         </div>
       )}
-      <Dialog open={resetOpen} title="Reset the sample workspace?" onClose={() => !resetting && setResetOpen(false)}>
-        <p className="text-ink-2">You'll get a fresh copy of the sample institution, as a {me.role}. Anything you changed here is cleared.</p>
+      <Dialog open={resetOpen} title="Reset this workspace?" onClose={() => !resetting && setResetOpen(false)}>
+        <p className="text-ink-2">You'll get a fresh copy of every course, as a {me.role}. Anything you changed here is cleared.</p>
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setResetOpen(false)} disabled={resetting} data-autofocus>
             Cancel
@@ -274,31 +277,143 @@ function SwitchRole() {
 // ---------------------------------------------------------------- sidebar
 const navItem = ({ isActive }: { isActive: boolean }) =>
   cx("flex min-h-11 items-center gap-3 rounded-lg px-3 text-[15px] font-medium transition-colors", isActive ? "bg-action-soft text-action" : "text-ink-2 hover:bg-locked-soft hover:text-ink");
+const railItem = ({ isActive }: { isActive: boolean }) =>
+  cx("mx-auto flex size-11 items-center justify-center rounded-lg transition-colors", isActive ? "bg-action-soft text-action" : "text-ink-2 hover:bg-locked-soft hover:text-ink");
 
-function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+const SIDEBAR_KEY = "socratic.sidebar";
+const COURSES_OPEN_KEY = "socratic.sidebar.courses";
+
+interface NavCourse {
+  id: string;
+  code: string;
+  sub: string;
+  name: string;
+  badge: number;
+  badgeLabel: string;
+}
+
+function useNavCourses(): NavCourse[] | null {
   const me = useMe();
   const s = useContext(ShellContext);
+  if (me.role === "student")
+    return s.student?.status === "ready"
+      ? s.student.data.courses.map((c) => ({ id: c.id, code: c.code, sub: c.code, name: c.name, badge: c.assignments.filter(needsWork).length, badgeLabel: "to do" }))
+      : null;
+  return s.teacher?.status === "ready"
+    ? s.teacher.data.courses.map((c) => ({ id: c.id, code: c.code, sub: c.section ? `${c.code} · ${c.section.replace(/^Section /, "Sec. ")}` : c.code, name: c.name, badge: c.toReview, badgeLabel: "to review" }))
+    : null;
+}
+
+function CourseIcon({ code, className }: { code: string; className?: string }) {
+  const st = courseStyle(code);
+  return (
+    <span className={cx("flex shrink-0 items-center justify-center rounded-md text-white", className)} style={{ backgroundColor: st.color }}>
+      <st.icon className="size-4" aria-hidden />
+    </span>
+  );
+}
+
+/** The full sidebar: Home, My courses (a section that opens to every course), then the student's Calendar and Marks. */
+function Sidebar({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
+  const me = useMe();
+  const location = useLocation();
   const base = me.role === "teacher" ? "/teacher" : "/student";
-  const courses =
-    me.role === "student"
-      ? s.student?.status === "ready"
-        ? s.student.data.courses.map((c) => ({ id: c.id, code: c.code, sub: c.code, name: c.name, badge: c.assignments.filter(needsWork).length, badgeLabel: "to do" }))
-        : null
-      : s.teacher?.status === "ready"
-        ? s.teacher.data.courses.map((c) => ({ id: c.id, code: c.code, sub: c.section ? `${c.code} · ${c.section.replace(/^Section /, "Sec. ")}` : c.code, name: c.name, badge: c.toReview, badgeLabel: "to review" }))
-        : null;
+  const courses = useNavCourses();
+  const [open, setOpen] = useState(() => readPref(COURSES_OPEN_KEY) !== "closed");
+  const inCourse = location.pathname.startsWith(`${base}/courses`);
+  const groupLabel = me.role === "teacher" ? "Courses I teach" : "My courses";
+  const toDo = courses?.reduce((n, c) => n + c.badge, 0) ?? 0;
+  const toggleOpen = () => {
+    writePref(COURSES_OPEN_KEY, open ? "closed" : "open");
+    setOpen(!open);
+  };
 
   return (
     <nav aria-label="Main" className="flex h-full flex-col">
-      <div className="px-4 pt-4 pb-3">
+      <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
         <Link to={base} onClick={onNavigate} aria-label="Socratic AI home">
           <Logo />
         </Link>
+        {onCollapse && (
+          <button
+            type="button"
+            onClick={onCollapse}
+            aria-label="Collapse the sidebar"
+            title="Collapse the sidebar"
+            className="flex size-10 items-center justify-center rounded-lg text-ink-3 hover:bg-locked-soft hover:text-ink"
+          >
+            <PanelLeftClose className="size-5" aria-hidden />
+          </button>
+        )}
       </div>
-      <div className="space-y-0.5 px-3">
+      <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
         <NavLink to={base} end onClick={onNavigate} className={navItem}>
           <Home className="size-5" aria-hidden /> Home
         </NavLink>
+
+        <button
+          type="button"
+          onClick={toggleOpen}
+          aria-expanded={open}
+          aria-controls="sidebar-courses"
+          className={cx(
+            "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-[15px] font-medium transition-colors hover:bg-locked-soft",
+            inCourse && !open ? "text-action" : "text-ink-2 hover:text-ink",
+          )}
+        >
+          <BookOpen className="size-5" aria-hidden />
+          <span className="flex-1">{groupLabel}</span>
+          {!open && toDo > 0 && (
+            <span className="rounded-full bg-action-soft px-2 py-0.5 text-xs font-semibold text-action tabular-nums" aria-label={`${toDo} ${me.role === "teacher" ? "to review" : "to do"}`}>
+              {toDo}
+            </span>
+          )}
+          <ChevronDown className={cx("size-4 text-ink-3 transition-transform", !open && "-rotate-90")} aria-hidden />
+        </button>
+        {open && (
+          <div id="sidebar-courses" className="space-y-0.5 pb-1 pl-3">
+            {!courses && [0, 1, 2, 3].map((i) => <div key={i} className="mx-1 my-1.5 h-9 animate-pulse rounded-lg bg-locked-soft" />)}
+            {courses?.length === 0 && <p className="px-3 py-2 text-sm text-ink-3">{me.role === "teacher" ? "No courses yet." : "Join a course with your teacher's code."}</p>}
+            {courses?.map((c) => (
+              <NavLink
+                key={c.id}
+                to={`${base}/courses/${c.id}`}
+                onClick={onNavigate}
+                title={`${c.code} · ${c.name}`}
+                className={({ isActive }) => cx("flex min-h-11 items-center gap-3 rounded-lg px-2.5 py-1 transition-colors", isActive ? "bg-locked-soft" : "hover:bg-locked-soft")}
+              >
+                {({ isActive }) => (
+                  <>
+                    <CourseIcon code={c.code} className="size-8" />
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <span className={cx("block truncate text-xs font-semibold", isActive ? "text-ink" : "text-ink-3")}>{c.sub}</span>
+                      <span className={cx("block truncate text-sm", isActive ? "font-semibold text-ink" : "text-ink-2")}>{c.name}</span>
+                    </span>
+                    {c.badge > 0 && (
+                      <span className="rounded-full bg-action-soft px-2 py-0.5 text-xs font-semibold text-action tabular-nums" aria-label={`${c.badge} ${c.badgeLabel}`}>
+                        {c.badge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
+            {me.role === "student" && (
+              <NavLink
+                to="/student/courses"
+                end
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  cx("flex min-h-10 items-center gap-3 rounded-lg px-2.5 text-sm font-medium transition-colors", isActive ? "bg-action-soft text-action" : "text-ink-3 hover:bg-locked-soft hover:text-ink")
+                }
+              >
+                <span className="flex size-8 items-center justify-center"><LayoutGrid className="size-4" aria-hidden /></span>
+                All courses and joining
+              </NavLink>
+            )}
+          </div>
+        )}
+
         {me.role === "student" && (
           <>
             <NavLink to="/student/calendar" onClick={onNavigate} className={navItem}>
@@ -307,47 +422,76 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <NavLink to="/student/marks" onClick={onNavigate} className={navItem}>
               <Trophy className="size-5" aria-hidden /> Marks
             </NavLink>
-            <NavLink to="/student/courses" end onClick={onNavigate} className={navItem}>
-              <LayoutGrid className="size-5" aria-hidden /> All courses
-            </NavLink>
           </>
         )}
       </div>
-      <p className="mt-5 px-6 pb-1.5 text-xs font-semibold tracking-wide text-ink-3 uppercase">{me.role === "teacher" ? "Courses I teach" : "My courses"}</p>
-      <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
-        {!courses && [0, 1, 2, 3].map((i) => <div key={i} className="mx-1 my-1.5 h-9 animate-pulse rounded-lg bg-locked-soft" />)}
-        {courses?.length === 0 && <p className="px-3 text-sm text-ink-3">{me.role === "teacher" ? "No courses yet." : "Join a course with your teacher's code."}</p>}
-        {courses?.map((c) => {
-          const st = courseStyle(c.code);
-          return (
-            <NavLink
-              key={c.id}
-              to={`${base}/courses/${c.id}`}
-              onClick={onNavigate}
-              title={`${c.code} · ${c.name}`}
-              className={({ isActive }) => cx("flex min-h-11 items-center gap-3 rounded-lg px-2.5 py-1 transition-colors", isActive ? "bg-locked-soft" : "hover:bg-locked-soft")}
-            >
-              {({ isActive }) => (
-                <>
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-md text-white" style={{ backgroundColor: st.color }}>
-                    <st.icon className="size-4" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1 leading-tight">
-                    <span className={cx("block truncate text-xs font-semibold", isActive ? "text-ink" : "text-ink-3")}>{c.sub}</span>
-                    <span className={cx("block truncate text-sm", isActive ? "font-semibold text-ink" : "text-ink-2")}>{c.name}</span>
-                  </span>
-                  {c.badge > 0 && (
-                    <span className="rounded-full bg-action-soft px-2 py-0.5 text-xs font-semibold text-action tabular-nums" aria-label={`${c.badge} ${c.badgeLabel}`}>
-                      {c.badge}
-                    </span>
-                  )}
-                </>
-              )}
+    </nav>
+  );
+}
+
+/** The folded sidebar: icons only, with each name on hover, so the page gets the width. */
+function SidebarRail({ onExpand }: { onExpand: () => void }) {
+  const me = useMe();
+  const base = me.role === "teacher" ? "/teacher" : "/student";
+  const courses = useNavCourses();
+  return (
+    <nav aria-label="Main" className="flex h-full flex-col items-center">
+      <div className="flex flex-col items-center gap-1 pt-4 pb-2">
+        <Link to={base} aria-label="Socratic AI home" title="Home">
+          <LogoMark className="size-8" />
+        </Link>
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-label="Expand the sidebar"
+          title="Expand the sidebar"
+          className="mt-1 flex size-11 items-center justify-center rounded-lg text-ink-3 hover:bg-locked-soft hover:text-ink"
+        >
+          <PanelLeftOpen className="size-5" aria-hidden />
+        </button>
+      </div>
+      <div className="flex min-h-0 w-full flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-4">
+        <NavLink to={base} end className={railItem} aria-label="Home" title="Home">
+          <Home className="size-5" aria-hidden />
+        </NavLink>
+        {me.role === "student" ? (
+          <>
+            <NavLink to="/student/courses" end className={railItem} aria-label="My courses" title="My courses">
+              <BookOpen className="size-5" aria-hidden />
             </NavLink>
-          );
-        })}
+            <NavLink to="/student/calendar" className={railItem} aria-label="Calendar" title="Calendar">
+              <CalendarDays className="size-5" aria-hidden />
+            </NavLink>
+            <NavLink to="/student/marks" className={railItem} aria-label="Marks" title="Marks">
+              <Trophy className="size-5" aria-hidden />
+            </NavLink>
+          </>
+        ) : null}
+        <div className="mx-auto my-2 h-px w-8 bg-line" aria-hidden />
+        {courses?.map((c) => (
+          <NavLink
+            key={c.id}
+            to={`${base}/courses/${c.id}`}
+            aria-label={`${c.code} · ${c.name}${c.badge ? `, ${c.badge} ${c.badgeLabel}` : ""}`}
+            title={`${c.code} · ${c.name}`}
+            className={({ isActive }) => cx("relative mx-auto flex size-11 items-center justify-center rounded-lg transition-colors", isActive ? "bg-locked-soft" : "hover:bg-locked-soft")}
+          >
+            <CourseIcon code={c.code} className="size-8" />
+            {c.badge > 0 && <span className="absolute top-1 right-1 size-2.5 rounded-full border-2 border-surface bg-action" aria-hidden />}
+          </NavLink>
+        ))}
       </div>
     </nav>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  const label = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  return (
+    <button type="button" onClick={toggle} aria-label={label} title={label} className="flex size-11 items-center justify-center rounded-lg text-ink-2 hover:bg-locked-soft hover:text-ink">
+      {theme === "dark" ? <Sun className="size-5" aria-hidden /> : <Moon className="size-5" aria-hidden />}
+    </button>
   );
 }
 
@@ -356,6 +500,7 @@ export function Shell() {
   const me = useMe();
   const location = useLocation();
   const [drawer, setDrawer] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => readPref(SIDEBAR_KEY) === "collapsed");
   const student = useApi<StudentHomeData>(me.role === "student" ? "/student/home" : null);
   const teacher = useApi<{ courses: TeacherNavCourse[] }>(me.role === "teacher" ? "/teacher/home" : null);
   const focus = /^\/student\/assignments\//.test(location.pathname);
@@ -368,19 +513,24 @@ export function Shell() {
     return () => document.removeEventListener("keydown", onKey);
   }, [drawer]);
 
+  const setSidebar = (c: boolean) => {
+    writePref(SIDEBAR_KEY, c ? "collapsed" : "open");
+    setCollapsed(c);
+  };
+
   const state: ShellState = { student: me.role === "student" ? student : null, teacher: me.role === "teacher" ? teacher : null };
 
   return (
     <ShellContext.Provider value={state}>
       <div className="min-h-screen lg:flex">
         {!focus && (
-          <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-line bg-surface lg:block">
-            <Sidebar />
+          <aside className={cx("sticky top-0 hidden h-screen shrink-0 border-r border-line bg-surface transition-[width] duration-200 lg:block", collapsed ? "w-[72px]" : "w-64")}>
+            {collapsed ? <SidebarRail onExpand={() => setSidebar(false)} /> : <Sidebar onCollapse={() => setSidebar(true)} />}
           </aside>
         )}
         {drawer && (
           <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-            <button type="button" className="absolute inset-0 bg-ink/40" aria-label="Close the menu" onClick={() => setDrawer(false)} />
+            <button type="button" className="absolute inset-0 bg-scrim/50" aria-label="Close the menu" onClick={() => setDrawer(false)} />
             <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-surface shadow-2xl">
               <button type="button" onClick={() => setDrawer(false)} aria-label="Close the menu" className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-lg text-ink-3 hover:bg-locked-soft">
                 <X className="size-5" aria-hidden />
@@ -404,8 +554,8 @@ export function Shell() {
                 <Logo className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline" />
               </Link>
               <div className="flex-1" />
-              {me.demo && <DemoBadge />}
               <SwitchRole />
+              <ThemeToggle />
               {me.role === "student" && <NotificationBell notices={student.status === "ready" ? student.data.notifications : []} />}
               <PersonMenu />
             </div>
@@ -419,5 +569,5 @@ export function Shell() {
 
 /** The page body inside the shell. `wide` gives work screens (editor + mentor) more room. */
 export function Page({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
-  return <main className={cx("mx-auto px-4 py-6 sm:px-6 lg:py-8", wide ? "max-w-7xl" : "max-w-6xl")}>{children}</main>;
+  return <main className={cx("mx-auto px-4 py-6 sm:px-6 lg:py-8", wide ? "max-w-[96rem]" : "max-w-6xl")}>{children}</main>;
 }

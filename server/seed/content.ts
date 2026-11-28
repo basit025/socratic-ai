@@ -21,13 +21,17 @@ export interface SeedPerson {
 const person = (key: string, fullName: string, email?: string): SeedPerson => ({
   key,
   fullName,
-  initials: fullName.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase(),
+  // Initials skip a title ("Dr. Nauman Shamim" → NS).
+  initials: fullName.replace(/^(Dr|Mr|Ms|Mrs|Prof)\.?\s+/i, "").split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase(),
   ...(email ? { email } : {}),
 });
 
 export const teachers: SeedPerson[] = [
-  person("sana", "Sana Rauf", "demo-teacher@pothohar.demo"),
-  person("imran", "Imran Qureshi"),
+  person("nauman", "Dr. Nauman Shamim", "demo-teacher@pothohar.demo"),
+  person("naveed", "Dr. Naveed Akhtar"),
+  person("ijaz", "Dr. Ijaz Hussain"),
+  person("abbas", "Dr. Abbas Raza"),
+  person("irfan", "Mr. Irfan Hameed"),
   person("hina", "Hina Baig"),
   person("farhan", "Dr. Farhan Malik"),
   person("saima", "Dr. Saima Javed"),
@@ -110,10 +114,10 @@ export interface SeedCourse {
 }
 
 export const courses: SeedCourse[] = [
-  { key: "cs101", teacher: "sana", code: "CS-101", name: "Programming Fundamentals", section: "Section A", term: "Fall 2026", joinCode: "PKC7HA", students: firstYears.slice(0, 30) },
+  { key: "cs101", teacher: "nauman", code: "CS-101", name: "Programming Fundamentals", section: "Section A", term: "Fall 2026", joinCode: "PKC7HA", students: firstYears.slice(0, 30) },
   // A new, empty section: shows the creation flow and the teaching empty states.
-  { key: "cs101b", teacher: "sana", code: "CS-101", name: "Programming Fundamentals", section: "Section B (new)", term: "Fall 2026", joinCode: "PKC7HB", students: [] },
-  { key: "web102", teacher: "imran", code: "WEB-102", name: "Web Development", section: "Section A", term: "Fall 2026", joinCode: "WEB4KQ", students: ["ayesha", ...firstYears.slice(5, 34)] },
+  { key: "cs101b", teacher: "nauman", code: "CS-101", name: "Programming Fundamentals", section: "Section B (new)", term: "Fall 2026", joinCode: "PKC7HB", students: [] },
+  { key: "web102", teacher: "irfan", code: "WEB-102", name: "Web Development", section: "Section A", term: "Fall 2026", joinCode: "WEB4KQ", students: ["ayesha", ...firstYears.slice(5, 34)] },
   { key: "eng101", teacher: "hina", code: "ENG-101", name: "Communication Skills", section: "Section C", term: "Fall 2026", joinCode: "ENG3RT", students: firstYears.slice(3, 33).filter((k) => k !== "ayesha") },
   // Courses built from the team's own lecture material (server/seed/courses/). Rosters are set here.
   ...coursePacks.map((p) => ({ ...p.course, students: ROSTERS[p.course.key] ?? [] })),

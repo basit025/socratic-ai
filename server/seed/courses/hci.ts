@@ -4,7 +4,7 @@ import { closed, draft, open, quiz, weeks, written, type CoursePack } from "./ki
 const C = "cs381";
 
 export const hci: CoursePack = {
-  course: { key: C, teacher: "sana", code: "CS-381", name: "Human-Computer Interaction", section: "Section A", term: "Fall 2026", joinCode: "HCI2MB", students: [] },
+  course: { key: C, teacher: "abbas", code: "CS-381", name: "Human-Computer Interaction", section: "Section A", term: "Fall 2026", joinCode: "HCI2MB", students: [] },
   modules: weeks(C, [
     ["The human: senses and movement", `
 ### The human as an information processor

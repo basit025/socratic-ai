@@ -10,7 +10,7 @@ const C = "cs201";
 const LINKED = "class Node:\n    def __init__(self, value, next=None):\n        self.value = value\n        self.next = next\n\n\ndef from_list(values):\n    head = None\n    for v in reversed(values):\n        head = Node(v, head)\n    return head\n\n\ndef to_list(head):\n    out = []\n    while head:\n        out.append(head.value)\n        head = head.next\n    return out\n";
 
 export const dsa: CoursePack = {
-  course: { key: C, teacher: "imran", code: "CS-201", name: "Data Structures and Algorithms", section: "Section A", term: "Fall 2026", joinCode: "DSA8MZ", students: [] },
+  course: { key: C, teacher: "naveed", code: "CS-201", name: "Data Structures and Algorithms", section: "Section A", term: "Fall 2026", joinCode: "DSA8MZ", students: [] },
   modules: weeks(C, [
     ["Abstract data types and the List ADT", `
 ### Abstraction

@@ -54,19 +54,6 @@ export function Chip({ tone, icon, children, className }: { tone: ChipTone; icon
   );
 }
 
-/** Always visible in a sample workspace, so sample data is never mistaken for real results. */
-export function DemoBadge({ className }: { className?: string }) {
-  return (
-    <span
-      title="This is a sample institution: its people and work are fictional. Classmates' past work comes from simulated students who used the real platform (its real viva, scoring and flags)."
-      className={cx("inline-flex items-center gap-1.5 rounded-full border border-line bg-canvas px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-ink-3", className)}
-    >
-      <span className="size-1.5 rounded-full bg-ink-3/60" aria-hidden />
-      Sample workspace
-    </span>
-  );
-}
-
 // ---------------------------------------------------------------- layout
 export function Card({ children, className, as: As = "section" }: { children: ReactNode; className?: string; as?: "section" | "div" | "article" }) {
   return <As className={cx("rounded-xl border border-line bg-surface", className)}>{children}</As>;

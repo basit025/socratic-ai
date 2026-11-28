@@ -5,6 +5,7 @@ import { Router } from "express";
 import { eq, select } from "../lib/db.js";
 import { requireSession } from "../lib/auth.js";
 import { notFound } from "../lib/errors.js";
+import { deckFor } from "../lib/lectureSlides.js";
 
 export const homeRouter = Router();
 
@@ -179,7 +180,7 @@ homeRouter.get("/teacher/home", requireSession("teacher"), async (req, res, next
 // ---------------------------------------------------------------- a course page (both roles)
 homeRouter.get("/courses/:id", requireSession(), async (req, res, next) => {
   try {
-    const { sid, pid, role } = req.session!;
+    const { sid, pid, role, demo } = req.session!;
     const id = String(req.params.id);
     if (!/^[0-9a-f-]{36}$/i.test(id)) throw notFound("That course");
     const [c] = await select<{ id: string; code: string; name: string; section: string | null; term: string | null; join_code: string; teacher_id: string; teacher: { full_name: string } }>(
@@ -243,7 +244,14 @@ homeRouter.get("/courses/:id", requireSession(), async (req, res, next) => {
     };
     res.set("Cache-Control", "no-store").json({
       course: { id: c.id, code: c.code, name: c.name, section: c.section, term: c.term, teacher: c.teacher.full_name, students: enrolled[0]?.count ?? 0, ...(role === "teacher" ? { joinCode: c.join_code } : {}) },
-      weeks: modules.map((m) => ({ week: m.week, title: m.title, notes: m.notes_md, assignments: visible.filter((a) => a.module_id === m.id).map(toItem) })),
+      weeks: modules.map((m) => ({
+        week: m.week,
+        title: m.title,
+        notes: m.notes_md,
+        // Pages in the teacher's own slide deck for this lecture (0 = none); links come from /courses/:id/lectures/:week/slides.
+        slides: demo === false ? 0 : (deckFor(c.code, m.week)?.count ?? 0),
+        assignments: visible.filter((a) => a.module_id === m.id).map(toItem),
+      })),
       unscheduled: visible.filter((a) => !a.module_id || !modules.some((m) => m.id === a.module_id)).map(toItem),
       announcements: announcements.filter((a) => Date.parse(a.posted_at) <= Date.now()).map((a) => ({ id: a.id, title: a.title, body: a.body, postedAt: a.posted_at })),
     });

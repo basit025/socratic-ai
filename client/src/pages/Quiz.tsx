@@ -453,7 +453,7 @@ export function QuizPlayer({ assignment, submissionId, nextSeq }: { assignment: 
       </Appear>
 
       {leftFullscreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4" role="alertdialog" aria-modal="true" aria-labelledby="fs-title">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/60 p-4" role="alertdialog" aria-modal="true" aria-labelledby="fs-title">
           <Pop>
             <div className="max-w-md rounded-2xl bg-surface p-6 shadow-xl">
               <p id="fs-title" className="flex items-center gap-2 text-lg font-bold text-attention">

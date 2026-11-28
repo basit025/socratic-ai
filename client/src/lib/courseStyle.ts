@@ -27,8 +27,12 @@ function hash(s: string) {
   return Math.abs(h);
 }
 
-export function courseStyle(code: string): { color: string; soft: string; line: string; icon: LucideIcon } {
+/**
+ * color: solid backgrounds with white text. text: the same colour for words and icons on the page; in dark mode it is
+ * mixed towards white (--course-lift in index.css) so it stays readable on the dark surface.
+ */
+export function courseStyle(code: string): { color: string; text: string; soft: string; line: string; icon: LucideIcon } {
   const k = KNOWN[code];
   const color: string = k?.color ?? PALETTE[hash(code) % PALETTE.length]!;
-  return { color, soft: `${color}12`, line: `${color}40`, icon: k?.icon ?? GraduationCap };
+  return { color, text: `color-mix(in srgb, ${color}, #fff var(--course-lift, 0%))`, soft: `${color}12`, line: `${color}40`, icon: k?.icon ?? GraduationCap };
 }

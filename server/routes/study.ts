@@ -12,6 +12,7 @@ import { enforceAi } from "../lib/limits.js";
 import { ipHash } from "../lib/session.js";
 import { generateJson } from "../llm.js";
 import { fence } from "../lib/promptSafety.js";
+import { deckFor, deckPages } from "../lib/lectureSlides.js";
 import {
   buildPracticePrompt,
   buildTutorPrompt,
@@ -47,6 +48,26 @@ async function accessibleCourse(sid: string, pid: string, role: "student" | "tea
 
 const lecturesOf = (courseId: string) =>
   select<{ id: string; week: number; title: string; notes_md: string }>(`modules?select=id,week,title,notes_md&course_id=${eq(courseId)}&order=week`);
+
+// ---------------------------------------------------------------- the teacher's own slides
+/**
+ * Signed links to the pages of a lecture's original slide deck (and each page's text, for Ustaad).
+ * Decks belong to the institution's own courses, so real accounts' courses never pick one up by code.
+ */
+studyRouter.get("/courses/:id/lectures/:week/slides", requireSession(), async (req, res, next) => {
+  try {
+    const { sid, pid, role, demo } = req.session!;
+    const week = Number(req.params.week);
+    if (!Number.isInteger(week) || week < 1 || week > 60) throw notFound("That lecture");
+    const c = await accessibleCourse(sid, pid, role, String(req.params.id));
+    const deck = demo === false ? null : deckFor(c.code, week);
+    if (!deck) return void res.json({ pages: [] });
+    res.setHeader("Cache-Control", "private, max-age=1800");
+    res.json({ pages: await deckPages(deck) });
+  } catch (e) {
+    next(e);
+  }
+});
 
 // ---------------------------------------------------------------- tutor chat
 const TutorBody = z.object({

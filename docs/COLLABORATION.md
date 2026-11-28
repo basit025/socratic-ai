@@ -113,7 +113,7 @@ Use only the tokens in `index.css`: `action` (blue: do something), `done` (green
 
 - Classroom words only: Course, Lecture, Assignment, Quiz, Marks, Viva, Due. No developer jargon on screen.
 - Buttons say what will happen: "Publish assignment", "Confirm mark", not "Submit" or "OK".
-- **Don't use "demo" anywhere in the product.** The seeded institution is a **sample workspace**. The small "Sample workspace" label in the top bar stays, because it's our honesty disclosure.
+- **Don't use "demo" or "sample" anywhere in the product** (decision, Nov 28): it should read as a real platform. The disclosure that the seeded institution is fictional lives in the README.
 - It's a "learning platform", never a "portal". Ustaad is the AI's name, and Ustaad never writes solution code.
 
 ### Server patterns (`server/`)

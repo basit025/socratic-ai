@@ -2,13 +2,12 @@
  * The student's Home: what to do, by date, and what's new, across every course.
  *   Left:  To-do, grouped by day (Today, Tomorrow, each day this week, Later).
  *   Right: Notifications (announcements, new work, marks released, reminders).
- *   Below: My courses, one card per course; each opens that course's own space.
+ * Courses live in the sidebar (My courses), so Home stays about what to do next.
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { BellRing, BookOpen, CalendarCheck2, CalendarDays, ChevronRight, PartyPopper } from "lucide-react";
+import { BellRing, BookOpen, CalendarCheck2, CalendarDays, PartyPopper } from "lucide-react";
 import { AppShell } from "../components/AppShell";
-import { CourseCard } from "../components/CourseCard";
 import { noticeView, useStudentData } from "../components/Shell";
 import { Card, Chip, EmptyState, ErrorState, Skeleton, cx } from "../components/ui";
 import { courseStyle } from "../lib/courseStyle";
@@ -50,7 +49,7 @@ function TodoRow({ a }: { a: Item }) {
     <li>
       <Link to={`/student/assignments/${a.id}`} className="group flex items-center gap-3 py-3 pr-4 pl-3 hover:bg-canvas sm:pr-5">
         <span className="h-10 w-1 shrink-0 rounded-full" style={{ backgroundColor: cs.color }} aria-hidden />
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: cs.soft, color: cs.color }} title={k.label}>
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: cs.soft, color: cs.text }} title={k.label}>
           <k.icon className="size-5" aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
@@ -88,7 +87,6 @@ export function StudentHome() {
   const [allTodo, setAllTodo] = useState(false);
   const TODO_LIMIT = 12;
   const groups = groupByDay(allTodo ? todo : todo.slice(0, TODO_LIMIT));
-  const weekCount = todo.filter((a) => a.dueAt && dayDiff(a.dueAt) <= 7).length;
   const notices = data?.notifications ?? [];
   const shownNotices = allNotices ? notices : notices.slice(0, 7);
 
@@ -97,13 +95,6 @@ export function StudentHome() {
       <div className="mb-6">
         <p className="text-sm font-medium text-ink-3">{longDay.format(Date.now())}</p>
         <h1 className="text-2xl font-bold tracking-tight sm:text-[28px]">{greeting()}, {firstName(me.name)}</h1>
-        {data && data.courses.length > 0 && (
-          <p className="mt-1 text-ink-2">
-            {todo.length === 0
-              ? "You're all caught up across your courses."
-              : `${todo.length} thing${todo.length === 1 ? "" : "s"} to do${weekCount ? `, ${weekCount} due in the next 7 days` : ""}. Start with the top of the list.`}
-          </p>
-        )}
       </div>
 
       {home.status === "loading" && (
@@ -124,7 +115,6 @@ export function StudentHome() {
       )}
 
       {data && data.courses.length > 0 && (
-        <>
           <div className="grid min-w-0 gap-6 lg:grid-cols-3">
             {/* To-do, by date */}
             <Card className="min-w-0 overflow-hidden lg:col-span-2">
@@ -192,20 +182,6 @@ export function StudentHome() {
               )}
             </Card>
           </div>
-
-          {/* Courses */}
-          <section aria-label="My courses" className="mt-10">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-lg font-semibold"><BookOpen className="size-5 text-ink-3" aria-hidden /> My courses</h2>
-              <Link to="/student/courses" className="inline-flex min-h-9 items-center gap-0.5 text-sm font-semibold text-action hover:underline">
-                All courses <ChevronRight className="size-4" aria-hidden />
-              </Link>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {data.courses.map((c) => <CourseCard key={c.id} c={c} />)}
-            </div>
-          </section>
-        </>
       )}
     </AppShell>
   );

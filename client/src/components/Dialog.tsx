@@ -25,7 +25,7 @@ export function Dialog({ open, title, children, onClose }: { open: boolean; titl
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" onMouseDown={(e) => e.target === e.currentTarget && onCloseRef.current()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/50 p-4" onMouseDown={(e) => e.target === e.currentTarget && onCloseRef.current()}>
       <div ref={panel} role="dialog" aria-modal="true" aria-labelledby="dialog-title" className="w-full max-w-lg rounded-xl bg-surface p-6 shadow-xl">
         <h2 id="dialog-title" className="text-xl font-bold">
           {title}
