@@ -245,7 +245,7 @@ const FAQ = [
   { q: "Does it work on phones?", a: "Yes. Students can read lectures, take quizzes, write answers and chat with Ustaad on a phone. Coding labs work best on a laptop or lab computer, with nothing to install." },
   { q: "Who decides the final mark?", a: "Always the teacher. The platform suggests a mark from hidden tests and the viva, and flags things worth a look in plain words. Flags are evidence, never verdicts." },
   { q: "What does it cost?", a: "A pilot is free for one semester. After that, pricing is per student per semester, set with each department. Tell us about your institution and we'll send a quote." },
-  { q: "Can we try it right now?", a: "Yes. \"Try as student\" or \"Try as teacher\" opens a sample institution in a couple of seconds, with no sign-up. Its people and work are fictional; everything else is the real platform." },
+  { q: "Can we try it right now?", a: "Yes. \"Try as student\" or \"Try as teacher\" opens the platform in a couple of seconds, with courses, lectures, labs, quizzes and marks already set up." },
 ];
 
 const ROLES = [
@@ -462,11 +462,10 @@ export function Landing() {
                 Lectures, coding labs, assignments, quizzes and marks for Pakistani universities and colleges, with <strong className="text-ink">Ustaad</strong>, an AI tutor that helps students learn and makes sure every mark reflects real understanding.
               </p>
               <div className="mt-8"><DemoButtons /></div>
-              <p className="mt-3 text-sm text-ink-3">Opens a sample institution with courses, students and marks. No sign-up.</p>
               {error && <p role="alert" className="mt-4 max-w-xl rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-danger">{error}</p>}
             </div>
             <div className="relative">
-              <BrowserFrame src="/screens/student-home.webp" alt="Socratic AI student home: to-dos by date, notifications from every course, and course cards" eager />
+              <BrowserFrame src="/screens/student-home.webp" alt="Socratic AI student home: to-dos by date, notifications from every course, and every course one click away in the sidebar" eager />
             </div>
           </div>
         </section>
@@ -650,7 +649,7 @@ export function Landing() {
               </ol>
               <div className="mt-10 rounded-2xl border border-line bg-surface p-5">
                 <p className="font-semibold">Want to look around first?</p>
-                <p className="mt-1 text-[15px] text-ink-2">Open a sample institution with courses, students and marks. No sign-up.</p>
+                <p className="mt-1 text-[15px] text-ink-2">See the student and teacher sides, with courses, lectures, labs, quizzes and marks already set up.</p>
                 <div className="mt-4"><DemoButtons /></div>
               </div>
             </div>
@@ -683,7 +682,7 @@ export function Landing() {
         </div>
         <div className="border-t border-line">
           <p className="mx-auto max-w-7xl px-4 py-5 text-sm text-ink-3 sm:px-6">
-            © 2026 Socratic AI. Made in Pakistan. The sample institution, its people and their work are fictional.
+            © 2026 Socratic AI. Made in Pakistan.
           </p>
         </div>
       </footer>

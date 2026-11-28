@@ -48,7 +48,7 @@ export function SignIn() {
       </header>
       <main className="mx-auto max-w-md px-4 pb-16 pt-6">
         <h1 className="text-center text-3xl font-bold tracking-tight">{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
-        <p className="mt-2 text-center text-ink-2">For your classes. To look around first, open the sample institution: no account needed.</p>
+        <p className="mt-2 text-center text-ink-2">For your classes. To look around first, use Try as student or Try as teacher on the home page: no account needed.</p>
         <div className="mt-6 flex justify-center">
           <Segmented label="Sign in or create an account" value={mode} onChange={(v) => { setMode(v); setError(null); }} options={[{ value: "signin", label: "Sign in" }, { value: "signup", label: "Create account" }]} />
         </div>
