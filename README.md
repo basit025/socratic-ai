@@ -123,9 +123,6 @@ Formats and rules: [`docs/event-format.md`](docs/event-format.md) · full specif
 - **A second phone can't be blocked**, but it can be made useless: retyping leaves a fingerprint in the replay, variants make shared answers wrong, and the timed viva on the student's own work carries the marks.
 - **Someone else doing both the work and the viva** while logged in as the student needs identity checks; high-stakes exams belong in a lab with an invigilator.
 
-## About the sample institution
-
-The institution you enter with **Try as student / Try as teacher**, its people and their work are fictional. Classmates' past submissions come from **simulated students** (strong, struggling and copying personas) who worked through the real platform: the platform's own viva questions, AI scoring and flag rules produced every score and flag you see. They show how the platform behaves; they are not measured results. Measured results will be reported only from real students and teachers, exactly as measured.
 
 ## Run it locally
 
@@ -177,7 +174,7 @@ Every external service, model and library used in this repository is listed here
 The rules allow AI coding assistants as long as they are disclosed. We use:
 
 - **Claude Code** (Anthropic): coding assistant throughout the build.
-- **Google AI Studio**: the team's first prototype (Ustaad mentor, in-browser code runner, report) was generated in AI Studio on Nov 22, 2026, inside the build window. It is kept unchanged in [`prototype/`](prototype/) as its own commit, so the history shows exactly what came from it; it isn't built or deployed.
+
 
 ## Originality
 
