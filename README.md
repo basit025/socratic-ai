@@ -170,6 +170,8 @@ Every external service, model and library used in this repository is listed here
 | [CodeMirror 6](https://codemirror.net) (incl. `@codemirror/language`, and `@lezer/highlight` from the same project) | Code editor in the student workspace (with paste blocking); syntax colours that follow light and dark mode | MIT |
 | [Motion](https://motion.dev) | Small feedback animations (a step completing, a result appearing) | MIT |
 | [Pyodide](https://pyodide.org) (jsDelivr CDN in the browser; npm for the seed script) | Runs students' Python in a Web Worker; computes hidden-test answers when seeding | MPL-2.0 |
+| [LibreOffice](https://www.libreoffice.org), [Poppler](https://poppler.freedesktop.org) and [ImageMagick](https://imagemagick.org) (operator tools, not shipped) | `scripts/lecture-slides.ts`: turn the teachers' PowerPoint/PDF slides into page images and text for the lecture viewer | MPL-2.0 / GPL-2.0 / ImageMagick License |
+| [Supabase Storage](https://supabase.com/docs/guides/storage) | Private bucket for lecture slide pages, served to signed-in course members through short-lived signed links | (service) |
 | [Inter](https://rsms.me/inter/), [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (Google Fonts) | Interface and code fonts | SIL Open Font License |
 | [Puppeteer](https://pptr.dev) (`puppeteer-core`) | Browser smoke tests (development only) | Apache-2.0 |
 | [Supabase CLI](https://supabase.com/docs/guides/cli) | Applies database migrations and seeds (development tool, run with `npx`) | MIT |

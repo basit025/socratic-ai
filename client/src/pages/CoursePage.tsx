@@ -43,7 +43,7 @@ interface Item {
 
 interface CourseData {
   course: { id: string; code: string; name: string; section: string | null; term: string | null; teacher: string; students: number; joinCode?: string };
-  weeks: { week: number; title: string; notes: string; assignments: Item[] }[];
+  weeks: { week: number; title: string; notes: string; slides?: number; assignments: Item[] }[];
   unscheduled: Item[];
   announcements: { id?: string; title: string; body: string; postedAt: string }[];
 }
@@ -408,7 +408,7 @@ export function CoursePage() {
                   <Card className="overflow-hidden">
                     <ul className="divide-y divide-line">
                       {d.weeks.map((w) => {
-                        const n = toSlides(w.title, w.notes).length + 1;
+                        const n = w.slides || toSlides(w.title, w.notes).length + 1;
                         const seen = viewed.includes(w.week);
                         return (
                           <li key={w.week}>
