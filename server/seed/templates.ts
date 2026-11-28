@@ -132,7 +132,7 @@ export const templates: Template[] = [
       { name: "Empty name", call: "countVowels(\"\")" },
       { name: "Capital letters", call: "countVowels(\"OMAR\")" },
       { name: "No vowels", call: "countVowels(\"Rhythm\")" },
-      { name: "Two words", call: "countVowels(\"Sana Rauf\")" },
+      { name: "Two words", call: "countVowels(\"Ayesha Khan\")" },
     ],
     variants: null,
     marks: 10,
