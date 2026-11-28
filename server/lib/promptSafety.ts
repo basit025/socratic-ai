@@ -12,9 +12,18 @@
  *    the chat (never code comments), so the model can't be talked into a check the student didn't earn.
  */
 
+/** The tags our prompts wrap student text in (plus "system"). Student text may never open or close one. */
+const OUR_TAGS = ["student_message", "student_code", "student_answer", "chat_with_ustaad", "program_output", "previous_answers", "lecture", "slide", "system"];
+
+/**
+ * Any "<" that starts one of OUR tag names, however it is disguised: spaces after "<" or "/",
+ * capitals, a line break before ">", or no ">" at all. A model can still read those as our tags.
+ */
+const OUR_TAG_START = new RegExp(`<(\\s*\\/?\\s*)(${OUR_TAGS.join("|")})\\b`, "gi");
+
 /** Defuse tag-shaped sequences (<x>, </x>, <x attr>) in student text; code comparisons like a < b stay readable. */
 export function fence(text: string): string {
-  return text.replace(/<(\/?)([A-Za-z_][\w-]*)([^<>\n]*)>/g, "‹$1$2$3›");
+  return text.replace(/<(\/?)([A-Za-z_][\w-]*)([^<>\n]*)>/g, "‹$1$2$3›").replace(OUR_TAG_START, "‹$1$2");
 }
 
 const INSTRUCTION_PATTERNS: RegExp[] = [
