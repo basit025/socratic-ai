@@ -28,11 +28,11 @@ async function shot(p: Page, name: string) {
     await s.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
     await s.goto(BASE, { waitUntil: "domcontentloaded" });
     await s.locator("button ::-p-text(Try as student)").click();
-    await s.waitForFunction(() => location.pathname === "/student" && document.querySelectorAll("[data-course-card]").length > 0, { timeout: 60000 });
+    await s.waitForFunction(() => location.pathname === "/student" && document.querySelectorAll("nav a[href^='/student/courses/']").length > 0, { timeout: 60000 });
     await wait(800);
     await shot(s, "student-home");
 
-    const course = await s.$$eval("[data-course-card]", (as) => (as.find((a) => a.textContent?.includes("Programming Fundamentals")) as HTMLAnchorElement).href);
+    const course = await s.$$eval("nav a[href^='/student/courses/']", (as) => (as.find((a) => a.textContent?.includes("Programming Fundamentals")) as HTMLAnchorElement).href);
     await s.goto(`${course}/lectures/2`, { waitUntil: "domcontentloaded" });
     await s.waitForSelector("section[aria-label='Study with Ustaad']", { timeout: 20000 });
     await s.locator("section[aria-label='Study with Ustaad'] button ::-p-text(Give me a real-life example)").click();

@@ -7,6 +7,8 @@ import path from "node:path";
 
 const BASE = process.argv[2] ?? "http://localhost:3000";
 const OUT = process.argv[3] ?? "smoke-screens";
+/** The student's courses, listed under "My courses" in the sidebar. */
+const COURSE_LINK = "nav[aria-label='Main'] a[href^='/student/courses/']";
 const CHROME = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";
 mkdirSync(OUT, { recursive: true });
 
@@ -59,7 +61,17 @@ async function main() {
     ok(`"Try as student" → student home in ${Date.now() - t1} ms`);
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 10000 });
     await shot(s, "2-student-home-1440");
-    (await s.$eval("body", (b) => b.innerText.includes("Sample workspace"))) ? ok("sample-data label visible") : fail("sample-data label missing");
+    (await s.$eval("body", (b) => /Sample workspace|\bdemo\b/i.test(b.innerText))) ? fail("a sample or demo label is visible") : ok("no sample or demo label in the product");
+    // Sidebar folds to an icon rail and back; the theme switch turns dark mode on and off.
+    await s.click("button[aria-label='Collapse the sidebar']");
+    await s.waitForSelector("button[aria-label='Expand the sidebar']", { timeout: 3000 });
+    await s.click("button[aria-label='Expand the sidebar']");
+    await s.waitForSelector("button[aria-label='Collapse the sidebar']", { timeout: 3000 });
+    ok("sidebar collapses to icons and expands again");
+    await s.click("button[aria-label='Switch to dark mode']");
+    (await s.$eval("html", (h) => h.classList.contains("dark"))) ? ok("dark mode on") : fail("dark mode did not turn on");
+    await s.click("button[aria-label='Switch to light mode']");
+    (await s.$eval("html", (h) => !h.classList.contains("dark"))) ? ok("back to light mode") : fail("light mode did not come back");
     const leftovers = await s.$eval("body", (b) => [/[؀-ۿ]/.test(b.innerText) && "Urdu script", /Hackathon/i.test(b.innerText) && "hackathon label"].filter(Boolean));
     leftovers.length ? fail(`removed content is back: ${leftovers.join(", ")}`) : ok("no Urdu labels or hackathon label");
 
@@ -99,9 +111,9 @@ async function main() {
 
     // ------------------------------------------------ workspace: a real student session
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForFunction(() => document.querySelectorAll("[data-course-card]").length > 0, { timeout: 15000 });
-    const courseCount = await s.$$eval("[data-course-card]", (cs) => cs.length);
-    courseCount >= 3 ? ok(`student home lists ${courseCount} courses (lived-in institution)`) : fail(`only ${courseCount} course(s) on student home`);
+    await s.waitForFunction((sel) => document.querySelectorAll(sel).length > 0, { timeout: 15000 }, COURSE_LINK);
+    const courseCount = await s.$$eval(COURSE_LINK, (cs) => cs.length);
+    courseCount >= 3 ? ok(`sidebar lists ${courseCount} courses (lived-in institution)`) : fail(`only ${courseCount} course(s) in the sidebar`);
 
     // A JavaScript lab: runs in its own worker
     await showAllTasks(s);
@@ -118,7 +130,7 @@ async function main() {
 
     // A written task: plain-text editor, paste blocked, live word count
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForSelector("[data-course-card]", { timeout: 15000 });
+    await s.waitForSelector(COURSE_LINK, { timeout: 15000 });
     await showAllTasks(s);
     await s.waitForFunction(() => document.body.innerText.includes("Usability Review of a University Website"), { timeout: 15000 });
     await s.locator("a ::-p-text(Usability Review of a University Website)").click();
@@ -136,7 +148,7 @@ async function main() {
 
     // The Python lab used for the full journey below
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForSelector("[data-course-card]", { timeout: 15000 });
+    await s.waitForSelector(COURSE_LINK, { timeout: 15000 });
     await showAllTasks(s);
     await s.waitForFunction(() => document.body.innerText.includes("Cricket Over Tracker"), { timeout: 15000 });
     await s.locator("a ::-p-text(Cricket Over Tracker)").click();
@@ -176,7 +188,7 @@ async function main() {
     await s.setViewport({ width: 1920, height: 1080 });
     await shot(s, "7-workspace-ustaad-1920");
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForSelector("[data-course-card]", { timeout: 15000 });
+    await s.waitForSelector(COURSE_LINK, { timeout: 15000 });
     await showAllTasks(s);
     await s.waitForFunction(() => document.body.innerText.includes("In progress"), { timeout: 10000 });
     ok('student home now shows "In progress"');
@@ -248,8 +260,8 @@ async function main() {
     ok("switched back to the student view");
 
     // Course page and the student's view of the teacher's mark
-    await s.waitForSelector("a[data-course-card]", { timeout: 15000 });
-    await s.locator("a[data-course-card] ::-p-text(Programming Fundamentals)").click();
+    await s.waitForSelector(COURSE_LINK, { timeout: 15000 });
+    await s.locator(`${COURSE_LINK} ::-p-text(Programming Fundamentals)`).click();
     await s.waitForFunction(() => document.body.innerText.includes("This week's lecture") && document.body.innerText.includes("Announcements"), { timeout: 15000 });
     ok("student course page: overview with announcements and this week's lecture");
     await shot(s, "17-course-page");
@@ -273,7 +285,7 @@ async function main() {
     await s.waitForFunction(() => document.body.innerText.includes("Marked: 7/10"), { timeout: 15000 });
     ok('course marks show the confirmed mark "Marked: 7/10"');
     await s.goto(`${BASE}/student`, { waitUntil: "domcontentloaded" });
-    await s.waitForSelector("a[data-course-card]", { timeout: 15000 });
+    await s.waitForSelector(COURSE_LINK, { timeout: 15000 });
 
     // ------------------------------------------------ timed quiz: one question at a time → result
     await showAllTasks(s);
