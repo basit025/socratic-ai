@@ -182,4 +182,8 @@ All application code was written between Nov 22 and Nov 28, 2026, inside the off
 
 ## Team
 
-Five students; names, roles and institutions to be added.
+- Abdul Basit
+- M Abdullah Iftikhar
+- Hammad Qaiser
+- Sayed Ali Shah
+- Haider Ali
